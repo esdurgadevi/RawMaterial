@@ -1,0 +1,54 @@
+import express from "express";
+import cors from "cors";
+import authRoutes from "./routes/authRoute.js";
+import stationRoutes from './routes/stationRoutes.js';
+import mixingGroupRoutes from './routes/mixingGroupRoutes.js';
+import mixingRoutes from './routes/mixingRoutes.js';
+import varietyRoutes from './routes/varietyRoutes.js';
+import stateRoutes from './routes/stateRoutes.js';
+import brokerRoutes from './routes/brokerRoutes.js';
+import commodityRoutes from './routes/commodityRoutes.js';
+import transportRoutes from './routes/transportRoutes.js';
+import godownRoutes from './routes/godownRoutes.js';
+import companyBrokerRoutes from './routes/companyBrokerRoutes.js';
+import wasteInvoiceTypeRoutes from './routes/wasteInvoiceTypeRoutes.js';
+import supplierRoutes from './routes/supplierRoutes.js';
+import fibreRoutes from './routes/fibreRoutes.js';
+import packingTypeRoutes from './routes/packingTypeRoutes.js';
+import wasteMasterRoutes from './routes/wasteMasterRoutes.js';
+import wasteRateRoutes from './routes/wasteRateRoutes.js';
+import wasteLotRoutes from './routes/wasteLotRoutes.js';
+import costMasterRoutes from './routes/costMasterRoutes.js';
+import purchaseOrderRoutes from './routes/purchaseOrderRoutes.js';
+import inwardEntryRoutes from './routes/inwardEntryRoutes.js';
+import lotEntryRoutes from './routes/lotEntryRoutes.js';
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.use("/api/auth", authRoutes);
+app.use("/api/stations", stationRoutes);
+app.use("/api/mixing-groups", mixingGroupRoutes);
+app.use("/api/mixings", mixingRoutes);
+app.use("/api/varieties", varietyRoutes);
+app.use("/api/states", stateRoutes);
+app.use("/api/brokers", brokerRoutes);
+app.use("/api/commodities", commodityRoutes);
+app.use("/api/transports", transportRoutes);
+app.use("/api/godowns", godownRoutes);
+app.use("/api/company-brokers", companyBrokerRoutes);
+app.use("/api/waste-invoice-types", wasteInvoiceTypeRoutes);
+app.use("/api/suppliers", supplierRoutes);
+app.use("/api/fibres", fibreRoutes);
+app.use("/api/packing-types", packingTypeRoutes);
+app.use("/api/waste-masters", wasteMasterRoutes);
+app.use("/api/waste-rates", wasteRateRoutes);
+app.use("/api/waste-lots", wasteLotRoutes);
+app.use("/api/cost-masters", costMasterRoutes);
+app.use("/api/purchase-orders", purchaseOrderRoutes);
+app.use("/api/inward-entries", inwardEntryRoutes);
+app.use("/api/lot-entries", lotEntryRoutes);
+
+export default app;

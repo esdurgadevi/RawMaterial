@@ -1,0 +1,21 @@
+import express from "express";
+import {
+  createGodown,
+  getAllGodowns,
+  getGodownById,
+  updateGodown,
+  deleteGodown,
+} from "../controllers/godownController.js";
+import { protect } from "../middlewares/authMiddleware.js";
+
+const router = express.Router();
+
+router.use(protect);
+
+router.post("/", createGodown);
+router.get("/", getAllGodowns);
+router.get("/:id", getGodownById);
+router.put("/:id", updateGodown);
+router.delete("/:id", deleteGodown);
+
+export default router;
