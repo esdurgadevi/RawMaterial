@@ -1,6 +1,6 @@
 // controllers/inwardLotController.js
 import * as service from "../services/inwardLotService.js";
-import * as lotEntryService from "../services/lotEntryService.js";
+
 
 export const getNextLotNo = async (req, res) => {
   try {
