@@ -11,17 +11,18 @@ const InwardLotModel = (sequelize) => {
         primaryKey: true,
       },
 
-      inwardNo: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-        references: {
-          model: "inward_entries",
-          key: "inward_no",
-        },
-        onUpdate: "CASCADE",
-        onDelete: "RESTRICT",
-        field: "inward_no",
-      },
+      inwardId: {
+  type: DataTypes.INTEGER,
+  allowNull: false,
+  references: {
+    model: "inward_entries",
+    key: "id",
+  },
+  onUpdate: "CASCADE",
+  onDelete: "RESTRICT",
+  field: "inward_id",
+},
+
 
       lotNo: {
         type: DataTypes.STRING(50),
@@ -95,7 +96,7 @@ const InwardLotModel = (sequelize) => {
       timestamps: true,
       indexes: [
         { unique: true, fields: ["lot_no"] },
-        { fields: ["inward_no"] },
+        { fields: ["inward_id"] },
       ],
     }
   );

@@ -51,6 +51,6 @@ app.use("/api/cost-masters", costMasterRoutes);
 app.use("/api/purchase-orders", purchaseOrderRoutes);
 app.use("/api/inward-entries", inwardEntryRoutes);
 app.use("/api/inward-lots",inwardLotsRoutes);
-app.use("/api/inward-lot-weightments",inwardLotWeightmentRoutes)
+app.use("/api/weightments",inwardLotWeightmentRoutes)
 
 export default app;

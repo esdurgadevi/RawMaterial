@@ -24,7 +24,8 @@ import PurchaseOrderModel from "./purchaseOrder.js";
 import InwardEntryModel from "./inwardEntry.js";
 import InwardLotModel from "./inwardLot.js";
 import InwardLotWeightmentModel from "./inwardLotWeightment.js";
-
+import IssueModel from "./issueEntry.js";
+import IssueItemModel from "./issueEntryBale.js";
 const db = {};
 db.sequelize = sequelize;
 
@@ -51,6 +52,8 @@ db.PurchaseOrder = PurchaseOrderModel(sequelize);
 db.InwardEntry = InwardEntryModel(sequelize);
 db.InwardLot = InwardLotModel(sequelize);
 db.InwardLotWeightment = InwardLotWeightmentModel(sequelize);
+db.Issue = IssueModel(sequelize);
+db.IssueItem = IssueItemModel(sequelize);
 
 db.State.hasMany(db.Station, {
   foreignKey: "stateId",
@@ -210,19 +213,27 @@ db.Godown.hasMany(db.InwardEntry, {
   foreignKey: "godownId",
   as: "inwardEntries",
 });
+
 db.InwardEntry.belongsTo(db.Godown, {
   foreignKey: "godownId",
   as: "godown",
 });
 
+// db.InwardEntry.hasMany(db.InwardLot, {
+//   foreignKey: "inwardId",
+//   as: "inwardLots",
+// });
 db.InwardEntry.hasMany(db.InwardLot, {
   foreignKey: "inwardId",
-  as: "inwardLots",
 });
 
+// //inward lot
+// db.InwardLot.belongsTo(db.InwardEntry, {
+//   foreignKey: "inwardId",
+//   as: "inwardEntry",
+// });
 db.InwardLot.belongsTo(db.InwardEntry, {
   foreignKey: "inwardId",
-  as: "inwardEntry",
 });
 
 db.InwardLot.hasMany(db.InwardLotWeightment, {
@@ -235,6 +246,31 @@ db.InwardLotWeightment.belongsTo(db.InwardLot, {
   as: "inwardLot",
 });
 
+
+
+
+
+
+
+// Issue ↔ IssueItem
+db.Issue.hasMany(db.IssueItem, {
+  foreignKey: "issueId",
+});
+
+db.IssueItem.belongsTo(db.Issue, {
+  foreignKey: "issueId",
+});
+
+// InwardLot ↔ IssueItem
+db.InwardLot.hasMany(db.IssueItem, {
+  foreignKey: "lotNo",
+  sourceKey: "lotNo",
+});
+
+db.IssueItem.belongsTo(db.InwardLot, {
+  foreignKey: "lotNo",
+  targetKey: "lotNo",
+});
 
 
 export default db;

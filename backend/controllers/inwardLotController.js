@@ -1,18 +1,20 @@
 // controllers/inwardLotController.js
 import * as service from "../services/inwardLotService.js";
+import { getNextLotNo } from "../utils/helpers.js";
 
-
-export const getNextLotNo = async (req, res) => {
+export const getNextLotNo1 = async (req, res) => {
   try {
-    const nextNo = await lotEntryService.getNextLotNo();
+    const lotNo = await getNextLotNo();
     res.status(200).json({
-      message: "Next lot number generated",
-      nextLotNo: nextNo,
+      message: "Next inward number generated",
+      lotNo,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error generating next lot no:", error);
+    res.status(500).json({ message: "Failed to generate next order number" });
   }
 };
+
 export const createLot = async (req, res) => {
   try {
     const lot = await service.create(req.body);

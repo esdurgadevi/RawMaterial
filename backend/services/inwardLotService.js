@@ -4,12 +4,16 @@ import db from "../models/index.js";
 const { InwardEntry, InwardLot } = db;
 
 export const create = async (data) => {
+  //console.log(data);
   const inward = await InwardEntry.findOne({
-    where: { inwardNo: data.inwardNo },
+    where: { id: data.inwardId },
   });
-  if (!inward) throw new Error("Invalid Inward No");
+  if(!inward) throw new Error("Invalid Inward No");
 
-  return await InwardLot.create(data);
+  return await InwardLot.create({
+    ...data,
+    inwardId: inward.id,   // ✅ THIS IS THE KEY FIX
+  });
 };
 
 export const getAll = async () => {

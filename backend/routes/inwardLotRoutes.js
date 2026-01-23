@@ -1,7 +1,7 @@
 // routes/inwardLotRoutes.js
 import express from "express";
 import {
-  getNextLotNo,
+  getNextLotNo1,
   createLot,
   getAllLots,
   getLot,
@@ -13,7 +13,7 @@ import { protect } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 router.use(protect);
 
-router.get("/next-lot-no", getNextLotNo);
+router.get("/next-lot-no", getNextLotNo1);
 router.post("/", createLot);
 router.get("/", getAllLots);
 router.get("/:lotNo", getLot);

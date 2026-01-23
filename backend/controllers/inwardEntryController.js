@@ -1,14 +1,16 @@
 import * as inwardEntryService from "../services/inwardEntryService.js";
+import { getNextInwardNo } from "../utils/helpers.js";
 
-export const getNextInwardNo = async (req, res) => {
+export const getNextInwardNo1 = async (req, res) => {
   try {
-    const nextNo = await inwardEntryService.getNextInwardNo();
+    const nextNo = await getNextInwardNo();
     res.status(200).json({
       message: "Next inward number generated",
-      nextInwardNo: nextNo,
+      nextNo,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error generating next order no:", error);
+    res.status(500).json({ message: "Failed to generate next order number" });
   }
 };
 

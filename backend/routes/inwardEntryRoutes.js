@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  getNextInwardNo,
+  getNextInwardNo1,
   createInwardEntry,
   getAllInwardEntries,
   getInwardEntryById,
@@ -13,7 +13,7 @@ const router = express.Router();
 
 router.use(protect);
 
-router.get("/next-inward-no", getNextInwardNo);
+router.get("/next-inward-no",getNextInwardNo1);
 router.post("/", createInwardEntry);
 router.get("/", getAllInwardEntries);
 router.get("/:id", getInwardEntryById);
