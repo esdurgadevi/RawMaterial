@@ -4,7 +4,6 @@ import db from "../models/index.js";
 const { InwardEntry, InwardLot } = db;
 
 export const create = async (data) => {
-  //console.log(data);
   const inward = await InwardEntry.findOne({
     where: { id: data.inwardId },
   });

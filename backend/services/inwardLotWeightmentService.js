@@ -17,7 +17,8 @@ export const create = async (lotNo, rows) => {
     baleWeight: r.grossWeight - r.tareWeight,
     baleValue: r.baleValue,
   }));
-
+  //console.log("d");
+  //console.log(payload);
   return await InwardLotWeightment.bulkCreate(payload);
 };
 

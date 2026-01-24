@@ -103,28 +103,35 @@ export const getNextLotNo = async () => {
   }
 };
 
-export const getNextIssueNo = async () => {
-  const now = new Date();
-  let year = now.getFullYear();
-  if (now.getMonth() < 3) year -= 1; // Jan-Mar belongs to previous FY
-  const nextYear = year + 1;
-  const fyPrefix = `${year.toString().slice(-2)}-${nextYear.toString().slice(-2)}`;
+const { Issue } = db;
 
-  const lastEntry = await IssueEntry.findOne({
-    where: {
-      issueNo: { [Op.like]: `ISSUE/${fyPrefix}/%` },
-    },
-    order: [["createdAt", "DESC"]],
-    limit: 1,
-  });
+export const getNextIssueNumber = async () => {
+  try {
+    const now = new Date();
+    const year = now.getFullYear() % 100;
+    const nextYear = year + 1;
+    const financialYear = `${year}-${nextYear}`;
 
-  let nextSeq = 1;
-  if (lastEntry) {
-    const lastPart = lastEntry.issueNo.split("/").pop();
-    const lastNum = parseInt(lastPart, 10);
-    if (!isNaN(lastNum)) nextSeq = lastNum + 1;
+    const lastIssue = await Issue.findOne({
+      where: {
+        issueNumber: {
+          [Op.like]: `ISSUE/${financialYear}/%`,
+        },
+      },
+      order: [["issueNumber", "DESC"]],
+    });
+
+    let nextSeq = 1;
+
+    if (lastIssue && lastIssue.issueNumber) {
+      const lastNumber = lastIssue.issueNumber.split("/").pop();
+      nextSeq = parseInt(lastNumber, 10) + 1;
+    }
+
+    return `ISSUE/${financialYear}/${String(nextSeq).padStart(4, "0")}`;
+  } catch (error) {
+    console.error("Error generating next issue number:", error);
+    throw error;
   }
-
-  const padded = String(nextSeq).padStart(4, "0");
-  return `ISSUE/${fyPrefix}/${padded}`;
 };
+

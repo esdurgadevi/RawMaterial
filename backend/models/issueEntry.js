@@ -1,35 +1,27 @@
-// models/IssueEntry.js
 import { DataTypes } from "sequelize";
 
-const IssueEntryModel = (sequelize) => {
-  const IssueEntry = sequelize.define(
-    "IssueEntry",
+const IssueModel = (sequelize) => {
+  const Issue = sequelize.define(
+    "Issue",
     {
       id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
       },
-
-      issueNo: {
-        type: DataTypes.STRING(50),
+      issueNumber: {
+        type: DataTypes.STRING(30),
         allowNull: false,
         unique: true,
-        field: "issue_no",
       },
-
       issueDate: {
         type: DataTypes.DATEONLY,
         allowNull: false,
-        field: "issue_date",
       },
-
       mixingNo: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING(30),
         allowNull: false,
-        field: "mixing_no",
       },
-
       mixingGroupId: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -37,9 +29,7 @@ const IssueEntryModel = (sequelize) => {
           model: "mixing_groups",
           key: "id",
         },
-        field: "mixing_group_id",
       },
-
       toMixingGroupId: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -47,16 +37,23 @@ const IssueEntryModel = (sequelize) => {
           model: "mixing_groups",
           key: "id",
         },
-        field: "to_mixing_group_id",
+      },
+      lotId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: "inward_lots",
+          key: "id",
+        },
       },
     },
     {
-      tableName: "issue_entries",
+      tableName: "issues",
       timestamps: true,
     }
   );
 
-  return IssueEntry;
+  return Issue;
 };
 
-export default IssueEntryModel;
+export default IssueModel;

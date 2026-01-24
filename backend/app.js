@@ -21,9 +21,9 @@ import wasteLotRoutes from './routes/wasteLotRoutes.js';
 import costMasterRoutes from './routes/costMasterRoutes.js';
 import purchaseOrderRoutes from './routes/purchaseOrderRoutes.js';
 import inwardEntryRoutes from './routes/inwardEntryRoutes.js';
-import inwardLotsRoutes from './routes/inwardLotRoutes.js'
-import inwardLotWeightmentRoutes from './routes/inwardLotWeightmentRoutes.js'
-
+import inwardLotsRoutes from './routes/inwardLotRoutes.js';
+import inwardLotWeightmentRoutes from './routes/inwardLotWeightmentRoutes.js';
+import issueEntryRoutes from './routes/issueEntryRoutes.js';
 const app = express();
 
 app.use(cors());
@@ -52,5 +52,5 @@ app.use("/api/purchase-orders", purchaseOrderRoutes);
 app.use("/api/inward-entries", inwardEntryRoutes);
 app.use("/api/inward-lots",inwardLotsRoutes);
 app.use("/api/weightments",inwardLotWeightmentRoutes)
-
+app.use("/api/issues",issueEntryRoutes)
 export default app;

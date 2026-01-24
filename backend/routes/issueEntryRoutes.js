@@ -1,23 +1,23 @@
-// routes/issueEntryRoutes.js
 import express from "express";
 import {
-  getNextIssueNumber,
   createIssue,
   getAllIssues,
-  getIssue,
+  getIssueById,
   updateIssue,
   deleteIssue,
+  getNextIssueNo,
+  getIssuesByLotNo
 } from "../controllers/issueEntryController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 router.use(protect);
-
-router.get("/next-issue-no", getNextIssueNumber);
+router.get("/next-issue-no", getNextIssueNo);
 router.post("/", createIssue);
 router.get("/", getAllIssues);
-router.get("/:id", getIssue);
+router.get("/:id", getIssueById);
 router.put("/:id", updateIssue);
 router.delete("/:id", deleteIssue);
+router.get("/by-lot/:lotNo", getIssuesByLotNo);
 
 export default router;
