@@ -1,109 +1,158 @@
 // services/inwardLotService.js
 import axios from "axios";
 
-// ✅ Backend base URL
-const API_URL = "http://localhost:5000/api/inward-lots"; // Update if your backend URL is different
+// ---------------- LOT API ----------------
+const LOT_API_URL = "http://localhost:5000/api/inward-lots";
 
-// ✅ Axios instance
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+// ---------------- WEIGHTMENT API ----------------
+const WEIGHTMENT_API_URL = "http://localhost:5000/api/weightments";
+
+// Axios instances
+const lotApi = axios.create({
+  baseURL: LOT_API_URL,
+  headers: { "Content-Type": "application/json" },
 });
 
-// 🔐 Attach JWT token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+const weightmentApi = axios.create({
+  baseURL: WEIGHTMENT_API_URL,
+  headers: { "Content-Type": "application/json" },
+});
+
+// Attach token
+const attachToken = (config) => {
+  const token = localStorage.getItem("token");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+};
+
+lotApi.interceptors.request.use(attachToken);
+weightmentApi.interceptors.request.use(attachToken);
 
 const inwardLotService = {
+  /* =============================
+     CREATE LOT + WEIGHTMENTS SAFELY
+     - Rollback if weightment creation fails
+  ============================= */
+  createLotWithWeightments: async (lotData, weightments = []) => {
+  const lotPayload = {
+    inwardId: lotData.inwardId,
+    lotNo: lotData.lotNo,
+    setNo: String(lotData.setNo) || null,
+    balesQty: Number(lotData.balesQty) || 0,
+    grossWeight: Number(lotData.grossWeight) || 0,
+    tareWeight: Number(lotData.tareWeight) || 0,
+    nettWeight: Number(lotData.nettWeight) || 0,
+    candyRate: Number(lotData.candyRate) || 0,
+    quintalRate: Number(lotData.quintalRate) || 0,
+    ratePerKg: Number(lotData.ratePerKg) || 0,
+    invoiceValue: Number(lotData.invoiceValue) || 0,
+    cessPaidAmount: 200,
+  };
+
+  let createdLot = null;
+
+  try {
+    // 1️⃣ Create Lot
+    const lotResponse = await lotApi.post("/", lotPayload);
+    createdLot = lotResponse.data.lot;
+
+    // 2️⃣ Create Weightments
+    if (weightments.length > 0) {
+      // Only send required fields
+      const payload = weightments.map(w => ({
+        grossWeight: w.grossWeight,
+        tareWeight: w.tareWeight,
+        baleValue: w.baleValue,
+      }));
+      const lotNo = encodeURIComponent(createdLot.lotNo);
+      await weightmentApi.post(
+        `/${lotNo}/weightments`,
+        payload
+      );
+    }
+
+    return createdLot;
+  } catch (error) {
+    // 🔥 Rollback lot if weightment creation fails
+    if (createdLot && createdLot.lotNo) {
+      try {
+        //await lotApi.delete(`/${createdLot.lotNo}`);
+        console.error(
+          `Weightment creation failed. Rolled back lot ${createdLot.lotNo}`
+        );
+      } catch (rollbackError) {
+        console.error(
+          `Failed to rollback lot ${createdLot.lotNo}:`,
+          rollbackError
+        );
+      }
+    }
+
+    throw error;
+  }
+},
+
+
   /* =============================
      GET NEXT LOT NO
   ============================= */
   getNextLotNo: async () => {
-    const response = await api.get("/next-lot-no");
-    console.log(response);
-    return response.data.lotNo;
+    const res = await lotApi.get("/next-lot-no");
+    return res.data.lotNo;
   },
-
-  /* =============================
-     GET ALL LOTS
-  ============================= */
-  getAll: async () => {
-    const response = await api.get("/");
-    console.log(response);
-    return response.data; // returns array of lots
+  getAllLotNumbers: async()=>{
+    const res = await lotApi.get("/");
+    return res.data;
   },
 
   /* =============================
      GET LOT BY LOT NO
   ============================= */
   getByLotNo: async (lotNo) => {
-    const response = await api.get(`/${lotNo}`);
-    return response.data;
+    const res = await lotApi.get(`/${lotNo}`);
+    return res.data;
   },
 
   /* =============================
-     CREATE LOT
+     GET WEIGHTMENTS BY LOT NO
   ============================= */
-  create: async (data) => {
-    console.log(data);
-    const payload = {
-      inwardId:  Number(data.selectedInwardId) || 0,
-      lotNo: data.lotNo,
-      setNo: String(data.setNo) || null,
-      balesQty: Number(data.balesQty) || 0,
-grossWeight: Number(data.grossWeight) || 0,
-tareWeight: Number(data.tareWeight) || 0,
-nettWeight: Number(data.nettWeight) || 0,
-candyRate: Number(data.candyRate) || 0,
-quintalRate: Number(data.quintalRate) || 0,
-ratePerKg: Number(data.ratePerKg) || 0,
-invoiceValue: Number(data.invoiceValue) || 0,
-cessPaidAmount: 200
-    };
-
-    const response = await api.post("/", payload);
-    return response.data.lot;
+  getWeightments: async (lotNo) => {
+    const lotNo1 = encodeURIComponent(lotNo);
+    const res = await weightmentApi.get(`/${lotNo1}/weightments`); 
+    console.log(res);
+    return res.data;
   },
 
   /* =============================
      UPDATE LOT
   ============================= */
-  update: async (lotNo, data) => {
-    const payload = {
-      inwardNo: data.inwardNo,
-      lotNo: data.lotNo,
-      setNo: data.setNo || null,
-      balesQty: data.balesQty,
-      cessPaidAmount: data.cessPaidAmount || 0,
-      grossWeight: data.grossWeight,
-      tareWeight: data.tareWeight,
-      nettWeight: data.nettWeight,
-      candyRate: data.candyRate,
-      quintalRate: data.quintalRate,
-      ratePerKg: data.ratePerKg,
-      invoiceValue: data.invoiceValue,
-    };
+  updateLot: async (lotNo, data) => {
+    const res = await lotApi.put(`/${lotNo}`, data);
+    return res.data.lot;
+  },
 
-    const response = await api.put(`/${lotNo}`, payload);
-    return response.data.lot;
+  /* =============================
+     UPDATE WEIGHTMENTS BY LOT NO
+  ============================= */
+  updateWeightments: async (lotNo, data) => {
+    const res = await weightmentApi.put(`/${lotNo}/weightments`, data);
+    return res.data.weightments;
   },
 
   /* =============================
      DELETE LOT
   ============================= */
-  delete: async (lotNo) => {
-    const response = await api.delete(`/${lotNo}`);
-    return response.data;
+  deleteLot: async (lotNo) => {
+    const res = await lotApi.delete(`/${lotNo}`);
+    return res.data;
+  },
+
+  /* =============================
+     DELETE WEIGHTMENTS BY LOT NO
+  ============================= */
+  deleteWeightments: async (lotNo) => {
+    const res = await weightmentApi.delete(`/${lotNo}/weightments`);
+    return res.data;
   },
 };
 

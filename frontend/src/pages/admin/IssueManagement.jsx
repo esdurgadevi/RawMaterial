@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import issueService from '../../services/issueService';
 import mixingGroupService from '../../services/mixingGroupService';
 import mixingService from '../../services/mixingService';
-import inwardEntryService from '../../services/inwardEntryService';
+import inwardLotService from '../../services/inwardLotService';
 import {
   Search,
   Plus,
@@ -43,6 +43,7 @@ const IssueEntryManagement = () => {
   const [mixingGroups, setMixingGroups] = useState([]);
   const [mixings, setMixings] = useState([]);
   const [availableBales, setAvailableBales] = useState([]);
+  const [availableLotNumbers, setAvailableLotNumbers] = useState([]);
   
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -50,6 +51,7 @@ const IssueEntryManagement = () => {
   const [mixingLoading, setMixingLoading] = useState(false);
   const [balesLoading, setBalesLoading] = useState(false);
   const [issueNoLoading, setIssueNoLoading] = useState(false);
+  const [lotNumbersLoading, setLotNumbersLoading] = useState(false);
   
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -63,13 +65,13 @@ const IssueEntryManagement = () => {
   
   // Form state
   const [formData, setFormData] = useState({
-    issueNo: '',
+    issueNumber: '',
     issueDate: new Date().toISOString().split('T')[0],
     mixingNo: '',
     mixingGroupId: '',
     mixingGroupName: '',
-    mixingId: '',
-    mixingName: '',
+    toMixingGroupId: '',
+    toMixingGroupName: '',
     lotNo: '',
     issueQty: '',
     
@@ -86,18 +88,26 @@ const IssueEntryManagement = () => {
   // Filter states
   const [showMixingGroupDropdown, setShowMixingGroupDropdown] = useState(false);
   const [showMixingDropdown, setShowMixingDropdown] = useState(false);
+  const [showLotDropdown, setShowLotDropdown] = useState(false);
   const [mixingGroupSearch, setMixingGroupSearch] = useState('');
   const [mixingSearch, setMixingSearch] = useState('');
+  const [lotSearch, setLotSearch] = useState('');
+  
+  // Cache for mixing group and mixing names
+  const [mixingGroupNames, setMixingGroupNames] = useState({});
+  const [mixingNames, setMixingNames] = useState({});
   
   // Refs
   const mixingGroupRef = useRef(null);
   const mixingRef = useRef(null);
+  const lotRef = useRef(null);
 
   // Load all data on component mount
   useEffect(() => {
     fetchIssues();
     fetchMixingGroups();
     fetchMixings();
+    fetchAvailableLotNumbers();
   }, []);
 
   // Close dropdowns when clicking outside
@@ -109,13 +119,46 @@ const IssueEntryManagement = () => {
       if (mixingRef.current && !mixingRef.current.contains(event.target)) {
         setShowMixingDropdown(false);
       }
+      if (lotRef.current && !lotRef.current.contains(event.target)) {
+        setShowLotDropdown(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch functions
+  // Fetch mixing group name by ID
+  const fetchMixingGroupName = async (id) => {
+    if (!id || mixingGroupNames[id]) return mixingGroupNames[id];
+    
+    try {
+      const response = await mixingGroupService.getById(id);
+      const name = response.mixingName || `Group ${id}`;
+      setMixingGroupNames(prev => ({ ...prev, [id]: name }));
+      return name;
+    } catch (err) {
+      console.error(`Failed to fetch mixing group ${id}:`, err);
+      return `Group ${id}`;
+    }
+  };
+
+  // Fetch mixing name by ID
+  const fetchMixingName = async (id) => {
+    if (!id || mixingNames[id]) return mixingNames[id];
+    
+    try {
+      const response = await mixingService.getById(id);
+      const name = response.mixingName || response.mixingNo || `Mixing ${id}`;
+      setMixingNames(prev => ({ ...prev, [id]: name }));
+      return name;
+    } catch (err) {
+      console.error(`Failed to fetch mixing ${id}:`, err);
+      return `Mixing ${id}`;
+    }
+  };
+
+  // Enhanced fetch issues with name resolution
   const fetchIssues = async () => {
     setLoading(true);
     setError('');
@@ -124,7 +167,45 @@ const IssueEntryManagement = () => {
     try {
       const response = await issueService.getAll();
       const issuesData = Array.isArray(response) ? response : [];
-      setIssues(issuesData);
+      
+      // Process each issue to fetch names
+      const processedIssues = await Promise.all(issuesData.map(async (issue) => {
+        // Fetch names asynchronously
+        const [mixingGroupName, mixingName] = await Promise.all([
+          fetchMixingGroupName(issue.mixingGroupId),
+          fetchMixingName(issue.toMixingGroupId)
+        ]);
+        
+        return {
+          id: issue.id,
+          issueNo: issue.issueNumber, // Map issueNumber to issueNo for display
+          issueNumber: issue.issueNumber,
+          issueDate: issue.issueDate,
+          mixingNo: issue.mixingNo,
+          mixingGroupId: issue.mixingGroupId,
+          mixingGroupName: mixingGroupName,
+          toMixingGroupId: issue.toMixingGroupId,
+          mixingName: mixingName,
+          issueQty: issue.issueQty,
+          // Map IssueItems to issuedBales
+          issuedBales: issue.IssueItems ? issue.IssueItems.map(item => ({
+            id: item.weightmentId,
+            baleNo: item.InwardLotWeightment?.baleNo,
+            baleWeight: parseFloat(item.issueWeight) || parseFloat(item.InwardLotWeightment?.baleWeight),
+            grossWeight: parseFloat(item.InwardLotWeightment?.grossWeight),
+            baleValue: parseFloat(item.InwardLotWeightment?.baleValue),
+            lotNo: item.InwardLotWeightment?.lotNo
+          })) : [],
+          // Get lotNo from first bale if available
+          lotNo: issue.IssueItems && issue.IssueItems.length > 0 
+            ? issue.IssueItems[0]?.InwardLotWeightment?.lotNo 
+            : '',
+          createdAt: issue.createdAt,
+          updatedAt: issue.updatedAt
+        };
+      }));
+      
+      setIssues(processedIssues);
       setLoading(false);
     } catch (err) {
       setError(err.message || 'Failed to load issues');
@@ -139,6 +220,15 @@ const IssueEntryManagement = () => {
       const response = await mixingGroupService.getAll();
       const groupsData = Array.isArray(response) ? response : [];
       setMixingGroups(groupsData);
+      
+      // Update names cache
+      const names = {};
+      groupsData.forEach(group => {
+        if (group.id) {
+          names[group.id] = group.mixingName || `Group ${group.id}`;
+        }
+      });
+      setMixingGroupNames(names);
     } catch (err) {
       console.error('Failed to load mixing groups:', err);
     } finally {
@@ -152,10 +242,34 @@ const IssueEntryManagement = () => {
       const response = await mixingService.getAll();
       const mixingsData = Array.isArray(response) ? response : [];
       setMixings(mixingsData);
+      
+      // Update names cache
+      const names = {};
+      mixingsData.forEach(mixing => {
+        if (mixing.id) {
+          names[mixing.id] = mixing.mixingName || mixing.mixingNo || `Mixing ${mixing.id}`;
+        }
+      });
+      setMixingNames(names);
     } catch (err) {
       console.error('Failed to load mixings:', err);
     } finally {
       setMixingLoading(false);
+    }
+  };
+
+  const fetchAvailableLotNumbers = async () => {
+    setLotNumbersLoading(true);
+    try {
+      // Assuming inwardLotService has a method to get all lot numbers
+      const response = await inwardLotService.getAllLotNumbers();
+      const lotNumbersData = Array.isArray(response) ? response : [];
+      setAvailableLotNumbers(lotNumbersData);
+    } catch (err) {
+      console.error('Failed to load lot numbers:', err);
+      setAvailableLotNumbers([]);
+    } finally {
+      setLotNumbersLoading(false);
     }
   };
 
@@ -164,7 +278,8 @@ const IssueEntryManagement = () => {
     
     setBalesLoading(true);
     try {
-      const response = await issueService.getLotWeightments(lotNo);
+      const response = await inwardLotService.getWeightments(lotNo);
+      console.log(response);
       const balesData = Array.isArray(response) ? response : [];
       setAvailableBales(balesData);
       
@@ -189,7 +304,7 @@ const IssueEntryManagement = () => {
       
       setFormData(prev => ({
         ...prev,
-        issueNo: response || ''
+        issueNumber: response || ''
       }));
       
     } catch (err) {
@@ -200,7 +315,7 @@ const IssueEntryManagement = () => {
       
       setFormData(prev => ({
         ...prev,
-        issueNo: defaultIssueNo
+        issueNumber: defaultIssueNo
       }));
       
       setError('Could not fetch next issue number. Using default pattern.');
@@ -225,8 +340,18 @@ const IssueEntryManagement = () => {
     if (!mixingSearch.trim()) return mixings;
     const searchLower = mixingSearch.toLowerCase();
     return (
+      (mixing.mixingName && mixing.mixingName.toLowerCase().includes(searchLower)) ||
       (mixing.mixingNo && mixing.mixingNo.toLowerCase().includes(searchLower)) ||
       (mixing.code && mixing.code.toString().includes(searchLower))
+    );
+  });
+
+  // Filter lot numbers based on search
+  const filteredLotNumbers = availableLotNumbers.filter(lot => {
+    if (!lotSearch.trim()) return availableLotNumbers;
+    const searchLower = lotSearch.toLowerCase();
+    return (
+      (lot.lotNo && lot.lotNo.toLowerCase().includes(searchLower))
     );
   });
 
@@ -238,13 +363,17 @@ const IssueEntryManagement = () => {
       if (!issue || typeof issue !== 'object') return false;
       
       const issueNo = issue.issueNo || '';
+      const issueNumber = issue.issueNumber || '';
       const mixingGroupName = issue.mixingGroupName || '';
+      const mixingName = issue.mixingName || '';
       const mixingNo = issue.mixingNo || '';
       const lotNo = issue.lotNo || '';
       
       return searchTerm === '' || 
         issueNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        issueNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         mixingGroupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        mixingName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         mixingNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lotNo.toLowerCase().includes(searchTerm.toLowerCase());
     });
@@ -253,8 +382,8 @@ const IssueEntryManagement = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
-    // Prevent issueNo changes when creating new issue (editingIssue is null)
-    if (name === 'issueNo' && !editingIssue) {
+    // Prevent issueNumber changes when creating new issue (editingIssue is null)
+    if (name === 'issueNumber' && !editingIssue) {
       return;
     }
     
@@ -266,15 +395,18 @@ const IssueEntryManagement = () => {
     }));
   };
 
-  // Handle lot number change - fetch available bales
-  const handleLotNoChange = async (e) => {
-    const lotNo = e.target.value;
+  // Handle lot number selection
+  const handleLotSelect = async (lot) => {
+    const lotNo = lot.lotNo || lot;
     setFormData(prev => ({
       ...prev,
       lotNo,
       selectedBales: [] // Clear selected bales when lot changes
     }));
+    setLotSearch(lotNo);
+    setShowLotDropdown(false);
     
+    // Fetch available bales for the selected lot
     if (lotNo) {
       await fetchAvailableBales(lotNo);
     }
@@ -283,12 +415,12 @@ const IssueEntryManagement = () => {
   // Handle bale selection
   const handleBaleSelect = (bale) => {
     setFormData(prev => {
-      const isSelected = prev.selectedBales.some(selected => selected.baleNo === bale.baleNo);
+      const isSelected = prev.selectedBales.some(selected => selected.id === bale.id);
       
       if (isSelected) {
         // Remove bale from selection
         const updatedSelectedBales = prev.selectedBales.filter(
-          selected => selected.baleNo !== bale.baleNo
+          selected => selected.id !== bale.id
         );
         
         return {
@@ -296,16 +428,18 @@ const IssueEntryManagement = () => {
           selectedBales: updatedSelectedBales,
           issueQty: updatedSelectedBales.length.toString(),
           totalBales: updatedSelectedBales.length,
-          totalWeight: updatedSelectedBales.reduce((sum, b) => sum + (b.baleWeight || 0), 0),
-          totalValue: updatedSelectedBales.reduce((sum, b) => sum + (b.baleValue || 0), 0)
+          totalWeight: updatedSelectedBales.reduce((sum, b) => sum + (parseFloat(b.baleWeight) || 0), 0),
+          totalValue: updatedSelectedBales.reduce((sum, b) => sum + (parseFloat(b.baleValue) || 0), 0)
         };
       } else {
         // Add bale to selection
         const updatedSelectedBales = [...prev.selectedBales, {
+          id: bale.id,
           baleNo: bale.baleNo,
-          baleWeight: bale.baleWeight || 0,
-          baleValue: bale.baleValue || 0,
-          grossWeight: bale.grossWeight || 0
+          baleWeight: parseFloat(bale.baleWeight) || 0,
+          baleValue: parseFloat(bale.baleValue) || 0,
+          grossWeight: parseFloat(bale.grossWeight) || 0,
+          lotNo: bale.lotNo
         }];
         
         return {
@@ -313,8 +447,8 @@ const IssueEntryManagement = () => {
           selectedBales: updatedSelectedBales,
           issueQty: updatedSelectedBales.length.toString(),
           totalBales: updatedSelectedBales.length,
-          totalWeight: updatedSelectedBales.reduce((sum, b) => sum + (b.baleWeight || 0), 0),
-          totalValue: updatedSelectedBales.reduce((sum, b) => sum + (b.baleValue || 0), 0)
+          totalWeight: updatedSelectedBales.reduce((sum, b) => sum + (parseFloat(b.baleWeight) || 0), 0),
+          totalValue: updatedSelectedBales.reduce((sum, b) => sum + (parseFloat(b.baleValue) || 0), 0)
         };
       }
     });
@@ -325,21 +459,21 @@ const IssueEntryManagement = () => {
     setFormData(prev => ({
       ...prev,
       mixingGroupId: group.id,
-      mixingGroupName: group.mixingName
+      mixingGroupName: group.mixingName || `Group ${group.id}`
     }));
-    setMixingGroupSearch(group.mixingName);
+    setMixingGroupSearch(group.mixingName || `Group ${group.id}`);
     setShowMixingGroupDropdown(false);
   };
 
-  // Handle mixing selection
+  // Handle mixing selection (which is actually toMixingGroupId)
   const handleMixingSelect = (mixing) => {
     setFormData(prev => ({
       ...prev,
-      mixingId: mixing.id,
-      mixingName: mixing.mixingNo || mixing.mixingName,
+      toMixingGroupId: mixing.id,
+      toMixingGroupName: mixing.mixingName || mixing.mixingNo || `Mixing ${mixing.id}`,
       mixingNo: mixing.mixingNo || ''
     }));
-    setMixingSearch(mixing.mixingNo || mixing.mixingName);
+    setMixingSearch(mixing.mixingName || mixing.mixingNo || `Mixing ${mixing.id}`);
     setShowMixingDropdown(false);
   };
 
@@ -357,12 +491,27 @@ const IssueEntryManagement = () => {
   const clearMixingSelection = () => {
     setFormData(prev => ({
       ...prev,
-      mixingId: '',
-      mixingName: '',
+      toMixingGroupId: '',
+      toMixingGroupName: '',
       mixingNo: ''
     }));
     setMixingSearch('');
     setShowMixingDropdown(false);
+  };
+
+  const clearLotSelection = () => {
+    setFormData(prev => ({
+      ...prev,
+      lotNo: '',
+      selectedBales: [],
+      availableBales: [],
+      totalBales: 0,
+      totalWeight: 0,
+      totalValue: 0
+    }));
+    setLotSearch('');
+    setShowLotDropdown(false);
+    setAvailableBales([]);
   };
 
   // Handle form submission
@@ -382,13 +531,13 @@ const IssueEntryManagement = () => {
       return;
     }
 
-    if (!formData.mixingId) {
+    if (!formData.toMixingGroupId) {
       setError('Please select a mixing');
       return;
     }
 
     if (!formData.lotNo) {
-      setError('Please enter a lot number');
+      setError('Please select a lot number');
       return;
     }
 
@@ -400,17 +549,18 @@ const IssueEntryManagement = () => {
     try {
       // Prepare payload according to service structure
       const payload = {
-        issueNo: formData.issueNo.trim(),
+        issueNumber: formData.issueNumber.trim(),
         issueDate: formData.issueDate,
+        mixingNo: parseInt(formData.mixingNo, 10) || null,
         mixingGroupId: parseInt(formData.mixingGroupId, 10),
-        mixingId: parseInt(formData.mixingId, 10),
-        lotNo: formData.lotNo,
-        issuedBales: formData.selectedBales.map(bale => ({
-          baleNo: bale.baleNo,
-          baleWeight: parseFloat(bale.baleWeight),
-          baleValue: bale.baleValue ? parseFloat(bale.baleValue) : null
+        toMixingGroupId: parseInt(formData.toMixingGroupId, 10),
+        items: formData.selectedBales.map(bale => ({
+          weightmentId: bale.id,
+          issueWeight: parseFloat(bale.baleWeight)
         }))
       };
+      
+      console.log('Submitting payload:', payload);
       
       if (editingIssue) {
         // Update existing issue
@@ -453,32 +603,33 @@ const IssueEntryManagement = () => {
     
     setEditingIssue(issue);
     
-    // Set basic form data
+    // Set basic form data from issue
     const basicFormData = {
-      issueNo: issue.issueNo || '',
+      issueNumber: issue.issueNumber || issue.issueNo || '',
       issueDate: issue.issueDate || new Date().toISOString().split('T')[0],
       mixingNo: issue.mixingNo || '',
       mixingGroupId: issue.mixingGroupId || '',
       mixingGroupName: issue.mixingGroupName || '',
-      mixingId: issue.mixingId || '',
-      mixingName: issue.mixingName || issue.mixingNo || '',
+      toMixingGroupId: issue.toMixingGroupId || '',
+      toMixingGroupName: issue.mixingName || '',
       lotNo: issue.lotNo || '',
-      issueQty: issue.issuedBales ? issue.issuedBales.length.toString() : '0',
+      issueQty: issue.issueQty || (issue.issuedBales ? issue.issuedBales.length.toString() : '0'),
       selectedBales: issue.issuedBales || [],
       availableBales: [],
       totalBales: issue.issuedBales ? issue.issuedBales.length : 0,
       totalWeight: issue.issuedBales ? 
-        issue.issuedBales.reduce((sum, b) => sum + (b.baleWeight || 0), 0) : 0,
+        issue.issuedBales.reduce((sum, b) => sum + (parseFloat(b.baleWeight) || 0), 0) : 0,
       totalValue: issue.issuedBales ? 
-        issue.issuedBales.reduce((sum, b) => sum + (b.baleValue || 0), 0) : 0
+        issue.issuedBales.reduce((sum, b) => sum + (parseFloat(b.baleValue) || 0), 0) : 0
     };
     
     setFormData(basicFormData);
     setMixingGroupSearch(issue.mixingGroupName || '');
-    setMixingSearch(issue.mixingName || issue.mixingNo || '');
+    setMixingSearch(issue.mixingName || '');
+    setLotSearch(issue.lotNo || '');
     
     // Fetch available bales for this lot
-    if (issue.lotNo) {
+    if (issue.lotNo && issue.issuedBales && issue.issuedBales.length > 0) {
       await fetchAvailableBales(issue.lotNo);
     }
     
@@ -517,13 +668,13 @@ const IssueEntryManagement = () => {
 
   const resetForm = () => {
     setFormData({
-      issueNo: '',
+      issueNumber: '',
       issueDate: new Date().toISOString().split('T')[0],
       mixingNo: '',
       mixingGroupId: '',
       mixingGroupName: '',
-      mixingId: '',
-      mixingName: '',
+      toMixingGroupId: '',
+      toMixingGroupName: '',
       lotNo: '',
       issueQty: '',
       selectedBales: [],
@@ -535,9 +686,11 @@ const IssueEntryManagement = () => {
     
     setMixingGroupSearch('');
     setMixingSearch('');
+    setLotSearch('');
     setAvailableBales([]);
     setShowMixingGroupDropdown(false);
     setShowMixingDropdown(false);
+    setShowLotDropdown(false);
     setEditingIssue(null);
     setViewingIssue(null);
   };
@@ -551,15 +704,15 @@ const IssueEntryManagement = () => {
   const exportIssues = async () => {
     try {
       const csvContent = "data:text/csv;charset=utf-8," +
-        "Issue No,Issue Date,Mixing Group,Mixing No,Lot No,Bales Issued,Total Weight,Total Value,Created Date\n" +
+        "Issue No,Issue Date,Mixing Group,To Mixing,Mixing No,Lot No,Bales Issued,Total Weight,Total Value,Created Date\n" +
         filteredIssues.map(issue => {
           const balesCount = issue.issuedBales ? issue.issuedBales.length : 0;
           const totalWeight = issue.issuedBales ? 
-            issue.issuedBales.reduce((sum, b) => sum + (b.baleWeight || 0), 0) : 0;
+            issue.issuedBales.reduce((sum, b) => sum + (parseFloat(b.baleWeight) || 0), 0) : 0;
           const totalValue = issue.issuedBales ? 
-            issue.issuedBales.reduce((sum, b) => sum + (b.baleValue || 0), 0) : 0;
+            issue.issuedBales.reduce((sum, b) => sum + (parseFloat(b.baleValue) || 0), 0) : 0;
           
-          return `"${issue.issueNo}","${issue.issueDate}","${issue.mixingGroupName || ''}","${issue.mixingNo || ''}","${issue.lotNo || ''}","${balesCount}","${totalWeight}","${totalValue}","${issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : 'N/A'}"`;
+          return `"${issue.issueNumber || issue.issueNo}","${issue.issueDate}","${issue.mixingGroupName || ''}","${issue.mixingName || ''}","${issue.mixingNo || ''}","${issue.lotNo || ''}","${balesCount}","${totalWeight.toFixed(2)}","${totalValue.toFixed(2)}","${issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : 'N/A'}"`;
         }).join("\n");
       
       const encodedUri = encodeURI(csvContent);
@@ -592,7 +745,7 @@ const IssueEntryManagement = () => {
   };
 
   const formatNumber = (num) => {
-    if (!num && num !== 0) return 'N/A';
+    if (num === null || num === undefined) return '0.00';
     return parseFloat(num).toFixed(2);
   };
 
@@ -675,6 +828,7 @@ const IssueEntryManagement = () => {
                 fetchIssues();
                 fetchMixingGroups();
                 fetchMixings();
+                fetchAvailableLotNumbers();
               }}
               disabled={loading}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center disabled:opacity-50"
@@ -750,7 +904,7 @@ const IssueEntryManagement = () => {
                 {filteredIssues.map((issue) => {
                   const balesCount = issue.issuedBales ? issue.issuedBales.length : 0;
                   const totalWeight = issue.issuedBales ? 
-                    issue.issuedBales.reduce((sum, b) => sum + (b.baleWeight || 0), 0) : 0;
+                    issue.issuedBales.reduce((sum, b) => sum + (parseFloat(b.baleWeight) || 0), 0) : 0;
                   
                   return (
                     <tr key={issue.id} className="hover:bg-gray-50">
@@ -761,7 +915,7 @@ const IssueEntryManagement = () => {
                           </div>
                           <div>
                             <div className="font-mono font-semibold text-gray-900">
-                              {issue.issueNo}
+                              {issue.issueNumber || issue.issueNo}
                             </div>
                             <div className="text-xs text-gray-500">
                               {formatDate(issue.issueDate)}
@@ -779,15 +933,23 @@ const IssueEntryManagement = () => {
                           <div className="flex items-center">
                             <Layers className="w-4 h-4 text-gray-400 mr-2" />
                             <div className="text-sm font-medium text-gray-900">
-                              {issue.mixingGroupName || 'N/A'}
+                              {issue.mixingGroupName || `Group ${issue.mixingGroupId}`}
                             </div>
                           </div>
                           <div className="flex items-center">
-                            <Tag className="w-4 h-4 text-gray-400 mr-2" />
+                            <ArrowRight className="w-4 h-4 text-gray-400 mr-2" />
                             <div className="text-sm text-gray-600">
-                              Mixing No: {issue.mixingNo || 'N/A'}
+                              To: {issue.mixingName || `Mixing ${issue.toMixingGroupId}`}
                             </div>
                           </div>
+                          {issue.mixingNo && (
+                            <div className="flex items-center">
+                              <Tag className="w-4 h-4 text-gray-400 mr-2" />
+                              <div className="text-sm text-gray-500">
+                                Mixing No: {issue.mixingNo}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -804,6 +966,11 @@ const IssueEntryManagement = () => {
                               Total Weight: {formatNumber(totalWeight)} kg
                             </div>
                           </div>
+                          {issue.issueQty && (
+                            <div className="text-xs text-gray-500">
+                              Qty: {issue.issueQty} bales
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -828,7 +995,7 @@ const IssueEntryManagement = () => {
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDelete(issue.id, issue.issueNo)}
+                            onClick={() => handleDelete(issue.id, issue.issueNumber || issue.issueNo)}
                             className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center"
                           >
                             <Trash2 className="w-3 h-3 mr-1" />
@@ -890,8 +1057,8 @@ const IssueEntryManagement = () => {
                             ) : (
                               <input
                                 type="text"
-                                name="issueNo"
-                                value={formData.issueNo}
+                                name="issueNumber"
+                                value={formData.issueNumber}
                                 onChange={handleInputChange}
                                 required
                                 readOnly={!editingIssue}
@@ -900,9 +1067,9 @@ const IssueEntryManagement = () => {
                               />
                             )}
                           </div>
-                          {!editingIssue && formData.issueNo && (
+                          {!editingIssue && formData.issueNumber && (
                             <p className="mt-1 text-xs text-green-600">
-                              ✓ Issue number will be auto-generated: {formData.issueNo}
+                              ✓ Issue number will be auto-generated: {formData.issueNumber}
                             </p>
                           )}
                         </div>
@@ -941,20 +1108,78 @@ const IssueEntryManagement = () => {
                           />
                         </div>
 
-                        {/* Lot Number */}
+                        {/* Lot Number Dropdown */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Lot Number *
                           </label>
-                          <input
-                            type="text"
-                            name="lotNo"
-                            value={formData.lotNo}
-                            onChange={handleLotNoChange}
-                            required
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Enter lot number (e.g., UC/24-25/0429)"
-                          />
+                          <div className="relative" ref={lotRef}>
+                            <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+                            <input
+                              type="text"
+                              value={lotSearch}
+                              onChange={(e) => {
+                                setLotSearch(e.target.value);
+                                setShowLotDropdown(true);
+                              }}
+                              onFocus={() => setShowLotDropdown(true)}
+                              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Select or search lot number..."
+                              required
+                            />
+                            {formData.lotNo && (
+                              <button
+                                type="button"
+                                onClick={clearLotSelection}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                            
+                            {/* Lot Number Dropdown */}
+                            {showLotDropdown && (
+                              <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                {lotNumbersLoading ? (
+                                  <div className="p-3 text-center text-gray-500">
+                                    <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2" />
+                                    Loading lot numbers...
+                                  </div>
+                                ) : filteredLotNumbers.length === 0 ? (
+                                  <div className="p-3 text-center text-gray-500">
+                                    {lotSearch ? 'No lot numbers found' : 'No lot numbers available'}
+                                  </div>
+                                ) : (
+                                  filteredLotNumbers.map((lot) => (
+                                    <div
+                                      key={lot.lotNo || lot}
+                                      onClick={() => handleLotSelect(lot)}
+                                      className={`p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
+                                        formData.lotNo === (lot.lotNo || lot) ? 'bg-blue-50' : ''
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <div className="font-medium text-gray-900">{lot.lotNo || lot}</div>
+                                          {lot.balesQty && (
+                                            <div className="text-xs text-gray-500">
+                                              {lot.balesQty} bales available
+                                            </div>
+                                          )}
+                                        </div>
+                                        {formData.lotNo === (lot.lotNo || lot) && (
+                                          <Check className="w-4 h-4 text-blue-600" />
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {!formData.lotNo && lotSearch && (
+                            <p className="mt-1 text-xs text-red-500">Please select a lot number from the list</p>
+                          )}
                         </div>
 
                         {/* Issue Quantity (Read-only) */}
@@ -984,7 +1209,7 @@ const IssueEntryManagement = () => {
                         {/* Mixing Group Selection */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Mixing Group *
+                            From Mixing Group *
                           </label>
                           <div className="relative" ref={mixingGroupRef}>
                             <Layers className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
@@ -1033,9 +1258,9 @@ const IssueEntryManagement = () => {
                                     >
                                       <div className="flex items-center justify-between">
                                         <div>
-                                          <div className="font-medium text-gray-900">{group.mixingName}</div>
+                                          <div className="font-medium text-gray-900">{group.mixingName || `Group ${group.id}`}</div>
                                           <div className="text-xs text-gray-500">
-                                            Code: #{group.code} | Mixing Code: #{group.mixingCode}
+                                            Code: #{group.code || group.mixingCode || group.id}
                                           </div>
                                         </div>
                                         {formData.mixingGroupId === group.id && (
@@ -1053,10 +1278,10 @@ const IssueEntryManagement = () => {
                           )}
                         </div>
 
-                        {/* Mixing Selection */}
+                        {/* To Mixing Selection */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            To Mixing *
+                            To Mixing Group *
                           </label>
                           <div className="relative" ref={mixingRef}>
                             <ArrowRight className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
@@ -1072,7 +1297,7 @@ const IssueEntryManagement = () => {
                               placeholder="Search mixings..."
                               required
                             />
-                            {formData.mixingId && (
+                            {formData.toMixingGroupId && (
                               <button
                                 type="button"
                                 onClick={clearMixingSelection}
@@ -1100,17 +1325,22 @@ const IssueEntryManagement = () => {
                                       key={mixing.id}
                                       onClick={() => handleMixingSelect(mixing)}
                                       className={`p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
-                                        formData.mixingId === mixing.id ? 'bg-blue-50' : ''
+                                        formData.toMixingGroupId === mixing.id ? 'bg-blue-50' : ''
                                       }`}
                                     >
                                       <div className="flex items-center justify-between">
                                         <div>
-                                          <div className="font-medium text-gray-900">{mixing.mixingNo || mixing.mixingName}</div>
+                                          <div className="font-medium text-gray-900">{mixing.mixingName || mixing.mixingNo || `Mixing ${mixing.id}`}</div>
                                           <div className="text-xs text-gray-500">
-                                            Code: #{mixing.code}
+                                            Code: #{mixing.code || mixing.id}
                                           </div>
+                                          {mixing.mixingNo && (
+                                            <div className="text-xs text-gray-500">
+                                              Mixing No: {mixing.mixingNo}
+                                            </div>
+                                          )}
                                         </div>
-                                        {formData.mixingId === mixing.id && (
+                                        {formData.toMixingGroupId === mixing.id && (
                                           <Check className="w-4 h-4 text-blue-600" />
                                         )}
                                       </div>
@@ -1120,7 +1350,7 @@ const IssueEntryManagement = () => {
                               </div>
                             )}
                           </div>
-                          {!formData.mixingId && mixingSearch && (
+                          {!formData.toMixingGroupId && mixingSearch && (
                             <p className="mt-1 text-xs text-red-500">Please select a mixing from the list</p>
                           )}
                         </div>
@@ -1163,8 +1393,10 @@ const IssueEntryManagement = () => {
                               <RefreshCw className="w-3 h-3 animate-spin mr-1" />
                               Loading...
                             </span>
+                          ) : formData.lotNo ? (
+                            `${availableBales.length} bales available for ${formData.lotNo}`
                           ) : (
-                            `${availableBales.length} bales available`
+                            'Select a lot number to view bales'
                           )}
                         </div>
                       </div>
@@ -1200,7 +1432,7 @@ const IssueEntryManagement = () => {
                               <tbody className="bg-white divide-y divide-gray-200">
                                 {availableBales.map((bale, index) => {
                                   const isSelected = formData.selectedBales.some(
-                                    selected => selected.baleNo === bale.baleNo
+                                    selected => selected.id === bale.id
                                   );
                                   
                                   return (
@@ -1248,7 +1480,7 @@ const IssueEntryManagement = () => {
                       ) : (
                         <div className="text-center py-8">
                           <ClipboardCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-gray-600">Enter a lot number to view available bales</p>
+                          <p className="text-gray-600">Select a lot number to view available bales</p>
                         </div>
                       )}
                     </div>
@@ -1329,8 +1561,8 @@ const IssueEntryManagement = () => {
                   <button
                     type="submit"
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50"
-                    disabled={!formData.issueNo || !formData.issueDate || !formData.mixingGroupId || 
-                             !formData.mixingId || !formData.lotNo || formData.selectedBales.length === 0}
+                    disabled={!formData.issueNumber || !formData.issueDate || !formData.mixingGroupId || 
+                             !formData.toMixingGroupId || !formData.lotNo || formData.selectedBales.length === 0}
                   >
                     {editingIssue ? 'Update Issue' : 'Create Issue'}
                   </button>
@@ -1364,7 +1596,7 @@ const IssueEntryManagement = () => {
                   <div>
                     <div className="flex items-center">
                       <Hash className="w-5 h-5 text-gray-400 mr-2" />
-                      <h4 className="text-2xl font-bold text-gray-900">{viewingIssue.issueNo}</h4>
+                      <h4 className="text-2xl font-bold text-gray-900">{viewingIssue.issueNumber || viewingIssue.issueNo}</h4>
                     </div>
                     <div className="flex items-center mt-2 space-x-4">
                       <div className="flex items-center">
@@ -1379,7 +1611,7 @@ const IssueEntryManagement = () => {
                   </div>
                   <div className="flex space-x-2">
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                      {viewingIssue.issuedBales ? viewingIssue.issuedBales.length : 0} Bales
+                      {viewingIssue.issueQty || (viewingIssue.issuedBales ? viewingIssue.issuedBales.length : 0)} Bales
                     </span>
                   </div>
                 </div>
@@ -1392,15 +1624,21 @@ const IssueEntryManagement = () => {
                       <h5 className="text-lg font-semibold text-gray-800 mb-3">Mixing Information</h5>
                       <div className="space-y-3">
                         <div>
-                          <div className="text-sm text-gray-500">Mixing Group</div>
+                          <div className="text-sm text-gray-500">From Mixing Group</div>
                           <div className="font-medium text-gray-900">
-                            {viewingIssue.mixingGroupName || 'N/A'}
+                            {viewingIssue.mixingGroupName || `Group ${viewingIssue.mixingGroupId}`}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            ID: {viewingIssue.mixingGroupId}
                           </div>
                         </div>
                         <div>
-                          <div className="text-sm text-gray-500">To Mixing</div>
+                          <div className="text-sm text-gray-500">To Mixing Group</div>
                           <div className="font-medium text-gray-900">
-                            {viewingIssue.mixingName || viewingIssue.mixingNo || 'N/A'}
+                            {viewingIssue.mixingName || `Mixing ${viewingIssue.toMixingGroupId}`}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            ID: {viewingIssue.toMixingGroupId}
                           </div>
                         </div>
                         <div>
@@ -1419,21 +1657,21 @@ const IssueEntryManagement = () => {
                         <div>
                           <div className="text-sm text-gray-500">Total Bales Issued</div>
                           <div className="font-bold text-gray-900 text-xl">
-                            {viewingIssue.issuedBales ? viewingIssue.issuedBales.length : 0}
+                            {viewingIssue.issueQty || (viewingIssue.issuedBales ? viewingIssue.issuedBales.length : 0)}
                           </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">Total Weight</div>
                           <div className="font-bold text-green-700 text-xl">
                             {viewingIssue.issuedBales ? 
-                              viewingIssue.issuedBales.reduce((sum, b) => sum + (b.baleWeight || 0), 0).toFixed(2) : '0.00'} kg
+                              viewingIssue.issuedBales.reduce((sum, b) => sum + (parseFloat(b.baleWeight) || 0), 0).toFixed(2) : '0.00'} kg
                           </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">Total Value</div>
                           <div className="font-bold text-purple-700 text-xl">
                             ₹{viewingIssue.issuedBales ? 
-                              viewingIssue.issuedBales.reduce((sum, b) => sum + (b.baleValue || 0), 0).toFixed(2) : '0.00'}
+                              viewingIssue.issuedBales.reduce((sum, b) => sum + (parseFloat(b.baleValue) || 0), 0).toFixed(2) : '0.00'}
                           </div>
                         </div>
                       </div>

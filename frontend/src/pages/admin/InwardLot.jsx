@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import inwardEntryService from '../../services/inwardEntryService';
 import inwardLotService from '../../services/inwardLotService';
-import weightmentService from '../../services/inwardLotWeightmentService';
 
 const InwardLot = () => {
   const [step, setStep] = useState(1);
@@ -185,7 +184,6 @@ const InwardLot = () => {
     const rows = [];
     for (let i = 1; i <= balesQty; i++) {
       rows.push({
-        id: i,
         baleNo: i,
         grossWeight: grossPerBale,
         tareWeight: tarePerBale,
@@ -312,25 +310,18 @@ const InwardLot = () => {
         remarks: formData.remarks || null
       };
       
-      const createdLot = await inwardLotService.create(lotData);
-      console.log('Created lot:', createdLot);
+      // Prepare weightments data - remove id field since it's not needed
+      const weightmentsData = weightmentRows.map(row => ({
+        baleNo: row.baleNo,
+        grossWeight: Number(row.grossWeight),
+        tareWeight: Number(row.tareWeight),
+        baleWeight: Number(row.baleWeight),
+        baleValue: Number(row.baleValue)
+      }));
       
-      // Create weightment entries
-      if (weightmentRows.length > 0) {
-        const weightmentPromises = weightmentRows.map(row => 
-          weightmentService.create({
-            inwardLotId: createdLot.id || createdLot._id,
-            lotNo: formData.lotNo,
-            baleNo: row.baleNo,
-            grossWeight: Number(row.grossWeight),
-            tareWeight: Number(row.tareWeight),
-            baleWeight: Number(row.baleWeight),
-            baleValue: Number(row.baleValue)
-          })
-        );
-        
-        await Promise.all(weightmentPromises);
-      }
+      // Create lot with weightments in a single transaction
+      const createdLot = await inwardLotService.createLotWithWeightments(lotData, weightmentsData);
+      console.log('Created lot with weightments:', createdLot);
       
       alert('Inward Lot created successfully!');
       
@@ -722,7 +713,7 @@ const InwardLot = () => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {weightmentRows.map((row, index) => (
-              <tr key={row.id} className="hover:bg-gray-50">
+              <tr key={index} className="hover:bg-gray-50">
                 <td className="px-4 py-3 whitespace-nowrap border-r">
                   <div className="text-center font-medium">{row.baleNo}</div>
                 </td>

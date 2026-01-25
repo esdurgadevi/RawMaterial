@@ -1,3 +1,4 @@
+// services/issueService.js
 import axios from "axios";
 
 // ✅ Backend base URL
@@ -24,96 +25,41 @@ api.interceptors.request.use(
 );
 
 const issueService = {
-  /* =============================
-     GET NEXT ISSUE NUMBER
-  ============================= */
-  getNextIssueNo: async () => {
-    const res = await api.get("/next-issue-no");
-    return res.data.nextIssueNo;
-  },
-
-  /* =============================
-     GET ALL ISSUES
-  ============================= */
-  getAll: async () => {
-    const res = await api.get("/");
-    return res.data;
-  },
-
-  /* =============================
-     GET ISSUE BY ID
-  ============================= */
-  getById: async (id) => {
-    const res = await api.get(`/${id}`);
-    return res.data;
-  },
-
-  /* =============================
-     CREATE ISSUE
-  ============================= */
+  // ➕ Create Issue
   create: async (data) => {
-    const payload = {
-      issueNo: data.issueNo,
-      issueDate: data.issueDate,
-
-      mixingGroupId:
-        data.mixingGroupId !== undefined
-          ? Number(data.mixingGroupId)
-          : null,
-
-      mixingId:
-        data.mixingId !== undefined ? Number(data.mixingId) : null,
-
-      lotNo: data.lotNo,
-
-      issuedBales: data.issuedBales.map((b) => ({
-        baleNo: b.baleNo,
-        baleWeight: Number(b.baleWeight),
-        baleValue:
-          b.baleValue !== undefined ? Number(b.baleValue) : null,
-      })),
-    };
-
-    const res = await api.post("/", payload);
-    return res.data;
+    console.log(data);
+    const response = await api.post("/", data);
+    return response.data.issue;
   },
 
-  /* =============================
-     UPDATE ISSUE
-  ============================= */
-  update: async (id, data) => {
-    const payload = {
-      issueDate: data.issueDate,
-
-      mixingGroupId:
-        data.mixingGroupId !== undefined
-          ? Number(data.mixingGroupId)
-          : undefined,
-
-      mixingId:
-        data.mixingId !== undefined ? Number(data.mixingId) : undefined,
-
-      issuedBales: data.issuedBales,
-    };
-
-    const res = await api.put(`/${id}`, payload);
-    return res.data;
+  // 📄 Get All Issues
+  getAll: async () => {
+    const response = await api.get("/");
+    return response.data.issues;
   },
 
-  /* =============================
-     DELETE ISSUE
-  ============================= */
+  // 🔍 Get Issue By ID
+  getById: async (id) => {
+    const response = await api.get(`/${id}`);
+    return response.data.issue;
+  },
+
+  // ❌ Delete Issue
   delete: async (id) => {
-    const res = await api.delete(`/${id}`);
-    return res.data;
+    const response = await api.delete(`/${id}`);
+    return response.data;
   },
 
-  /* =============================
-     GET LOT WEIGHTMENTS FOR ISSUE
-  ============================= */
-  getLotWeightments: async (lotNo) => {
-    const res = await api.get(`/lot/${lotNo}/weightments`);
-    return res.data;
+  // 🔢 Get Next Issue Number
+  getNextIssueNo: async () => {
+    const response = await api.get("/next-issue-no");
+    return response.data.nextIssueNo;
+  },
+
+  // ✏️ Update Issue
+  update: async (id, data) => {
+    const response = await api.put(`/${id}`, data);
+    return response.data.issue;
   },
 };
 
