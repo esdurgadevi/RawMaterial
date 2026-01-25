@@ -5,7 +5,7 @@ import db from "../models/index.js";
 const { PurchaseOrder } = db;
 const { InwardEntry } = db;
 const { InwardLot } = db;
-const { IssueEntry } = db;
+
 /**
  * Returns the NEXT auto-generated Purchase Order number
  * Format: PO/YY-YY/XXXX
@@ -120,7 +120,6 @@ export const getNextIssueNumber = async () => {
       },
       order: [["issueNumber", "DESC"]],
     });
-
     let nextSeq = 1;
 
     if (lastIssue && lastIssue.issueNumber) {

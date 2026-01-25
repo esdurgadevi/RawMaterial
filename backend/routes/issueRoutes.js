@@ -12,9 +12,9 @@ const router = express.Router();
 
 router.use(protect);
 
+router.get("/next-issue-no", getNextIssueNo);
 router.post("/", createIssue);
 router.get("/", getAllIssues);
 router.get("/:id", getIssueById);
-router.get("/next-issue-no", getNextIssueNo);
 router.delete("/:id", deleteIssue);
 export default router;

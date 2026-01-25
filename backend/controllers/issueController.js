@@ -50,10 +50,10 @@ export const deleteIssue = async (req, res) => {
 
 export const getNextIssueNo = async (req, res) => {
   try {
-    const nextissueNo = await getNextIssueNumber();
+    const nextIssueNo = await getNextIssueNumber();
     res.status(200).json({
       message: "Next order number generated",
-      nextissueNo,
+      nextIssueNo,
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to generate next order number" });
