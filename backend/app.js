@@ -24,12 +24,16 @@ import inwardEntryRoutes from './routes/inwardEntryRoutes.js';
 import inwardLotsRoutes from './routes/inwardLotRoutes.js';
 import inwardLotWeightmentRoutes from './routes/inwardLotWeightmentRoutes.js';
 import issueRoutes from "./routes/issueRoutes.js";
-
+import salesOrderRoutes from "./routes/salesOrderRoutes.js";
+import wastePackingRoutes from "./routes/wastePackingRoutes.js"
+import invoiceRoutes from "./routes/invoiceRoutes.js";
+import wasteEntryRoutes from "./routes/wasteEntryRoutes.js";
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+//Masters
 app.use("/api/auth", authRoutes);
 app.use("/api/stations", stationRoutes);
 app.use("/api/mixing-groups", mixingGroupRoutes);
@@ -49,9 +53,16 @@ app.use("/api/waste-masters", wasteMasterRoutes);
 app.use("/api/waste-rates", wasteRateRoutes);
 app.use("/api/waste-lots", wasteLotRoutes);
 app.use("/api/cost-masters", costMasterRoutes);
+
+//Transaction Purchase
 app.use("/api/purchase-orders", purchaseOrderRoutes);
 app.use("/api/inward-entries", inwardEntryRoutes);
 app.use("/api/inward-lots",inwardLotsRoutes);
 app.use("/api/weightments",inwardLotWeightmentRoutes)
 app.use("/api/issues",issueRoutes);
+
+app.use("/api/waste-packings",wastePackingRoutes);
+app.use("/api/waste-sales",salesOrderRoutes);
+app.use("/api/invoices",invoiceRoutes);
+app.use("/api/waste-entries",wasteEntryRoutes);
 export default app;

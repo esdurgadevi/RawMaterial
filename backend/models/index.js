@@ -26,6 +26,14 @@ import InwardLotModel from "./inwardLot.js";
 import InwardLotWeightmentModel from "./inwardLotWeightment.js";
 import IssueModel from "./Issue.js";
 import IssueItemModel from "./IssueItem.js";
+import WastePackingDetailModel from "./wastePackingDetailModel.js";
+import WastePacking from "./wastePackingModel.js";
+import SalesOrderModel from "./salesOrderModel.js";
+import SalesOrderDetailModel from "./salesOrderDetailModel.js";
+import InvoiceModel from "./invoiceModel.js";
+import InvoiceDetailModel from "./invoiceDetailModel.js";
+import WasteEntryModel from './wasteEntryModel.js';
+import WasteEntryDetailModel from './wasteEntryDetailModel.js';
 
 const db = {};
 db.sequelize = sequelize;
@@ -55,7 +63,14 @@ db.InwardLot = InwardLotModel(sequelize);
 db.InwardLotWeightment = InwardLotWeightmentModel(sequelize);
 db.Issue = IssueModel(sequelize);
 db.IssueItem = IssueItemModel(sequelize);
-
+db.WastePacking = WastePacking(sequelize);
+db.WastePackingDetail = WastePackingDetailModel(sequelize);
+db.SalesOrder = SalesOrderModel(sequelize);
+db.SalesOrderDetail = SalesOrderDetailModel(sequelize);
+db.Invoice = InvoiceModel(sequelize);
+db.InvoiceDetail = InvoiceDetailModel(sequelize);
+db.WasteEntry = WasteEntryModel(sequelize);
+db.WasteEntryDetail = WasteEntryDetailModel(sequelize);
 db.State.hasMany(db.Station, {
   foreignKey: "stateId",
 });
@@ -261,5 +276,52 @@ db.IssueItem.belongsTo(db.InwardLotWeightment, {
   foreignKey: "weightmentId",
 });
 
+db.WastePacking.hasMany(db.WastePackingDetail, {
+  foreignKey: "wastePackingId",
+  as: "details",
+});
 
+db.WastePackingDetail.belongsTo(db.WastePacking, {
+  foreignKey: "wastePackingId",
+  as: "packing",
+});
+
+db.SalesOrder.hasMany(db.SalesOrderDetail, {
+  foreignKey: "salesOrderId",
+  as: "details",
+});
+db.SalesOrderDetail.belongsTo(db.SalesOrder, {
+  foreignKey: "salesOrderId",
+  as: "order",
+});
+
+//waste invoice
+// Associations
+db.Invoice.hasMany(db.InvoiceDetail, {
+  foreignKey: "invoiceId",
+  as: "details",
+});
+db.InvoiceDetail.belongsTo(db.Invoice, {
+  foreignKey: "invoiceId",
+  as: "invoice",
+});
+
+db.SalesOrder.hasMany(db.Invoice, {
+  foreignKey: "salesOrderId",
+  as: "invoices",
+});
+db.Invoice.belongsTo(db.SalesOrder, {
+  foreignKey: "salesOrderId",
+  as: "salesOrder",
+});
+//waste entry
+db.WasteEntry.hasMany(db.WasteEntryDetail, {
+  foreignKey: "wasteEntryId",
+  as: "details",
+});
+
+db.WasteEntryDetail.belongsTo(db.WasteEntry, {
+  foreignKey: "wasteEntryId",
+  as: "entry",
+});
 export default db;
