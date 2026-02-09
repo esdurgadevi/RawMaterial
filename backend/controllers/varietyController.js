@@ -1,4 +1,17 @@
 import * as varietyService from "../services/varietyService.js";
+import { getNextVarietyCode } from "../utils/helpers.js";
+
+export const getNextVarietyCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextVarietyCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate variety code",
+      error: error.message,
+    });
+  }
+};
 
 export const createVariety = async (req, res) => {
   try {

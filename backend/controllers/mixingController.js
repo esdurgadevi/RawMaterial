@@ -1,5 +1,17 @@
 import * as mixingService from "../services/mixingService.js";
+import { getNextMixingCode } from "../utils/helpers.js";
 
+export const getNextMixingCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextMixingCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate mixing code",
+      error: error.message,
+    });
+  }
+};
 export const createMixing = async (req, res) => {
   try {
     const mixing = await mixingService.createMixing(req.body);

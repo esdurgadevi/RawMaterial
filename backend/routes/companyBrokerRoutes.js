@@ -5,6 +5,7 @@ import {
   getCompanyBrokerById,
   updateCompanyBroker,
   deleteCompanyBroker,
+  getNextCompanyBrokerCodeController
 } from "../controllers/companyBrokerController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -12,7 +13,7 @@ const router = express.Router();
 
 // Protect all routes
 router.use(protect);
-
+router.get("/next-code", getNextCompanyBrokerCodeController);
 router.post("/", createCompanyBroker);
 router.get("/", getAllCompanyBrokers);
 router.get("/:id", getCompanyBrokerById);

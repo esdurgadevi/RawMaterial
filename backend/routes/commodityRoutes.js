@@ -5,13 +5,14 @@ import {
   getCommodityById,
   updateCommodity,
   deleteCommodity,
+  getNextCommodityCodeController,
 } from "../controllers/commodityController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
 router.use(protect); // All routes protected
-
+router.get("/next-code", getNextCommodityCodeController);
 router.post("/", createCommodity);
 router.get("/", getAllCommodities);
 router.get("/:id", getCommodityById);

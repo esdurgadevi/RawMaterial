@@ -4,6 +4,7 @@ import {
   getAllVarieties,
   getVarietyById,
   updateVariety,
+   getNextVarietyCodeController,
   deleteVariety,
 } from "../controllers/varietyController.js";
 import { protect } from "../middlewares/authMiddleware.js";
@@ -12,7 +13,7 @@ const router = express.Router();
 
 // Protect all routes
 router.use(protect);
-
+router.get("/next-code", getNextVarietyCodeController);
 router.post("/", createVariety);
 router.get("/", getAllVarieties);
 router.get("/:id", getVarietyById);

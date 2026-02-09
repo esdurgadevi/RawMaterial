@@ -1,5 +1,17 @@
 import * as transportService from "../services/transportService.js";
+import { getNextTransportCode } from "../utils/helpers.js";
 
+export const getNextTransportCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextTransportCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate transport code",
+      error: error.message,
+    });
+  }
+};
 export const createTransport = async (req, res) => {
   try {
     const transport = await transportService.createTransport(req.body);

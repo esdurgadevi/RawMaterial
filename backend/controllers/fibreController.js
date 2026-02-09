@@ -1,4 +1,18 @@
 import * as fibreService from "../services/fibreService.js";
+import { getNextFibreCode } from "../utils/helpers.js";
+
+// 🔹 GET NEXT FIBRE CODE
+export const getNextFibreCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextFibreCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate fibre code",
+      error: error.message,
+    });
+  }
+};
 
 export const createFibre = async (req, res) => {
   try {

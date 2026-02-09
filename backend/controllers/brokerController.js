@@ -1,4 +1,5 @@
 import * as brokerService from "../services/brokerService.js";
+import { getNextBrokerCode } from "../utils/helpers.js";
 
 export const createBroker = async (req, res) => {
   try {
@@ -56,5 +57,14 @@ export const deleteBroker = async (req, res) => {
     });
   } catch (error) {
     res.status(404).json({ message: error.message });
+  }
+};
+
+export const getNextBrokerCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextBrokerCode();
+    res.status(200).json({ brokerCode: nextCode });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

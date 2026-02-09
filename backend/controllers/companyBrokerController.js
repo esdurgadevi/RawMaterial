@@ -1,5 +1,17 @@
 import * as companyBrokerService from "../services/companyBrokerService.js";
+import { getNextCompanyBrokerCode } from "../utils/helpers.js";
 
+export const getNextCompanyBrokerCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextCompanyBrokerCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate company broker code",
+      error: error.message,
+    });
+  }
+};
 export const createCompanyBroker = async (req, res) => {
   try {
     const broker = await companyBrokerService.createCompanyBroker(req.body);

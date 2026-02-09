@@ -1,4 +1,17 @@
 import * as packingTypeService from "../services/packingTypeService.js";
+import { getNextPackingTypeCode } from "../utils/helpers.js";
+
+export const getNextPackingTypeCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextPackingTypeCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate packing type code",
+      error: error.message,
+    });
+  }
+};
 
 export const createPackingType = async (req, res) => {
   try {

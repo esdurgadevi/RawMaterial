@@ -1,5 +1,18 @@
 import * as godownService from "../services/godownService.js";
 
+import { getNextGodownCode } from "../utils/helpers.js";
+
+export const getNextGodownCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextGodownCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate godown code",
+      error: error.message,
+    });
+  }
+};
 export const createGodown = async (req, res) => {
   try {
     const godown = await godownService.createGodown(req.body);

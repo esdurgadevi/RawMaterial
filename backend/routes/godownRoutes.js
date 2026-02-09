@@ -5,13 +5,14 @@ import {
   getGodownById,
   updateGodown,
   deleteGodown,
+   getNextGodownCodeController
 } from "../controllers/godownController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
 router.use(protect);
-
+router.get("/next-code", getNextGodownCodeController);
 router.post("/", createGodown);
 router.get("/", getAllGodowns);
 router.get("/:id", getGodownById);

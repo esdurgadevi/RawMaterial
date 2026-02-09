@@ -58,3 +58,19 @@ export const deleteCommodity = async (req, res) => {
     res.status(404).json({ message: error.message });
   }
 };
+
+import { getNextCommodityCode } from "../utils/helpers.js";
+
+
+// ✅ GET NEXT COMMODITY CODE
+export const getNextCommodityCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextCommodityCode();
+    res.status(200).json({ nextCommodityCode: nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate commodity code",
+      error: error.message,
+    });
+  }
+};

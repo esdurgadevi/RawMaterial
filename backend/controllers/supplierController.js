@@ -1,5 +1,17 @@
 import * as supplierService from "../services/supplierService.js";
+import { getNextSupplierCode } from "../utils/helpers.js";
 
+export const getNextSupplierCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextSupplierCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate supplier code",
+      error: error.message,
+    });
+  }
+};
 export const createSupplier = async (req, res) => {
   try {
     const supplier = await supplierService.createSupplier(req.body);

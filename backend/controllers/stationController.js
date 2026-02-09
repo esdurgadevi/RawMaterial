@@ -1,4 +1,17 @@
 import * as stationService from "../services/stationService.js";
+import { getNextStationCode } from "../utils/helpers.js";
+
+export const getNextStationCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextStationCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate station code",
+      error: error.message,
+    });
+  }
+};
 
 export const createStation = async (req, res) => {
   try {

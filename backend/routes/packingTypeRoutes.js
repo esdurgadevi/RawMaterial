@@ -5,6 +5,7 @@ import {
   getPackingTypeById,
   updatePackingType,
   deletePackingType,
+  getNextPackingTypeCodeController
 } from "../controllers/packingTypeController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -12,7 +13,7 @@ const router = express.Router();
 
 // Protect all routes (authentication required)
 router.use(protect);
-
+router.get("/next-code", getNextPackingTypeCodeController);
 router.post("/", createPackingType);
 router.get("/", getAllPackingTypes);
 router.get("/:id", getPackingTypeById);

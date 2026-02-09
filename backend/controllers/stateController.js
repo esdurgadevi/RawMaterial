@@ -1,4 +1,17 @@
 import * as stateService from "../services/stateService.js";
+import { getNextStateCode } from "../utils/helpers.js";
+
+export const getNextStateCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextStateCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate state code",
+      error: error.message,
+    });
+  }
+};
 
 export const createState = async (req, res) => {
   try {

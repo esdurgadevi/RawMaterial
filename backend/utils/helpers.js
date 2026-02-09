@@ -134,3 +134,295 @@ export const getNextIssueNumber = async () => {
   }
 };
 
+const { Broker } = db;
+
+export const getNextBrokerCode = async () => {
+  try {
+    const result = await Broker.findOne({
+      attributes: [
+        [Broker.sequelize.fn("MAX", Broker.sequelize.col("brokerCode")), "maxCode"],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode || 0;
+    return maxCode + 1;
+  } catch (error) {
+    console.error("Error generating broker code:", error);
+    throw error;
+  }
+};
+
+const { Commodity } = db;
+
+export const getNextCommodityCode = async () => {
+  try {
+    const result = await Commodity.findOne({
+      attributes: [
+        [
+          Commodity.sequelize.fn(
+            "MAX",
+            Commodity.sequelize.col("commodityCode")
+          ),
+          "maxCode",
+        ],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode || 0;
+    return maxCode + 1;
+  } catch (error) {
+    console.error("Error generating commodity code:", error);
+    throw error;
+  }
+};
+
+const { CompanyBroker } = db;
+
+export const getNextCompanyBrokerCode = async () => {
+  try {
+    const result = await CompanyBroker.findOne({
+      attributes: [
+        [
+          CompanyBroker.sequelize.fn(
+            "MAX",
+            CompanyBroker.sequelize.col("code")
+          ),
+          "maxCode",
+        ],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode || 0;
+    return maxCode + 1;
+  } catch (error) {
+    console.error("Error generating company broker code:", error);
+    throw error;
+  }
+};
+
+const { Fibre } = db;
+
+export const getNextFibreCode = async () => {
+  try {
+    const result = await Fibre.findOne({
+      attributes: [
+        [Fibre.sequelize.fn("MAX", Fibre.sequelize.col("code")), "maxCode"],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode || 0;
+    return maxCode + 1;
+  } catch (error) {
+    console.error("Error generating fibre code:", error);
+    throw error;
+  }
+};
+
+const { Godown } = db;
+
+export const getNextGodownCode = async () => {
+  try {
+    const result = await Godown.findOne({
+      attributes: [
+        [Godown.sequelize.fn("MAX", Godown.sequelize.col("code")), "maxCode"],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode || 0;
+    return maxCode + 1;
+  } catch (error) {
+    console.error("Error generating godown code:", error);
+    throw error;
+  }
+};
+
+const { Mixing } = db;
+
+export const getNextMixingCode = async () => {
+  try {
+    const result = await Mixing.findOne({
+      attributes: [
+        [
+          Mixing.sequelize.fn("MAX", Mixing.sequelize.col("mixing_code")),
+          "maxCode",
+        ],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode || 0;
+    return maxCode + 1;
+  } catch (error) {
+    console.error("Error generating mixing code:", error);
+    throw error;
+  }
+};
+
+const { MixingGroup } = db;
+
+export const getNextMixingCode1 = async () => {
+  try {
+    const result = await Mixing.findOne({
+      attributes: [
+        [
+          Mixing.sequelize.fn("MAX", MixingGroup.sequelize.col("mixing_code")),
+          "maxCode",
+        ],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode || 0;
+    return maxCode + 1;
+  } catch (error) {
+    console.error("Error generating mixing code:", error);
+    throw error;
+  }
+};
+
+const { PackingType } = db;
+
+export const getNextPackingTypeCode = async () => {
+  try {
+    const result = await PackingType.findOne({
+      attributes: [
+        [
+          PackingType.sequelize.fn("MAX", PackingType.sequelize.col("code")),
+          "maxCode",
+        ],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode || 0;
+    return maxCode + 1;
+  } catch (error) {
+    console.error("Error generating packing type code:", error);
+    throw error;
+  }
+};
+
+const { State } = db;
+
+export const getNextStateCode = async () => {
+  try {
+    const result = await State.findOne({
+      attributes: [
+        [
+          State.sequelize.fn("MAX", State.sequelize.col("code")),
+          "maxCode",
+        ],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode || 0;
+    return maxCode + 1;
+  } catch (error) {
+    console.error("Error generating state code:", error);
+    throw error;
+  }
+};
+
+const { Station } = db;
+
+export const getNextStationCode = async () => {
+  try {
+    const result = await Station.findOne({
+      attributes: [
+        [
+          Station.sequelize.fn("MAX", Station.sequelize.col("code")),
+          "maxCode",
+        ],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode || 0;
+    return maxCode + 1;
+  } catch (error) {
+    console.error("Error generating station code:", error);
+    throw error;
+  }
+};
+const { Supplier } = db;
+
+export const getNextSupplierCode = async () => {
+  try {
+    const result = await Supplier.findOne({
+      attributes: [
+        [Supplier.sequelize.fn("MAX", Supplier.sequelize.col("code")), "maxCode"],
+      ],
+      raw: true,
+    });
+
+    const maxCode = result?.maxCode;
+
+    if (!maxCode) return "1";
+
+    // if numeric string
+    const nextCode = (parseInt(maxCode, 10) + 1).toString();
+    return nextCode;
+  } catch (error) {
+    console.error("Error generating supplier code:", error);
+    throw error;
+  }
+};
+
+const { Transport } = db;
+
+export const getNextTransportCode = async () => {
+  const result = await Transport.findOne({
+    attributes: [
+      [
+        Transport.sequelize.fn(
+          "MAX",
+          Transport.sequelize.col("transportCode")
+        ),
+        "maxCode",
+      ],
+    ],
+    raw: true,
+  });
+
+  const maxCode = result?.maxCode || 0;
+  return maxCode + 1;
+};
+
+const { Variety } = db;
+
+export const getNextVarietyCode = async () => {
+  const result = await Variety.findOne({
+    attributes: [
+      [
+        Variety.sequelize.fn("MAX", Variety.sequelize.col("code")),
+        "maxCode",
+      ],
+    ],
+    raw: true,
+  });
+
+  const maxCode = result?.maxCode || 0;
+  return maxCode + 1;
+};
+const { WasteMaster } = db;
+
+export const getNextWasteMasterCode = async () => {
+  const result = await WasteMaster.findOne({
+    attributes: [
+      [
+        WasteMaster.sequelize.fn("MAX", WasteMaster.sequelize.col("code")),
+        "maxCode",
+      ],
+    ],
+    raw: true,
+  });
+
+  const maxCode = result?.maxCode || 0;
+  return maxCode + 1;
+};
