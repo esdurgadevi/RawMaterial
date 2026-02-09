@@ -48,6 +48,11 @@ const fibreService = {
     const res = await api.post("/", payload);
     return res.data.fibre;
   },
+  // 🔹 Get next fibre code (AUTO CODE)
+  getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
 
   // Update fibre
   update: async (id, data) => {

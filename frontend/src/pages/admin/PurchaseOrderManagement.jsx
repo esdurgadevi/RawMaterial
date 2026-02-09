@@ -41,7 +41,6 @@ import {
   ShoppingBag,
   Loader2
 } from 'lucide-react';
-
 const PurchaseOrderManagement = () => {
   // States
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -176,6 +175,20 @@ const PurchaseOrderManagement = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   // Add this useEffect after your other useEffects
+// Add this useEffect after your other useEffects
+useEffect(() => {
+  // Calculate rate per kg from candy rate (candy rate / 355.62)
+  if (formData.candyRate && !isNaN(parseFloat(formData.candyRate))) {
+    const calculatedRatePerKg = parseFloat(formData.candyRate) / 355.62;
+    setFormData(prev => ({
+      ...prev,
+      ratePerKg: calculatedRatePerKg.toFixed(2),
+      quintalRate: (calculatedRatePerKg * 100).toFixed(2)
+    }));
+  }
+}, [formData.candyRate]);
+
+// Update the quintal rate useEffect
 useEffect(() => {
   // Calculate rate per kg from quintal rate (quintal rate / 100)
   if (formData.quintalRate && !isNaN(parseFloat(formData.quintalRate))) {
@@ -187,22 +200,35 @@ useEffect(() => {
   }
 }, [formData.quintalRate]);
 
+// Update the rate per kg useEffect
 useEffect(() => {
-  // Calculate approximate lot value when quantity or rate changes
+  // Calculate quintal rate from rate per kg (rate per kg * 100)
+  if (formData.ratePerKg && !isNaN(parseFloat(formData.ratePerKg))) {
+    const calculatedQuintalRate = parseFloat(formData.ratePerKg) * 100;
+    setFormData(prev => ({
+      ...prev,
+      quintalRate: calculatedQuintalRate.toFixed(2)
+    }));
+  }
+}, [formData.ratePerKg]);
+
+// Update the approximate lot value calculation
+useEffect(() => {
+  // Calculate approximate lot value when quantity or rate per kg changes
   const calculateApproxLotValue = () => {
-    const quantity = parseFloat(formData.quantity);
-    let rate = parseFloat(formData.ratePerKg) || 0;
-    return quantity*(rate);
+    const quantity = parseFloat(formData.quantity) || 0;
+    const ratePerKg = parseFloat(formData.ratePerKg) || 0;
+    return quantity * ratePerKg;
   };
   
   const approxValue = calculateApproxLotValue();
-  if (approxValue !== formData.approxLotValue) {
+  if (!isNaN(approxValue) && approxValue !== formData.approxLotValue) {
     setFormData(prev => ({
       ...prev,
-      approxLotValue: approxValue
+      approxLotValue: approxValue.toFixed(2)
     }));
   }
-}, [formData.quantity, formData.candyRate, formData.quintalRate, formData.ratePerKg, formData.selectedRateType]);
+}, [formData.quantity, formData.ratePerKg]);
   // Fetch functions
   const fetchPurchaseOrders = async () => {
     setLoading(true);
@@ -612,29 +638,40 @@ useEffect(() => {
     }
 
     // Validate based on selected rate type
-    switch(formData.selectedRateType) {
-      case 'CANDY':
-        if (!formData.candyRate || parseFloat(formData.candyRate) <= 0) {
-          setError('Please enter a valid candy rate');
-          return;
-        }
-        break;
-      case 'QUINTAL':
-        if (!formData.quintalRate || parseFloat(formData.quintalRate) <= 0) {
-          setError('Please enter a valid quintal rate');
-          return;
-        }
-        break;
-      case 'PER_KG':
-        if (!formData.ratePerKg || parseFloat(formData.ratePerKg) <= 0) {
-          setError('Please enter a valid rate per kg');
-          return;
-        }
-        break;
-      default:
-        setError('Please select a rate type');
-        return;
+    // Validate based on selected rate type
+switch(formData.selectedRateType) {
+  case 'CANDY':
+    if (!formData.candyRate || parseFloat(formData.candyRate) <= 0) {
+      setError('Please enter a valid candy rate');
+      return;
     }
+    // Ensure rate per kg is calculated
+    if (!formData.ratePerKg || parseFloat(formData.ratePerKg) <= 0) {
+      setError('Please ensure rate per kg is calculated from candy rate');
+      return;
+    }
+    break;
+  case 'QUINTAL':
+    if (!formData.quintalRate || parseFloat(formData.quintalRate) <= 0) {
+      setError('Please enter a valid quintal rate');
+      return;
+    }
+    // Ensure rate per kg is calculated
+    if (!formData.ratePerKg || parseFloat(formData.ratePerKg) <= 0) {
+      setError('Please ensure rate per kg is calculated from quintal rate');
+      return;
+    }
+    break;
+  case 'PER_KG':
+    if (!formData.ratePerKg || parseFloat(formData.ratePerKg) <= 0) {
+      setError('Please enter a valid rate per kg');
+      return;
+    }
+    break;
+  default:
+    setError('Please select a rate type');
+    return;
+}
 
     try {
       // Prepare payload
@@ -1269,11 +1306,7 @@ useEffect(() => {
                               />
                             )}
                           </div>
-                          {!editingOrder && formData.orderNo && (
-                            <p className="mt-1 text-xs text-green-600">
-                              ✓ Order number will be auto-generated: {formData.orderNo}
-                            </p>
-                          )}
+                         
                         </div>
 
                         {/* Order Date */}
@@ -1404,91 +1437,91 @@ useEffect(() => {
     </div>
 
     {/* Candy Rate */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Candy Rate (₹/candy)
-      </label>
-      <div className="relative">
-        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="number"
-          name="candyRate"
-          value={formData.candyRate}
-          onChange={handleInputChange}
-          min="0"
-          step="0.01"
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Enter candy rate"
-        />
-      </div>
-      <p className="mt-1 text-xs text-gray-500">1 candy = 356 kg</p>
-    </div>
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Candy Rate (₹/candy)
+  </label>
+  <div className="relative">
+    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+    <input
+      type="number"
+      name="candyRate"
+      value={formData.candyRate}
+      onChange={handleInputChange}
+      min="0"
+      step="0.01"
+      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      placeholder="Enter candy rate"
+    />
+  </div>
+  {/* <p className="mt-1 text-xs text-gray-500">1 candy = 356 kg</p> */}
+</div>
 
-    {/* Quintal Rate */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Quintal Rate (₹/quintal)
-      </label>
-      <div className="relative">
-        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="number"
-          name="quintalRate"
-          value={formData.quintalRate}
-          onChange={handleInputChange}
-          min="0"
-          step="0.01"
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Enter quintal rate"
-        />
-      </div>
-      <p className="mt-1 text-xs text-gray-500">1 quintal = 100 kg</p>
-    </div>
+{/* Quintal Rate */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Quintal Rate (₹/quintal)
+  </label>
+  <div className="relative">
+    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+    <input
+      type="number"
+      name="quintalRate"
+      value={formData.quintalRate}
+      onChange={handleInputChange}
+      min="0"
+      step="0.01"
+      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      placeholder="Auto-calculated from rate per kg"
+      readOnly
+    />
+  </div>
+  {/* <p className="mt-1 text-xs text-gray-500">1 quintal = 100 kg (Auto-calculated)</p> */}
+</div>
 
-    {/* Rate Per Kg (calculated) */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Rate Per Kg (₹/kg) *
-      </label>
-      <div className="relative">
-        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="number"
-          name="ratePerKg"
-          value={formData.ratePerKg}
-          onChange={handleInputChange}
-          required
-          min="0"
-          step="0.01"
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Auto-calculated from quintal rate"
-          readOnly
-        />
-      </div>
-      <p className="mt-1 text-xs text-gray-500">Calculated: Quintal Rate ÷ 100</p>
-    </div>
+{/* Rate Per Kg */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Rate Per Kg (₹/kg) *
+  </label>
+  <div className="relative">
+    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+    <input
+      type="number"
+      name="ratePerKg"
+      value={formData.ratePerKg}
+      onChange={handleInputChange}
+      required
+      min="0"
+      step="0.01"
+      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      placeholder="Enter or calculated from candy rate"
+    />
+  </div>
+  {/* <p className="mt-1 text-xs text-gray-500">Calculated: Candy Rate ÷ 356</p> */}
+</div>
 
-    {/* Approx Lot Value */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Approx Lot Value (₹)
-      </label>
-      <div className="relative">
-        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="number"
-          name="approxLotValue"
-          value={formData.approxLotValue}
-          onChange={handleInputChange}
-          min="0"
-          step="0.01"
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Auto-calculated"
-          readOnly
-        />
-      </div>
-      <p className="mt-1 text-xs text-gray-500">Calculated based on selected rate type</p>
-    </div>
+{/* Approx Lot Value */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Approx Lot Value (₹)
+  </label>
+  <div className="relative">
+    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+    <input
+      type="number"
+      name="approxLotValue"
+      value={formData.approxLotValue}
+      onChange={handleInputChange}
+      min="0"
+      step="0.01"
+      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      placeholder="Auto-calculated"
+      readOnly
+    />
+  </div>
+  {/* <p className="mt-1 text-xs text-gray-500">Calculated: Rate/kg × Quantity</p> */}
+</div>
 
     {/* Rate Type Selection for Display/Radio */}
     <div className="md:col-span-2">
@@ -2064,29 +2097,27 @@ useEffect(() => {
                 </div>
 
                 {/* Form Actions */}
-                <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowModal(false);
-                      resetForm();
-                    }}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50"
-                    disabled={!formData.orderNo || !formData.orderDate || !formData.supplierId || !formData.varietyId || 
-                             !formData.mixingGroupId || !formData.stationId || !formData.quantity ||
-                             (formData.selectedRateType === 'CANDY' && !formData.candyRate) ||
-                             (formData.selectedRateType === 'QUINTAL' && !formData.quintalRate) ||
-                             (formData.selectedRateType === 'PER_KG' && !formData.ratePerKg)}
-                  >
-                    {editingOrder ? 'Update Order' : 'Create Order'}
-                  </button>
-                </div>
+<div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+  <button
+    type="button"
+    onClick={() => {
+      setShowModal(false);
+      resetForm();
+    }}
+    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+  >
+    Cancel
+  </button>
+  <button
+    type="submit"
+    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50"
+    disabled={!formData.orderNo || !formData.orderDate || !formData.supplierId || !formData.varietyId || 
+             !formData.mixingGroupId || !formData.stationId || !formData.quantity ||
+             !formData.ratePerKg || parseFloat(formData.ratePerKg) <= 0}
+  >
+    {editingOrder ? 'Update Order' : 'Create Order'}
+  </button>
+</div>
               </form>
             </div>
           </div>

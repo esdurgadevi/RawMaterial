@@ -36,6 +36,10 @@ const stationService = {
     const response = await api.get(`/${id}`);
     return response.data.station; // { station }
   },
+  getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
 
   // 🔹 Create station
   create: async (data) => {

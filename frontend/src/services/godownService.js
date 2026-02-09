@@ -37,6 +37,10 @@ const godownService = {
     return response.data.godown; // { godown }
   },
 
+ getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
   // 🔹 Create godown
   create: async (data) => {
     const payload = {

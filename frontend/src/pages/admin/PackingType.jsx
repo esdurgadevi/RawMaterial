@@ -170,8 +170,17 @@ const PackingType = () => {
     setViewingPackingType(null);
   };
 
-  const openCreateModal = () => {
+  const openCreateModal = async () => {
     resetForm();
+     try {
+    const nextCode = await packingTypeService.getNextCode();
+    setFormData((prev) => ({
+      ...prev,
+      code: nextCode,
+    }));
+  } catch (error) {
+    setError("Failed to generate packing type code");
+  }
     setShowModal(true);
   };
 
@@ -488,7 +497,7 @@ const PackingType = () => {
                         min="1"
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Enter unique packing type code"
-                        disabled={editingPackingType}
+                        disabled
                       />
                     </div>
                     {editingPackingType && (

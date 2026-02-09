@@ -29,7 +29,10 @@ const supplierService = {
     const response = await api.get("/");
     return response.data.suppliers;
   },
-
+   getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
   // 🔹 Get supplier by ID
   getById: async (id) => {
     const response = await api.get(`/${id}`);

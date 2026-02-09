@@ -182,8 +182,17 @@ const CompanyBroker = () => {
     setViewingCompanyBroker(null);
   };
 
-  const openCreateModal = () => {
+  const openCreateModal = async () => {
     resetForm();
+     try {
+    const nextCode = await companyBrokerService.getNextCode();
+    setFormData((prev) => ({
+      ...prev,
+      code: nextCode,
+    }));
+  } catch (err) {
+    setError("Failed to generate company broker code");
+  }
     setShowModal(true);
   };
 
@@ -508,7 +517,7 @@ const CompanyBroker = () => {
                         min="1"
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Enter unique company broker code"
-                        disabled={editingCompanyBroker}
+                        disabled
                       />
                     </div>
                     {editingCompanyBroker && (

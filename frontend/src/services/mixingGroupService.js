@@ -36,7 +36,10 @@ const mixingGroupService = {
     const response = await api.get(`/${id}`);
     return response.data.mixingGroup; // { mixingGroup }
   },
-
+   getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
   // 🔹 Create mixing group
   create: async (data) => {
     const payload = {

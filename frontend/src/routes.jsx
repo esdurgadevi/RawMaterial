@@ -33,6 +33,11 @@ import PurchaseOrderManagement from "./pages/admin/PurchaseOrderManagement.jsx";
 import InwardEntryManagement from "./pages/admin/InwardEntryManagement.jsx";
 import InwardLot from "./pages/admin/InwardLot.jsx";
 import IssueManagement from "./pages/admin/IssueManagement.jsx"
+import WastePackingPage from "./pages/admin/WastePackingPage.jsx";
+import WasteCottonSalesPage from "./pages/admin/WasteCottonSalesPage.jsx";
+import WasteCottonInvoicePage from "./pages/admin/WasteCottonInvoicePage.jsx";
+import WasteEntryPage from "./pages/admin/WasteEntryPage.jsx";
+import Invoice from "./pages/admin/Invoice.jsx";
 // ================= PROTECTED ROUTE =================
 const ProtectedRoute = ({ children, role }) => {
   const userStr = localStorage.getItem("user");
@@ -94,6 +99,11 @@ const routes = [
       { path:"inward-entries", element:<InwardEntryManagement />},
       { path:"inward-lot",element:<InwardLot />},
       { path:"issue",element:<IssueManagement />},
+      { path:"waste1",element:<WastePackingPage />},
+      {path:"sales-order",element:<WasteCottonSalesPage/> },
+      {path:"waste-order",element:<WasteCottonInvoicePage />},
+      {path:"waste-entry",element:<WasteEntryPage />},
+      { path:"invoice",element:<Invoice />},
     ],
   },
 ];

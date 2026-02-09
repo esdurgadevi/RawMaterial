@@ -47,6 +47,10 @@ const commodityService = {
     const response = await api.post("/", payload);
     return response.data.commodity;
   },
+   getNextCode: async () => {
+    const response = await api.get("/next-code");
+    return response.data.nextCommodityCode;
+  },
 
   // 🔹 Update commodity
   update: async (id, data) => {

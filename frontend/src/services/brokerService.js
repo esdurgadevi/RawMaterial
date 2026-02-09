@@ -73,6 +73,10 @@ const brokerService = {
     const response = await api.delete(`/${id}`);
     return response.data; // { message }
   },
+   getNextBrokerCode: async () => {
+    const response = await api.get("/next-code");
+    return response.data.brokerCode; // { brokerCode }
+  },
 };
 
 export default brokerService;

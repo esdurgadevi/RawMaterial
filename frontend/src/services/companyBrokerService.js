@@ -36,6 +36,10 @@ const companyBrokerService = {
     const response = await api.get(`/${id}`);
     return response.data.companyBroker; // { companyBroker }
   },
+   getNextCode: async () => {
+    const response = await api.get("/next-code");
+    return response.data.nextCode;
+  },
 
   // 🔹 Create company broker
   create: async (data) => {

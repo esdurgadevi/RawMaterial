@@ -36,7 +36,10 @@ const transportService = {
     const response = await api.get(`/${id}`);
     return response.data.transport; // { transport }
   },
-
+   getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
   // 🔹 Create transport
   create: async (data) => {
     const payload = {
@@ -49,7 +52,10 @@ const transportService = {
     const response = await api.post("/", payload);
     return response.data.transport;
   },
-
+  getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
   // 🔹 Update transport
   update: async (id, data) => {
     const payload = {

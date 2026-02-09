@@ -36,7 +36,10 @@ const stateService = {
     const response = await api.get(`/${id}`);
     return response.data.state; // 👈 backend should send { state }
   },
-
+   getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
   // 🔹 Create state
   create: async (data) => {
     const payload = {

@@ -182,8 +182,17 @@ const Broker = () => {
     setViewingBroker(null);
   };
 
-  const openCreateModal = () => {
+  const openCreateModal = async () => {
     resetForm();
+    try {
+    const nextCode = await brokerService.getNextBrokerCode();
+    setFormData(prev => ({
+      ...prev,
+      brokerCode: nextCode
+    }));
+  } catch (err) {
+    setError('Failed to generate broker code');
+  }
     setShowModal(true);
   };
 
@@ -506,9 +515,10 @@ const Broker = () => {
                         onChange={handleInputChange}
                         required
                         min="1"
+                        disabled
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Enter unique broker code"
-                        disabled={editingBroker}
+                      
                       />
                     </div>
                     {editingBroker && (

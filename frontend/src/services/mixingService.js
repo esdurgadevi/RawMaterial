@@ -36,7 +36,11 @@ const mixingService = {
     const response = await api.get(`/${id}`);
     return response.data.mixing; // { mixing }
   },
-
+  
+ getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
   // 🔹 Create mixing
   create: async (data) => {
     const payload = {

@@ -36,7 +36,10 @@ const packingTypeService = {
     const response = await api.get(`/${id}`);
     return response.data.packingType; // { packingType }
   },
-
+   getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
   // 🔹 Create packing type
   create: async (data) => {
     const payload = {
