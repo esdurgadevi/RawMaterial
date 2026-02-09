@@ -5,6 +5,7 @@ import {
   getWasteMasterById,
   updateWasteMaster,
   deleteWasteMaster,
+  getNextWasteMasterCodeController
 } from "../controllers/wasteMasterController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -12,7 +13,7 @@ const router = express.Router();
 
 // Protect all routes
 router.use(protect);
-
+router.get("/next-code", getNextWasteMasterCodeController);
 router.post("/", createWasteMaster);
 router.get("/", getAllWasteMasters);
 router.get("/:id", getWasteMasterById);

@@ -1,5 +1,17 @@
 import * as wasteMasterService from "../services/wasteMasterService.js";
+import { getNextWasteMasterCode } from "../utils/helpers.js";
 
+export const getNextWasteMasterCodeController = async (req, res) => {
+  try {
+    const nextCode = await getNextWasteMasterCode();
+    res.status(200).json({ nextCode });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate waste master code",
+      error: error.message,
+    });
+  }
+};
 export const createWasteMaster = async (req, res) => {
   try {
     const waste = await wasteMasterService.createWasteMaster(req.body);
