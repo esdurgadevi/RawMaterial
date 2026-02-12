@@ -1,40 +1,47 @@
 import sequelize from "../config/db.js";
 
-import UserModel from "./userModel.js";
+//auth
+import UserModel from "./auth/userModel.js";
 
-import BrokerModel from "./Broker.js";
-import StateModel from "./state.js";
-import StationModel from "./station.js";
-import MixingGroupModel from "./mixingGroup.js";
-import MixingModel from "./mixing.js";
-import VarietyModel from "./variety.js";
-import GodownModel from "./godown.js";
-import CompanyBrokerModel from "./companyBroker.js";
-import WasteInvoiceTypeModel from "./wasteInvoiceType.js";
-import SupplierModel from "./supplier.js";
-import CommodityModel from "./commodity.js";
-import TransportModel from "./transport.js";
-import FibreModel from "./fibre.js";
-import PackingTypeModel from "./packingType.js";
-import WasteMasterModel from "./wasteMaster.js";
-import WasteRateModel from "./wasteRate.js";
-import WasteLotModel from "./wasteLot.js"
-import CostMasterModel from "./costMaster.js";
-import PurchaseOrderModel from "./purchaseOrder.js";
-import InwardEntryModel from "./inwardEntry.js";
-import InwardLotModel from "./inwardLot.js";
-import InwardLotWeightmentModel from "./inwardLotWeightment.js";
-import IssueModel from "./Issue.js";
-import IssueItemModel from "./IssueItem.js";
-import WastePackingDetailModel from "./wastePackingDetailModel.js";
-import WastePacking from "./wastePackingModel.js";
-import SalesOrderModel from "./salesOrderModel.js";
-import SalesOrderDetailModel from "./salesOrderDetailModel.js";
+//master
+import BrokerModel from "./master/Broker.js";
+import StateModel from "./master/state.js";
+import StationModel from "./master/station.js";
+import MixingGroupModel from "./master/mixingGroup.js";
+import MixingModel from "./master/mixing.js";
+import VarietyModel from "./master/variety.js";
+import GodownModel from "./master/godown.js";
+import CompanyBrokerModel from "./master/companyBroker.js";
+import WasteInvoiceTypeModel from "./transaction-waste/wasteInvoiceType.js";
+import SupplierModel from "./master/supplier.js";
+import CommodityModel from "./master/commodity.js";
+import TransportModel from "./master/transport.js";
+import FibreModel from "./master/fibre.js";
+import PackingTypeModel from "./master/packingType.js";
+import WasteMasterModel from "./master/wasteMaster.js";
+import WasteRateModel from "./master/wasteRate.js";
+import WasteLotModel from "./master/wasteLot.js"
+import CostMasterModel from "./master/costMaster.js";
+
+//transaction-cotton
+import PurchaseOrderModel from "./transaction-cotton/purchaseOrder.js";
+import InwardEntryModel from "./transaction-cotton/gate-inward/inwardEntry.js";
+import InwardLotModel from "./transaction-cotton/inward-lot/inwardLot.js";
+import InwardLotWeightmentModel from "./transaction-cotton/inward-lot/inwardLotWeightment.js";
+import IssueModel from "./transaction-cotton/issue/Issue.js";
+import IssueItemModel from "./transaction-cotton/issue/IssueItem.js";
+
+//transaction-waste
+import WastePackingDetailModel from "./transaction-waste/waste-packing/wastePackingDetailModel.js";
+import WastePacking from "./transaction-waste/waste-packing/wastePackingModel.js";
+import SalesOrderModel from "./transaction-waste/sales-order/salesOrderModel.js";
+import SalesOrderDetailModel from "./transaction-waste/sales-order/salesOrderDetailModel.js";
+import WasteEntryModel from './transaction-waste/waste-entry/wasteEntryModel.js';
+import WasteEntryDetailModel from './transaction-waste/waste-entry/wasteEntryDetailModel.js';
+
+
 import InvoiceModel from "./invoiceModel.js";
 import InvoiceDetailModel from "./invoiceDetailModel.js";
-import WasteEntryModel from './wasteEntryModel.js';
-import WasteEntryDetailModel from './wasteEntryDetailModel.js';
-
 const db = {};
 db.sequelize = sequelize;
 

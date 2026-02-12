@@ -134,6 +134,8 @@ export const getNextIssueNumber = async () => {
   }
 };
 
+//masters Auto Code generation function
+
 const { Broker } = db;
 
 export const getNextBrokerCode = async () => {
