@@ -12,7 +12,7 @@ import MixingModel from "./master/mixing.js";
 import VarietyModel from "./master/variety.js";
 import GodownModel from "./master/godown.js";
 import CompanyBrokerModel from "./master/companyBroker.js";
-import WasteInvoiceTypeModel from "./transaction-waste/wasteInvoiceType.js";
+import WasteInvoiceTypeModel from "./master/wasteInvoiceType.js";
 import SupplierModel from "./master/supplier.js";
 import CommodityModel from "./master/commodity.js";
 import TransportModel from "./master/transport.js";

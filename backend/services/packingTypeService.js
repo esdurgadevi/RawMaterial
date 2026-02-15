@@ -1,9 +1,8 @@
 import db from "../models/index.js";
 
 const { PackingType } = db;
-
 export const createPackingType = async (data) => {
-  const { code, name } = data;
+  const { code, name, tareWeight, rate } = data;
 
   if (!code || !name) {
     throw new Error("Code and Name are required");
@@ -14,7 +13,6 @@ export const createPackingType = async (data) => {
     throw new Error("Packing type code already exists");
   }
 
-  // Optional: Check for duplicate name (to avoid confusion)
   const existingName = await PackingType.findOne({
     where: { name: name.trim() },
   });
@@ -25,8 +23,11 @@ export const createPackingType = async (data) => {
   return await PackingType.create({
     code,
     name: name.trim(),
+    tareWeight,
+    rate,
   });
 };
+
 
 export const getAllPackingTypes = async () => {
   return await PackingType.findAll({

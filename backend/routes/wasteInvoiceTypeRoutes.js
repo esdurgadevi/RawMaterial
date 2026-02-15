@@ -5,6 +5,7 @@ import {
   getWasteInvoiceTypeById,
   updateWasteInvoiceType,
   deleteWasteInvoiceType,
+  // getNextWasteInvoiceCodeController, // optional
 } from "../controllers/wasteInvoiceTypeController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -12,6 +13,9 @@ const router = express.Router();
 
 // Protect all routes (authentication required)
 router.use(protect);
+
+// Optional next code route
+// router.get("/next-code", getNextWasteInvoiceCodeController);
 
 router.post("/", createWasteInvoiceType);
 router.get("/", getAllWasteInvoiceTypes);

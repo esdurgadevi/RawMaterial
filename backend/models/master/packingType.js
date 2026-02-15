@@ -9,15 +9,28 @@ const PackingTypeModel = (sequelize) => {
         autoIncrement: true,
         primaryKey: true,
       },
+
       code: {
         type: DataTypes.INTEGER,
         allowNull: false,
         unique: true,
       },
+
       name: {
         type: DataTypes.STRING(100),
         allowNull: false,
-        trim: true,
+      },
+
+      tareWeight: {
+        type: DataTypes.DECIMAL(10, 2),  // supports weight like 12.50
+        allowNull: false,
+        defaultValue: 0,
+      },
+
+      rate: {
+        type: DataTypes.DECIMAL(10, 2),  // supports money values
+        allowNull: false,
+        defaultValue: 0,
       },
     },
     {
@@ -25,7 +38,7 @@ const PackingTypeModel = (sequelize) => {
       timestamps: true,
       indexes: [
         { unique: true, fields: ["code"] },
-        { fields: ["name"] }, // for faster name-based searches
+        { fields: ["name"] },
       ],
     }
   );

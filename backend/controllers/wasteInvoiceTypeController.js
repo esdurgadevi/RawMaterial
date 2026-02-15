@@ -1,4 +1,6 @@
 import * as wasteInvoiceTypeService from "../services/wasteInvoiceTypeService.js";
+// Optional: import next code helper if you have one
+// import { getNextWasteInvoiceCode } from "../utils/helpers.js";
 
 export const createWasteInvoiceType = async (req, res) => {
   try {
@@ -58,3 +60,13 @@ export const deleteWasteInvoiceType = async (req, res) => {
     res.status(404).json({ message: error.message });
   }
 };
+
+// Optional: if you want next code endpoint
+// export const getNextWasteInvoiceCodeController = async (req, res) => {
+//   try {
+//     const nextCode = await getNextWasteInvoiceCode();
+//     res.status(200).json({ nextCode });
+//   } catch (error) {
+//     res.status(500).json({ message: "Failed to generate next code", error: error.message });
+//   }
+// };
