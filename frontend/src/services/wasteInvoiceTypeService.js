@@ -1,6 +1,6 @@
 import axios from "axios";
 
-// ✅ Backend base URL
+// ✅ Backend base URL (adjust port if your backend runs on different one, e.g. 3000)
 const API_URL = "http://localhost:5000/api/waste-invoice-types";
 
 // ✅ Axios instance
@@ -11,7 +11,7 @@ const api = axios.create({
   },
 });
 
-// 🔐 Attach JWT token automatically
+// 🔐 Attach JWT token automatically (from login)
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token"); // saved after login
@@ -23,75 +23,85 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Service methods (MATCHES YOUR BACKEND)
+// ✅ Service methods (MATCHES YOUR BACKEND ROUTES)
 const wasteInvoiceTypeService = {
   // 🔹 Get all waste invoice types
   getAll: async () => {
     const response = await api.get("/");
-    return response.data.wasteInvoiceTypes; // { wasteInvoiceTypes }
+    return response.data.wasteInvoiceTypes; // { wasteInvoiceTypes: [...] }
   },
 
-  // 🔹 Get waste invoice type by ID
+  // 🔹 Get single waste invoice type by ID
   getById: async (id) => {
     const response = await api.get(`/${id}`);
-    return response.data.wasteInvoiceType; // { wasteInvoiceType }
+    return response.data.wasteInvoiceType; // { wasteInvoiceType: {...} }
   },
 
-  // 🔹 Create waste invoice type
+  // 🔹 Optional: Get next available code (if you added /next-code route)
+  // getNextCode: async () => {
+  //   const res = await api.get("/next-code");
+  //   return res.data.nextCode;
+  // },
+
+  // 🔹 Create new waste invoice type
   create: async (data) => {
     const payload = {
-      code: Number(data.code),
-      invoiceType: data.invoiceType,
-      assessValue: data.assessValue ?? false,
-      charity: data.charity ?? false,
-      tax: data.tax ?? false,
-      gst: data.gst ?? true,
-      igst: data.igst ?? false,
-      duty: data.duty ?? false,
-      cess: data.cess ?? false,
-      hrSecCess: data.hrSecCess ?? false,
-      tcs: data.tcs ?? false,
-      cst: data.cst ?? false,
-      cenvat: data.cenvat ?? false,
-      subTotal: data.subTotal ?? true,
-      totalValue: data.totalValue ?? true,
-      roundOff: data.roundOff ?? true,
-      packingForwardingCharges: data.packingForwardingCharges ?? false,
-      roundOffDigits: data.roundOffDigits ?? 0,
-      gstPercentage: data.gstPercentage ?? 0,
-      cgstPercentage: data.cgstPercentage ?? 0,
-      sgstPercentage: data.sgstPercentage ?? 0,
+      code: Number(data.code), // ensure it's integer
+      invoiceType: data.invoiceType?.trim(),
+      roundOffDigits: Number(data.roundOffDigits || 0),
+      assessValueFormula: data.assessValueFormula,
+      charityBale: Number(data.charityBale || 0),
+      charityFormula: data.charityFormula,
+      taxVat: Number(data.taxVat || 0),
+      taxVatFormula: data.taxVatFormula,
+      gst: Number(data.gst || 5),
+      cgstFormula: data.cgstFormula,
+      sgstFormula: data.sgstFormula,
+      igst: Number(data.igst || 0),
+      igstFormula: data.igstFormula,
+      duty: Number(data.duty || 0),
+      dutyFormula: data.dutyFormula,
+      cess: Number(data.cess || 1),
+      cessFormula: data.cessFormula,
+      hrSecCess: Number(data.hrSecCess || 0),
+      hrSecCessFormula: data.hrSecCessFormula,
+      tcs: Number(data.tcs || 0.75),
+      tcsFormula: data.tcsFormula,
+      cst: Number(data.cst || 0),
+      cstFormula: data.cstFormula,
+      cenvat: Number(data.cenvat || 0),
+      cenvatFormula: data.cenvatFormula,
+      subTotalFormula: data.subTotalFormula,
+      totalValueFormula: data.totalValueFormula,
+      roundOffFormula: data.roundOffFormula,
+      packingForwardingFormula: data.packingForwardingFormula,
+      accPosting: data.accPosting ?? true,
     };
 
     const response = await api.post("/", payload);
     return response.data.wasteInvoiceType;
   },
 
-  // 🔹 Update waste invoice type
+  // 🔹 Update existing waste invoice type
   update: async (id, data) => {
-    const payload = {
-      code: data.code !== undefined ? Number(data.code) : undefined,
-      invoiceType: data.invoiceType,
-      assessValue: data.assessValue,
-      charity: data.charity,
-      tax: data.tax,
-      gst: data.gst,
-      igst: data.igst,
-      duty: data.duty,
-      cess: data.cess,
-      hrSecCess: data.hrSecCess,
-      tcs: data.tcs,
-      cst: data.cst,
-      cenvat: data.cenvat,
-      subTotal: data.subTotal,
-      totalValue: data.totalValue,
-      roundOff: data.roundOff,
-      packingForwardingCharges: data.packingForwardingCharges,
-      roundOffDigits: data.roundOffDigits,
-      gstPercentage: data.gstPercentage,
-      cgstPercentage: data.cgstPercentage,
-      sgstPercentage: data.sgstPercentage,
-    };
+    const payload = {};
+
+    // Only include fields that are sent (partial update)
+    if (data.code !== undefined) payload.code = Number(data.code);
+    if (data.invoiceType) payload.invoiceType = data.invoiceType.trim();
+    if (data.roundOffDigits !== undefined) payload.roundOffDigits = Number(data.roundOffDigits);
+    if (data.assessValueFormula !== undefined) payload.assessValueFormula = data.assessValueFormula;
+    if (data.charityBale !== undefined) payload.charityBale = Number(data.charityBale);
+    if (data.charityFormula !== undefined) payload.charityFormula = data.charityFormula;
+    // ... add other fields the same way
+    if (data.gst !== undefined) payload.gst = Number(data.gst);
+    if (data.cgstFormula !== undefined) payload.cgstFormula = data.cgstFormula;
+    if (data.sgstFormula !== undefined) payload.sgstFormula = data.sgstFormula;
+    if (data.tcs !== undefined) payload.tcs = Number(data.tcs);
+    if (data.tcsFormula !== undefined) payload.tcsFormula = data.tcsFormula;
+    if (data.subTotalFormula !== undefined) payload.subTotalFormula = data.subTotalFormula;
+    if (data.totalValueFormula !== undefined) payload.totalValueFormula = data.totalValueFormula;
+    if (data.accPosting !== undefined) payload.accPosting = data.accPosting;
 
     const response = await api.put(`/${id}`, payload);
     return response.data.wasteInvoiceType;
@@ -100,7 +110,7 @@ const wasteInvoiceTypeService = {
   // 🔹 Delete waste invoice type
   delete: async (id) => {
     const response = await api.delete(`/${id}`);
-    return response.data; // { message }
+    return response.data; // usually { message: "Waste invoice type deleted successfully" }
   },
 };
 
