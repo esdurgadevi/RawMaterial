@@ -6,7 +6,7 @@ import {
   updatePackingType,
   deletePackingType,
   getNextPackingTypeCodeController
-} from "../controllers/packingTypeController.js";
+} from "../controllers/admin1/master/packingTypeController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

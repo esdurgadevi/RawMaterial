@@ -5,7 +5,7 @@ import {
   getWastePackingById,
   updateWastePacking,
   deleteWastePacking,
-} from "../controllers/wastePackingController.js";
+} from "../controllers/admin1/transaction-waste/wastePackingController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

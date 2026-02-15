@@ -6,7 +6,7 @@ import {
   getInwardEntryById,
   updateInwardEntry,
   deleteInwardEntry,
-} from "../controllers/inwardEntryController.js";
+} from "../controllers/admin1/transaction-cotton/inwardEntryController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

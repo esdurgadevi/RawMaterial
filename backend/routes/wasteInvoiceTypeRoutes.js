@@ -6,7 +6,7 @@ import {
   updateWasteInvoiceType,
   deleteWasteInvoiceType,
   // getNextWasteInvoiceCodeController, // optional
-} from "../controllers/wasteInvoiceTypeController.js";
+} from "../controllers/admin1/master/wasteInvoiceTypeController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

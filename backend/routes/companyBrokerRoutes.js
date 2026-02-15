@@ -6,7 +6,7 @@ import {
   updateCompanyBroker,
   deleteCompanyBroker,
   getNextCompanyBrokerCodeController
-} from "../controllers/companyBrokerController.js";
+} from "../controllers/admin1/master/companyBrokerController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

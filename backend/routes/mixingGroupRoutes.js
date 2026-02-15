@@ -6,7 +6,7 @@ import {
   updateMixingGroup,
   deleteMixingGroup,
   getNextMixingCodeController,
-} from "../controllers/mixingGroupController.js";
+} from "../controllers/admin1/master/mixingGroupController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

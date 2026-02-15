@@ -6,7 +6,7 @@ import {
   updateStation,
   deleteStation,
   getNextStationCodeController,
-} from "../controllers/stationController.js";
+} from "../controllers/admin1/master/stationController.js";
 import { protect } from "../middlewares/authMiddleware.js"; // Assuming this is the file name based on your structure
 
 const router = express.Router();

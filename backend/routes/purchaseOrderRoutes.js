@@ -6,7 +6,7 @@ import {
   updatePurchaseOrder,
   deletePurchaseOrder,
   getNextOrderNo
-} from "../controllers/purchaseOrderController.js";
+} from "../controllers/admin1/transaction-cotton/purchaseOrderController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

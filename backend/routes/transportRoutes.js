@@ -6,7 +6,7 @@ import {
   updateTransport,
   deleteTransport,
   getNextTransportCodeController,
-} from "../controllers/transportController.js";
+} from "../controllers/admin1/master/transportController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

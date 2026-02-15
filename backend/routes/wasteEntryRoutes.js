@@ -5,7 +5,7 @@ import {
   getWasteEntryById,
   updateWasteEntry,
   deleteWasteEntry,
-} from "../controllers/wasteEntryController.js";
+} from "../controllers/admin1/transaction-waste/wasteEntryController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

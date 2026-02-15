@@ -6,7 +6,7 @@ import {
   updateGodown,
   deleteGodown,
    getNextGodownCodeController
-} from "../controllers/godownController.js";
+} from "../controllers/admin1/master/godownController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

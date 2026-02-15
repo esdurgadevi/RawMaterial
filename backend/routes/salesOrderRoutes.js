@@ -6,7 +6,7 @@ import {
   getSalesOrderById,
   updateSalesOrder,
   deleteSalesOrder,
-} from "../controllers/salesOrderController.js";
+} from "../controllers/admin1/transaction-waste/salesOrderController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();

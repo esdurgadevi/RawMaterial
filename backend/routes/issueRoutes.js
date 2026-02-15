@@ -5,7 +5,7 @@ import {
   getIssueById,
   deleteIssue,
   getNextIssueNo
-} from "../controllers/issueController.js";
+} from "../controllers/admin1/transaction-cotton/issueController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
