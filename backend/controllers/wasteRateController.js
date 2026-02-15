@@ -1,4 +1,4 @@
-import * as wasteRateService from "../services/wasteRateService.js";
+import * as wasteRateService from "../services/admin1/master/wasteRateService.js";
 
 export const createWasteRate = async (req, res) => {
   try {

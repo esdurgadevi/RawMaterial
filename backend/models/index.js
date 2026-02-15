@@ -4,40 +4,40 @@ import sequelize from "../config/db.js";
 import UserModel from "./auth/userModel.js";
 
 //master
-import BrokerModel from "./master/Broker.js";
-import StateModel from "./master/state.js";
-import StationModel from "./master/station.js";
-import MixingGroupModel from "./master/mixingGroup.js";
-import MixingModel from "./master/mixing.js";
-import VarietyModel from "./master/variety.js";
-import GodownModel from "./master/godown.js";
-import CompanyBrokerModel from "./master/companyBroker.js";
-import WasteInvoiceTypeModel from "./master/wasteInvoiceType.js";
-import SupplierModel from "./master/supplier.js";
-import CommodityModel from "./master/commodity.js";
-import TransportModel from "./master/transport.js";
-import FibreModel from "./master/fibre.js";
-import PackingTypeModel from "./master/packingType.js";
-import WasteMasterModel from "./master/wasteMaster.js";
-import WasteRateModel from "./master/wasteRate.js";
-import WasteLotModel from "./master/wasteLot.js"
-import CostMasterModel from "./master/costMaster.js";
+import BrokerModel from "./admin1/master/Broker.js";
+import StateModel from "./admin1/master/state.js";
+import StationModel from "./admin1/master/station.js";
+import MixingGroupModel from "./admin1/master/mixingGroup.js";
+import MixingModel from "./admin1/master/mixing.js";
+import VarietyModel from "./admin1/master/variety.js";
+import GodownModel from "./admin1/master/godown.js";
+import CompanyBrokerModel from "./admin1/master/companyBroker.js";
+import WasteInvoiceTypeModel from "./admin1/master/wasteInvoiceType.js";
+import SupplierModel from "./admin1/master/supplier.js";
+import CommodityModel from "./admin1/master/commodity.js";
+import TransportModel from "./admin1/master/transport.js";
+import FibreModel from "./admin1/master/fibre.js";
+import PackingTypeModel from "./admin1/master/packingType.js";
+import WasteMasterModel from "./admin1/master/wasteMaster.js";
+import WasteRateModel from "./admin1/master/wasteRate.js";
+import WasteLotModel from "./admin1/master/wasteLot.js"
+import CostMasterModel from "./admin1/master/costMaster.js";
 
 //transaction-cotton
-import PurchaseOrderModel from "./transaction-cotton/purchaseOrder.js";
-import InwardEntryModel from "./transaction-cotton/gate-inward/inwardEntry.js";
-import InwardLotModel from "./transaction-cotton/inward-lot/inwardLot.js";
-import InwardLotWeightmentModel from "./transaction-cotton/inward-lot/inwardLotWeightment.js";
-import IssueModel from "./transaction-cotton/issue/Issue.js";
-import IssueItemModel from "./transaction-cotton/issue/IssueItem.js";
+import PurchaseOrderModel from "./admin1/transaction-cotton/purchaseOrder.js";
+import InwardEntryModel from "./admin1/transaction-cotton/gate-inward/inwardEntry.js";
+import InwardLotModel from "./admin1/transaction-cotton/inward-lot/inwardLot.js";
+import InwardLotWeightmentModel from "./admin1/transaction-cotton/inward-lot/inwardLotWeightment.js";
+import IssueModel from "./admin1/transaction-cotton/issue/Issue.js";
+import IssueItemModel from "./admin1/transaction-cotton/issue/IssueItem.js";
 
 //transaction-waste
-import WastePackingDetailModel from "./transaction-waste/waste-packing/wastePackingDetailModel.js";
-import WastePacking from "./transaction-waste/waste-packing/wastePackingModel.js";
-import SalesOrderModel from "./transaction-waste/sales-order/salesOrderModel.js";
-import SalesOrderDetailModel from "./transaction-waste/sales-order/salesOrderDetailModel.js";
-import WasteEntryModel from './transaction-waste/waste-entry/wasteEntryModel.js';
-import WasteEntryDetailModel from './transaction-waste/waste-entry/wasteEntryDetailModel.js';
+import WastePackingDetailModel from "./admin1/transaction-waste/waste-packing/wastePackingDetailModel.js";
+import WastePacking from "./admin1/transaction-waste/waste-packing/wastePackingModel.js";
+import SalesOrderModel from "./admin1/transaction-waste/sales-order/salesOrderModel.js";
+import SalesOrderDetailModel from "./admin1/transaction-waste/sales-order/salesOrderDetailModel.js";
+import WasteEntryModel from './admin1/transaction-waste/waste-entry/wasteEntryModel.js';
+import WasteEntryDetailModel from './admin1/transaction-waste/waste-entry/wasteEntryDetailModel.js';
 
 
 import InvoiceModel from "./invoiceModel.js";

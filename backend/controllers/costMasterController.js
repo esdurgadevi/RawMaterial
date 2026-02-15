@@ -1,4 +1,4 @@
-import * as costMasterService from "../services/costMasterService.js";
+import * as costMasterService from "../services/admin1/master/costMasterService.js";
 
 export const createCostMaster = async (req, res) => {
   try {

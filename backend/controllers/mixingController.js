@@ -1,4 +1,4 @@
-import * as mixingService from "../services/mixingService.js";
+import * as mixingService from "../services/admin1/master/mixingService.js";
 import { getNextMixingCode } from "../utils/helpers.js";
 
 export const getNextMixingCodeController = async (req, res) => {

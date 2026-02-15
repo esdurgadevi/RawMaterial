@@ -1,5 +1,5 @@
 // controllers/invoiceController.js
-import * as invoiceService from "../services/invoiceService.js";
+import * as invoiceService from "../services/admin1/transaction-waste/invoiceService.js";
 
 export const createInvoice = async (req, res) => {
   try {

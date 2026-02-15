@@ -1,4 +1,4 @@
-import * as wasteEntryService from "../services/wasteEntryService.js";
+import * as wasteEntryService from "../services/admin1/transaction-waste/wasteEntryService.js";
 
 export const createWasteEntry = async (req, res) => {
   try {

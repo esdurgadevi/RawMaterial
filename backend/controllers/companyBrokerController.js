@@ -1,4 +1,4 @@
-import * as companyBrokerService from "../services/companyBrokerService.js";
+import * as companyBrokerService from "../services/admin1/master/companyBrokerService.js";
 import { getNextCompanyBrokerCode } from "../utils/helpers.js";
 
 export const getNextCompanyBrokerCodeController = async (req, res) => {

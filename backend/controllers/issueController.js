@@ -1,4 +1,4 @@
-import * as issueService from "../services/issueService.js";
+import * as issueService from "../services/admin1/transaction-cotton/issueService.js";
 import { getNextIssueNumber } from "../utils/helpers.js";
 
 export const createIssue = async (req, res) => {

@@ -1,4 +1,4 @@
-import * as wasteMasterService from "../services/wasteMasterService.js";
+import * as wasteMasterService from "../services/admin1/master/wasteMasterService.js";
 import { getNextWasteMasterCode } from "../utils/helpers.js";
 
 export const getNextWasteMasterCodeController = async (req, res) => {

@@ -1,5 +1,6 @@
 // services/salesOrderService.js
-import db from "../models/index.js";
+import db from "../../../models/index.js";
+
 import { Op } from "sequelize";
 
 const { SalesOrder, SalesOrderDetail } = db;

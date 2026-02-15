@@ -1,5 +1,7 @@
-import db from "../models/index.js";
-import { getNextInwardNo } from "../utils/helpers.js";
+import db from "../../../models/index.js";
+
+import { getNextInwardNo } from "../../../utils/helpers.js";
+
 
 const { InwardEntry, PurchaseOrder, Godown } = db;
 

@@ -1,4 +1,4 @@
-import * as purchaseOrderService from "../services/purchaseOrderService.js";
+import * as purchaseOrderService from "../services/admin1/transaction-cotton/purchaseOrderService.js";
 import { getNextPurchaseOrderNo } from "../utils/helpers.js";
 
 export const createPurchaseOrder = async (req, res) => {

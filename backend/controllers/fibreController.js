@@ -1,4 +1,4 @@
-import * as fibreService from "../services/fibreService.js";
+import * as fibreService from "../services/admin1/master/fibreService.js";
 import { getNextFibreCode } from "../utils/helpers.js";
 
 // 🔹 GET NEXT FIBRE CODE

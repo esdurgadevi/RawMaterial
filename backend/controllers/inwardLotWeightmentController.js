@@ -1,5 +1,5 @@
 // controllers/inwardLotWeightmentController.js
-import * as service from "../services/inwardLotWeightmentService.js";
+import * as service from "../services/admin1/transaction-cotton/inwardLotWeightmentService.js";
 
 export const saveWeightment = async (req, res) => {
   console.log(req.body.rows);

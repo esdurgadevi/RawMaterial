@@ -1,6 +1,6 @@
-import db from "../models/index.js";
-import { hashPassword, comparePassword } from "../utils/hash.js";
-import { generateToken } from "../utils/jwt.js";
+import db from "../../models/index.js";
+import { hashPassword, comparePassword } from "../../utils/hash.js";
+import { generateToken } from "../../utils/jwt.js";
 
 const { User } = db;
 

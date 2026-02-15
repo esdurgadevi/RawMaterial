@@ -1,4 +1,4 @@
-import * as stateService from "../services/stateService.js";
+import * as stateService from "../services/admin1/master/stateService.js";
 import { getNextStateCode } from "../utils/helpers.js";
 
 export const getNextStateCodeController = async (req, res) => {

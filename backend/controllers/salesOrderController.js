@@ -1,5 +1,5 @@
 // controllers/salesOrderController.js
-import * as salesOrderService from "../services/salesOrderService.js";
+import * as salesOrderService from "../services/admin1/transaction-waste/salesOrderService.js";
 
 export const createSalesOrder = async (req, res) => {
   try {

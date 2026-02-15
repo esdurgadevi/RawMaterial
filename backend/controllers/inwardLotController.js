@@ -1,5 +1,5 @@
 // controllers/inwardLotController.js
-import * as service from "../services/inwardLotService.js";
+import * as service from "../services/admin1/transaction-cotton/inwardLotService.js";
 import { getNextLotNo } from "../utils/helpers.js";
 
 export const getNextLotNo1 = async (req, res) => {

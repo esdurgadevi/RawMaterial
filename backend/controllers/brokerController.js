@@ -1,4 +1,4 @@
-import * as brokerService from "../services/brokerService.js";
+import * as brokerService from "../services/admin1/master/brokerService.js";
 import { getNextBrokerCode } from "../utils/helpers.js";
 
 export const createBroker = async (req, res) => {

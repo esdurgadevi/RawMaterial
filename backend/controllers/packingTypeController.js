@@ -1,4 +1,4 @@
-import * as packingTypeService from "../services/packingTypeService.js";
+import * as packingTypeService from "../services/admin1/master/packingTypeService.js";
 import { getNextPackingTypeCode } from "../utils/helpers.js";
 
 export const getNextPackingTypeCodeController = async (req, res) => {

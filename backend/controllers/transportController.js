@@ -1,4 +1,4 @@
-import * as transportService from "../services/transportService.js";
+import * as transportService from "../services/admin1/master/transportService.js";
 import { getNextTransportCode } from "../utils/helpers.js";
 
 export const getNextTransportCodeController = async (req, res) => {

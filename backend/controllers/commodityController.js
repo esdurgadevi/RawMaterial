@@ -1,4 +1,4 @@
-import * as commodityService from "../services/commodityService.js";
+import * as commodityService from "../services/admin1/master/commodityService.js";
 
 export const createCommodity = async (req, res) => {
   try {

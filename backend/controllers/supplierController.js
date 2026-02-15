@@ -1,4 +1,4 @@
-import * as supplierService from "../services/supplierService.js";
+import * as supplierService from "../services/admin1/master/supplierService.js";
 import { getNextSupplierCode } from "../utils/helpers.js";
 
 export const getNextSupplierCodeController = async (req, res) => {

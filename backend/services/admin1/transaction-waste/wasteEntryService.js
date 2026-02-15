@@ -1,5 +1,5 @@
-import db from "../models/index.js";
-import { Op } from "sequelize";
+import db from "../../../models/index.js";
+
 
 const { WasteEntry, WasteEntryDetail } = db;
 

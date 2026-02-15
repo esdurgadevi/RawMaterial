@@ -1,4 +1,4 @@
-import * as stationService from "../services/stationService.js";
+import * as stationService from "../services/admin1/master/stationService.js";
 import { getNextStationCode } from "../utils/helpers.js";
 
 export const getNextStationCodeController = async (req, res) => {

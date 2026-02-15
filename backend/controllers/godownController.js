@@ -1,4 +1,4 @@
-import * as godownService from "../services/godownService.js";
+import * as godownService from "../services/admin1/master/godownService.js";
 
 import { getNextGodownCode } from "../utils/helpers.js";
 

@@ -1,4 +1,4 @@
-import * as varietyService from "../services/varietyService.js";
+import * as varietyService from "../services/admin1/master/varietyService.js";
 import { getNextVarietyCode } from "../utils/helpers.js";
 
 export const getNextVarietyCodeController = async (req, res) => {

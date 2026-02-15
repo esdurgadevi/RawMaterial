@@ -1,4 +1,4 @@
-import * as wasteInvoiceTypeService from "../services/wasteInvoiceTypeService.js";
+import * as wasteInvoiceTypeService from "../services/admin1/master/wasteInvoiceTypeService.js";
 // Optional: import next code helper if you have one
 // import { getNextWasteInvoiceCode } from "../utils/helpers.js";
 

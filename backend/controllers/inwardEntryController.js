@@ -1,4 +1,4 @@
-import * as inwardEntryService from "../services/inwardEntryService.js";
+import * as inwardEntryService from "../services/admin1/transaction-cotton/inwardEntryService.js";
 import { getNextInwardNo } from "../utils/helpers.js";
 
 export const getNextInwardNo1 = async (req, res) => {

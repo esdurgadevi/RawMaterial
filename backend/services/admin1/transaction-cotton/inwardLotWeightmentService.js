@@ -1,5 +1,6 @@
 // services/inwardLotWeightmentService.js
-import db from "../models/index.js";
+import db from "../../../models/index.js";
+
 
 const { InwardLot, InwardLotWeightment } = db;
 

@@ -1,4 +1,4 @@
-import * as wastePackingService from "../services/wastePackingService.js";
+import * as wastePackingService from "../services/admin1/transaction-waste/wastePackingService.js";
 
 export const createWastePacking = async (req, res) => {
   try {

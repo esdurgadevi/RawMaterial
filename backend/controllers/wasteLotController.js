@@ -1,4 +1,4 @@
-import * as wasteLotService from "../services/wasteLotService.js";
+import * as wasteLotService from "../services/admin1/master/wasteLotService.js";
 
 export const createWasteLot = async (req, res) => {
   try {
