@@ -6,8 +6,8 @@ import {
   updateFibre,
   deleteFibre,
   getNextFibreCodeController
-} from "../controllers/admin1/master/fibreController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/master/fibreController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

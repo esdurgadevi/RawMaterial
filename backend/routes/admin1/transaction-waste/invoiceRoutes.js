@@ -6,8 +6,8 @@ import {
   getInvoiceById,
   updateInvoice,
   deleteInvoice,
-} from "../controllers/admin1/transaction-waste/invoiceController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/transaction-waste/invoiceController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

@@ -6,8 +6,8 @@ import {
   updateBroker,
   deleteBroker,
   getNextBrokerCodeController
-} from "../controllers/admin1/master/brokerController.js"
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/master/brokerController.js"
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

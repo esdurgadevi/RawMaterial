@@ -5,8 +5,8 @@ import {
   getWasteLotById,
   updateWasteLot,
   deleteWasteLot,
-} from "../controllers/admin1/master/wasteLotController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/master/wasteLotController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

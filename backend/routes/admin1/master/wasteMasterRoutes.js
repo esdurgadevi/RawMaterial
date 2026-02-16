@@ -6,8 +6,8 @@ import {
   updateWasteMaster,
   deleteWasteMaster,
   getNextWasteMasterCodeController
-} from "../controllers/admin1/master/wasteMasterController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/master/wasteMasterController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

@@ -5,8 +5,8 @@ import {
   getCostMasterById,
   updateCostMaster,
   deleteCostMaster,
-} from "../controllers/admin1/master/costMasterController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/master/costMasterController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

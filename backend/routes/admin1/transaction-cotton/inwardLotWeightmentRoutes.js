@@ -4,8 +4,8 @@ import {
   saveWeightment,
   getWeightments,
   deleteWeightments,
-} from "../controllers/admin1/transaction-cotton/inwardLotWeightmentController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/transaction-cotton/inwardLotWeightmentController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 router.use(protect);

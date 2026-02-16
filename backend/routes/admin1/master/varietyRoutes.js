@@ -6,8 +6,8 @@ import {
   updateVariety,
    getNextVarietyCodeController,
   deleteVariety,
-} from "../controllers/admin1/master/varietyController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/master/varietyController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

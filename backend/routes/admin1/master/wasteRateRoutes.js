@@ -5,8 +5,8 @@ import {
   getWasteRateById,
   updateWasteRate,
   deleteWasteRate,
-} from "../controllers/admin1/master/wasteRateController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/master/wasteRateController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

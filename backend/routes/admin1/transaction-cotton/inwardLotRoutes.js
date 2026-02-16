@@ -7,8 +7,8 @@ import {
   getLot,
   updateLot,
   deleteLot,
-} from "../controllers/admin1/transaction-cotton/inwardLotController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/transaction-cotton/inwardLotController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 router.use(protect);

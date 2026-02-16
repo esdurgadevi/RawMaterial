@@ -6,8 +6,8 @@ import {
   updateCommodity,
   deleteCommodity,
   getNextCommodityCodeController,
-} from "../controllers/admin1/master/commodityController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/master/commodityController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 

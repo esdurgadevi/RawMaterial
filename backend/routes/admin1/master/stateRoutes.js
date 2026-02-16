@@ -6,8 +6,8 @@ import {
   updateState,
   deleteState,
   getNextStateCodeController,
-} from "../controllers/admin1/master/stateController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+} from "../../../controllers/admin1/master/stateController.js";
+import { protect } from "../../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
