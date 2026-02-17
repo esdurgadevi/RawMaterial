@@ -12,7 +12,7 @@ export const create = async (data, userId) => {
 export const getAll = async () => {
   return await FinisherDrawing.findAll({
     include: [
-      { model: SpinningCount, as: "count", attributes: ["id", "name"] },
+      { model: SpinningCount, as: "count", attributes: ["id", "Noils"] },
     ],
     order: [["createdAt", "DESC"]],
   });
@@ -21,7 +21,7 @@ export const getAll = async () => {
 export const getById = async (id) => {
   const entry = await FinisherDrawing.findByPk(id, {
     include: [
-      { model: SpinningCount, as: "count", attributes: ["id", "name"] },
+      { model: SpinningCount, as: "count", attributes: ["id", "Noils"] },
     ],
   });
 

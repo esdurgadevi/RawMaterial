@@ -90,4 +90,12 @@ app.use(
   finisherDrawingRoutes
 );
 
+import comberEntryRoutes from "./routes/admin2/transaction-qc/comberEntryRoutes.js";
+
+app.use(
+  "/api/admin2/transaction-qc/comber-entry",
+  comberEntryRoutes
+);
+
+
 export default app;

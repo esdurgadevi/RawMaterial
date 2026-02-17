@@ -50,6 +50,7 @@ import QCEntryModel from "./admin2/transaction-qc/QCEntryModel.js";
 import SpinningLongFrameInit from "./admin2/transaction-qc/SpinningLongFrameModel.js";
 import BreakerDrawingModel from "./admin2/transaction-qc/BreakerDrawingModel.js";
 import FinisherDrawingInit from "./admin2/transaction-qc/FinisherDrawingModel.js";
+import ComberEntryModel from "./admin2/transaction-qc/comberEntry.js";
 
 const db = {};
 db.sequelize = sequelize;
@@ -95,6 +96,7 @@ db.QCEntry = QCEntryModel(sequelize);
 db.SpinningLongFrame = SpinningLongFrameInit(sequelize);
 db.BreakerDrawing = BreakerDrawingModel(sequelize);
 db.FinisherDrawing = FinisherDrawingInit(sequelize);
+db.ComberEntry = ComberEntryModel(sequelize);
 
 db.State.hasMany(db.Station, {
   foreignKey: "stateId",
@@ -389,6 +391,28 @@ db.BreakerDrawing.belongsTo(db.SimplexMachine, {
 db.FinisherDrawing.belongsTo(db.SpinningCount, {
   foreignKey: "countId",
   as: "count",
+});
+
+//transaction-qc comber entry
+db.ComberEntry.belongsTo(db.SpinningCount, {
+  foreignKey: "countId",
+  as: "count",
+});
+
+db.SpinningCount.hasMany(db.ComberEntry, {
+  foreignKey: "countId",
+  as: "comberEntries",
+});
+
+
+db.ComberEntry.belongsTo(db.SimplexMachine, {
+  foreignKey: "simplexMachineId",
+  as: "simplex",
+});
+
+db.SimplexMachine.hasMany(db.ComberEntry, {
+  foreignKey: "simplexMachineId",
+  as: "comberEntries",
 });
 
 

@@ -1,29 +1,39 @@
 import db from "../../../models/index.js";
 
-const { BreakerDrawing, SpinningCount, SimplexMachine } = db;
+const {
+  ComberEntry,
+  SpinningCount,
+  SimplexMachine,
+} = db;
 
+
+// ✅ CREATE
 export const create = async (data, userId) => {
-  return await BreakerDrawing.create({
+  return await ComberEntry.create({
     ...data,
     createdBy: userId,
   });
 };
 
+
+// ✅ GET ALL
 export const getAll = async () => {
-  return await BreakerDrawing.findAll({
+  return await ComberEntry.findAll({
     include: [
       { model: SpinningCount, as: "count", attributes: ["id", "Noils"] },
-      { model: SimplexMachine, as: "machine", attributes: ["id", "feedHank"] },
+      { model: SimplexMachine, as: "simplex", attributes: ["id", "feedHank"] },
     ],
     order: [["createdAt", "DESC"]],
   });
 };
 
+
+// ✅ GET BY ID
 export const getById = async (id) => {
-  const entry = await BreakerDrawing.findByPk(id, {
+  const entry = await ComberEntry.findByPk(id, {
     include: [
       { model: SpinningCount, as: "count", attributes: ["id", "Noils"] },
-      { model: SimplexMachine, as: "machine", attributes: ["id", "feedHank"] },
+      { model: SimplexMachine, as: "simplex", attributes: ["id", "feedHank"] },
     ],
   });
 
@@ -31,8 +41,10 @@ export const getById = async (id) => {
   return entry;
 };
 
+
+// ✅ UPDATE
 export const update = async (id, data, userId) => {
-  const entry = await BreakerDrawing.findByPk(id);
+  const entry = await ComberEntry.findByPk(id);
   if (!entry) throw new Error("Entry not found");
 
   return await entry.update({
@@ -41,8 +53,10 @@ export const update = async (id, data, userId) => {
   });
 };
 
+
+// ✅ DELETE
 export const remove = async (id) => {
-  const entry = await BreakerDrawing.findByPk(id);
+  const entry = await ComberEntry.findByPk(id);
   if (!entry) throw new Error("Entry not found");
 
   await entry.destroy();
