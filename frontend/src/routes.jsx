@@ -44,6 +44,9 @@ import AdminLayout1 from "./layouts/AdminLayout1.jsx";
 import Spinning from "./pages/admin2/SpinningCount.jsx";
 import SimplexMachine from "./pages/admin2/SimplexMachine.jsx";
 import QCEntry from "./pages/admin2/QCEntry.jsx";
+import SpinningLongFrame from "./pages/admin2/SpinningLongFrame.jsx";
+import BreakerDrawing from "./pages/admin2/BreakerDrawing.jsx";
+import FinisherDrawing from "./pages/admin2/FinisherDrawing.jsx";
 // ================= PROTECTED ROUTE =================
 const ProtectedRoute = ({ children, role }) => {
   const userStr = localStorage.getItem("user");
@@ -123,9 +126,12 @@ const routes = [
     children: [
       { index: true, element: <AdminDashboard /> },
       { path: "dashboard", element: <AdminDashboard /> },
-      { path:"spinning",element:<Spinning />},
-      { path: "simplex",element:<SimplexMachine />},
-      { path: "qc-entry",element:<QCEntry />},
+      { path:"spinning", element:<Spinning />},
+      { path: "simplex", element:<SimplexMachine />},
+      { path: "qc-entry", element:<QCEntry />},
+      { path: "spinning-lf", element:<SpinningLongFrame />},
+      { path: "breaker-drwaing", element:<BreakerDrawing />},
+      { path: "finisher-drawing", element:<FinisherDrawing />}
     ],
   },
 ];

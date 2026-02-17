@@ -19,6 +19,9 @@ const AdminSidebar1 = () => {
 
   const transactionQCItems = [
     { to: "/admin1/qc-entry", icon: "🧪", label: "QC Entry" },
+    { to: "/admin1/spinning-lf", icon:"🧪", label:"Spinning Long Frame"},
+    { to:"/admin1/breaker-drwaing", icon:"🧪", label:"BreakerDrawing"},
+    { to: "/admin1/finisher-drawing", icon:"🧪", label: "Finisher Drawing"},
   ];
 
   // ================= Logout =================
