@@ -25,6 +25,8 @@ const AdminSidebar1 = () => {
     { to: "/admin1/comber-entry", icon: "🧪", label: "Comber Entry"},
     { to: "/admin1/lap-former", icon: "🧪", label: "Lap Former"},
     { to: "/admin1/auto-coner", icon: "🧪", label: "Auto Coner"},
+    { to: "/admin1/qc-simplex", icon: "🧪", label: "Qc Simplex"},
+    
   ];
 
   // ================= Logout =================
