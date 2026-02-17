@@ -32,6 +32,9 @@ import wasteEntryRoutes from "./routes/admin1/transaction-waste/wasteEntryRoutes
 import spinningRoutes from "./routes/admin2/master/spinningCountRoutes.js";
 import simplexMachineRoutes from "./routes/admin2/master/simplexMachineRoutes.js";
 import qcEntryRoutes from "./routes/admin2/transaction-qc/qcEntryRoutes.js";
+import  spinningLongFrame from "./routes/admin2/transaction-qc/spinningLongFrameRoutes.js";
+import breakerDrawingRoutes from "./routes/admin2/transaction-qc/breakerDrawingRoutes.js";
+
 const app = express();
 
 app.use(cors());
@@ -75,4 +78,16 @@ app.use("/api/waste-entries",wasteEntryRoutes);
 app.use("/api/admin2/master/spinning-counts",spinningRoutes);
 app.use("/api/admin2/master/simplex-machines", simplexMachineRoutes);
 app.use("/api/admin2/transaction-qc/qc-entries", qcEntryRoutes);
+app.use("/api/admin2/transaction-qc/spinning-long-frame", spinningLongFrame);
+app.use(
+  "/api/admin2/transaction-qc/breaker-drawing",
+  breakerDrawingRoutes
+);
+import finisherDrawingRoutes from "./routes/admin2/transaction-qc/finisherDrawingRoutes.js";
+
+app.use(
+  "/api/admin2/transaction-qc/finisher-drawing",
+  finisherDrawingRoutes
+);
+
 export default app;

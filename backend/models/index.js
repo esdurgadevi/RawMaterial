@@ -47,6 +47,10 @@ import InvoiceDetailModel from "./invoiceDetailModel.js";
 import SpinningCountModel from "./admin2/master/spinningCount.js";
 import SimplexMachineModel from "./admin2/master/simplexMachine.js";
 import QCEntryModel from "./admin2/transaction-qc/QCEntryModel.js";
+import SpinningLongFrameInit from "./admin2/transaction-qc/SpinningLongFrameModel.js";
+import BreakerDrawingModel from "./admin2/transaction-qc/BreakerDrawingModel.js";
+import FinisherDrawingInit from "./admin2/transaction-qc/FinisherDrawingModel.js";
+
 const db = {};
 db.sequelize = sequelize;
 
@@ -88,6 +92,9 @@ db.WasteEntryDetail = WasteEntryDetailModel(sequelize);
 db.SpinningCount = SpinningCountModel(sequelize);
 db.SimplexMachine = SimplexMachineModel(sequelize);
 db.QCEntry = QCEntryModel(sequelize);
+db.SpinningLongFrame = SpinningLongFrameInit(sequelize);
+db.BreakerDrawing = BreakerDrawingModel(sequelize);
+db.FinisherDrawing = FinisherDrawingInit(sequelize);
 
 db.State.hasMany(db.Station, {
   foreignKey: "stateId",
@@ -355,4 +362,34 @@ db.QCEntry.belongsTo(db.InwardLot, {
   foreignKey: "inwardLotId",
   as: "inwardLot",
 });
+
+//transaction-qc spinning long frame
+db.SpinningLongFrame.belongsTo(db.SpinningCount, {
+  foreignKey: "countId",
+  as: "count",
+});
+
+db.SpinningLongFrame.belongsTo(db.SimplexMachine, {
+  foreignKey: "simplexId",
+  as: "simplex",
+});
+
+//transaction-qc breakerdrawingmodel
+db.BreakerDrawing.belongsTo(db.SpinningCount, {
+  foreignKey: "countId",
+  as: "count",
+});
+
+db.BreakerDrawing.belongsTo(db.SimplexMachine, {
+  foreignKey: "machineId",
+  as: "machine",
+});
+
+//transaction-qc finisherdrawing
+db.FinisherDrawing.belongsTo(db.SpinningCount, {
+  foreignKey: "countId",
+  as: "count",
+});
+
+
 export default db;
