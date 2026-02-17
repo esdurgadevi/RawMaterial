@@ -23,7 +23,8 @@ const AdminSidebar1 = () => {
     { to:"/admin1/breaker-drwaing", icon:"🧪", label:"BreakerDrawing"},
     { to: "/admin1/finisher-drawing", icon:"🧪", label: "Finisher Drawing"},
     { to: "/admin1/comber-entry", icon: "🧪", label: "Comber Entry"},
-    
+    { to: "/admin1/lap-former", icon: "🧪", label: "Lap Former"},
+    { to: "/admin1/auto-coner", icon: "🧪", label: "Auto Coner"},
   ];
 
   // ================= Logout =================
