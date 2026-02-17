@@ -22,6 +22,8 @@ const AdminSidebar1 = () => {
     { to: "/admin1/spinning-lf", icon:"🧪", label:"Spinning Long Frame"},
     { to:"/admin1/breaker-drwaing", icon:"🧪", label:"BreakerDrawing"},
     { to: "/admin1/finisher-drawing", icon:"🧪", label: "Finisher Drawing"},
+    { to: "/admin1/comber-entry", icon: "🧪", label: "Comber Entry"},
+    
   ];
 
   // ================= Logout =================
