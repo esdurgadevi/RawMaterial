@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import inwardEntryService from '../../services/inwardEntryService';
 import purchaseOrderService from '../../services/purchaseOrderService';
-import godownService from '../../services/godownService';
-import supplierService from '../../services/supplierService';
-import brokerService from '../../services/brokerService';
-import varietyService from '../../services/varietyService';
-import mixingGroupService from '../../services/mixingGroupService';
-import stationService from '../../services/stationService';
+import godownService from '../../services/admin1/master/godownService';
+import supplierService from '../../services/admin1/master/supplierService';
+import brokerService from '../../services/admin1/master/brokerService';
+import varietyService from '../../services/admin1/master/varietyService';
+import mixingGroupService from '../../services/admin1/master/mixingGroupService';
+import stationService from '../../services/admin1/master/stationService';
 
 const InwardEntryManagement = () => {
   // States

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import issueService from '../../services/issueService';
-import mixingGroupService from '../../services/mixingGroupService';
-import mixingService from '../../services/mixingService';
+import mixingGroupService from '../../services/admin1/master/mixingGroupService';
+import mixingService from '../../services/admin1/master/mixingService';
 import inwardLotService from '../../services/inwardLotService';
 
 const IssueEntryManagement = () => {

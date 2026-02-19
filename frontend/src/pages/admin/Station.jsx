@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import stationService from '../../services/stationService';
-import stateService from '../../services/stateService';
+import stationService from '../../services/admin1/master/stationService';
+import stateService from '../../services/admin1/master/stateService';
 
 const Station = () => {
   // States

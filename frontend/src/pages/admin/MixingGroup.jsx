@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import mixingGroupService from '../../services/mixingGroupService';
+import mixingGroupService from '../../services/admin1/master/mixingGroupService';
 
 const MixingGroup = () => {
   // States

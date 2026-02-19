@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import commodityService from '../../services/commodityService';
+import commodityService from '../../services/admin1/master/commodityService';
 
 const Commodity = () => {
   // States

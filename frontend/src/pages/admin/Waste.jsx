@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import wasteMasterService from '../../services/wasteMasterService';
-import packingTypeService from '../../services/packingTypeService';
+import wasteMasterService from '../../services/admin1/master/wasteMasterService';
+import packingTypeService from '../../services/admin1/master/packingTypeService';
 
 const WasteMaster = () => {
   // States

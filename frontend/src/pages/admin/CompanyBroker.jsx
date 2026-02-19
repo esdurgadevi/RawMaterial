@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import companyBrokerService from '../../services/companyBrokerService';
+import companyBrokerService from '../../services/admin1/master/companyBrokerService';
 
 const CompanyBroker = () => {
   // States

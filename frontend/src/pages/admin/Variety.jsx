@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import varietyService from '../../services/varietyService';
-import fibreService from '../../services/fibreService';
+import varietyService from '../../services/admin1/master/varietyService';
+import fibreService from '../../services/admin1/master/fibreService';
 
 const Variety = () => {
   // States

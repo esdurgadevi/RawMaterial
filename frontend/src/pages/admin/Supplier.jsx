@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import supplierService from '../../services/supplierService';
-import stateService from '../../services/stateService';
+import supplierService from '../../services/admin1/master/supplierService';
+import stateService from '../../services/admin1/master/stateService';
 
 // Helper component for detail items in view modal
 const DetailItem = ({ label, value, isMultiline = false, isLink = false }) => {

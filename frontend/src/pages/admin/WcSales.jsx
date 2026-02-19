@@ -1,6 +1,6 @@
 // src/pages/WasteInvoiceTypeMaster.jsx
 import { useState, useEffect } from "react";
-import wasteInvoiceTypeService from "../../services/wasteInvoiceTypeService";
+import wasteInvoiceTypeService from "../../services/admin1/master/wasteInvoiceTypeService";
 
 const WasteInvoiceTypeMaster = () => {
   const [types, setTypes] = useState([]);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import fibreService from '../../services/fibreService';
-import commodityService from '../../services/commodityService';
+import fibreService from '../../services/admin1/master/fibreService';
+import commodityService from '../../services/admin1/master/commodityService';
 
 const Fibre = () => {
   // States

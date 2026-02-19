@@ -1,8 +1,8 @@
 // frontend/src/pages/admin/WastePackingPage.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import wasteLotService from "../../services/wasteLotService";
-import wasteMasterService from "../../services/wasteMasterService";
-import packingTypeService from "../../services/packingTypeService";
+import wasteLotService from "../../services/admin1/master/wasteLotService";
+import wasteMasterService from "../../services/admin1/master/wasteMasterService";
+import packingTypeService from "../../services/admin1/master/packingTypeService";
 import wastePackingService from "../../services/wastePackingService";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";

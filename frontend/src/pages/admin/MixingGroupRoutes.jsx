@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import mixingService from '../../services/mixingService';
-import fibreService from '../../services/fibreService';
-import mixingGroupService from '../../services/mixingGroupService';
+import mixingService from '../../services/admin1/master/mixingService';
+import fibreService from '../../services/admin1/master/fibreService';
+import mixingGroupService from '../../services/admin1/master/mixingGroupService';
 
 const Mixing = () => {
   // States

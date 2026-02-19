@@ -3,9 +3,9 @@ import qcEntryService from '../../services/qcEntryService';
 import inwardLotService from '../../services/inwardLotService';
 import inwardEntryService from '../../services/inwardEntryService';
 import purchaseOrderService from '../../services/purchaseOrderService';
-import supplierService from '../../services/supplierService';
-import varietyService from '../../services/varietyService';
-import stationService from '../../services/stationService';
+import supplierService from '../../services/admin1/master/supplierService';
+import varietyService from '../../services/admin1/master/varietyService';
+import stationService from '../../services/admin1/master/stationService';
 
 const QCEntryManagement = () => {
   // View states: 'list', 'view', 'edit', 'create'

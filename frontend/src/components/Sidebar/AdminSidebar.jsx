@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { logout } from "../../services/authService";
+import { logout } from "../../services/auth/authService";
 
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);

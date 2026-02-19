@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import transportService from '../../services/transportService';
+import transportService from '../../services/admin1/master/transportService';
 
 const Transport = () => {
   // States

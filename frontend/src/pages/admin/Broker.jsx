@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import brokerService from '../../services/brokerService';
+import brokerService from '../../services/admin1/master/brokerService';
 
 const Broker = () => {
   // States

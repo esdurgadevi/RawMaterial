@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import costMasterService from '../../services/costMasterService';
+import costMasterService from '../../services/admin1/master/costMasterService';
 
 const CostMasterManagement = () => {
   // States

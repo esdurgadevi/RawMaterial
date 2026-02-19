@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import godownService from '../../services/godownService';
+import godownService from '../../services/admin1/master/godownService';
 
 const Godown = () => {
   // States

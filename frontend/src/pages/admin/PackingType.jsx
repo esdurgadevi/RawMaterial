@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import packingTypeService from '../../services/packingTypeService';
+import packingTypeService from '../../services/admin1/master/packingTypeService';
 
 const PackingType = () => {
   // States

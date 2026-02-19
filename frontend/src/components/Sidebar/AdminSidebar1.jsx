@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { logout } from "../../services/authService";
+import { logout } from "../../services/auth/authService";
 
 const AdminSidebar1 = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +26,7 @@ const AdminSidebar1 = () => {
     { to: "/admin1/lap-former", icon: "🧪", label: "Lap Former"},
     { to: "/admin1/auto-coner", icon: "🧪", label: "Auto Coner"},
     { to: "/admin1/qc-simplex", icon: "🧪", label: "Qc Simplex"},
-    
+    { to: "/admin1/qc-carding", icon: "🧪", label: "QC Carding"},
   ];
 
   // ================= Logout =================

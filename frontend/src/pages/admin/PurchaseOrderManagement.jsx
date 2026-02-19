@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import purchaseOrderService from '../../services/purchaseOrderService';
-import supplierService from '../../services/supplierService';
-import brokerService from '../../services/brokerService';
-import varietyService from '../../services/varietyService';
-import mixingGroupService from '../../services/mixingGroupService';
-import stationService from '../../services/stationService';
-import companyBrokerService from '../../services/companyBrokerService';
+import supplierService from '../../services/admin1/master/supplierService';
+import brokerService from '../../services/admin1/master/brokerService';
+import varietyService from '../../services/admin1/master/varietyService';
+import mixingGroupService from '../../services/admin1/master/mixingGroupService';
+import stationService from '../../services/admin1/master/stationService';
+import companyBrokerService from '../../services/admin1/master/companyBrokerService';
 
 const PurchaseOrderManagement = () => {
   // States
