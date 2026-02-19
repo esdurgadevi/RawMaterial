@@ -55,6 +55,7 @@ import LapFormerInit from "./admin2/transaction-qc/LapFormerModel.js";
 import AutoConerInit from "./admin2/transaction-qc/AutoConerModel.js";
 import QcSimplexInit from "./admin2/transaction-qc/QcSimplexModel.js";
 import QcCardingInit from "./admin2/transaction-qc/QcCardingModel.js";
+import QcBlowRoomInit from "./admin2/transaction-qc/QcBlowRoomModel.js";
 
 const db = {};
 db.sequelize = sequelize;
@@ -105,6 +106,7 @@ db.LapFormer = LapFormerInit(sequelize);
 db.AutoConer = AutoConerInit(sequelize);
 db.QcSimplex = QcSimplexInit(sequelize);
 db.QcCarding = QcCardingInit(sequelize);
+db.QcBlowRoom = QcBlowRoomInit(sequelize);
 
 db.State.hasMany(db.Station, {
   foreignKey: "stateId",

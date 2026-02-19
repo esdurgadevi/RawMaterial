@@ -125,4 +125,11 @@ app.use(
   qcCardingRoutes
 );
 
+import qcBlowRoomRoutes from "./routes/admin2/transaction-qc/qcBlowRoomRoutes.js";
+
+app.use(
+  "/api/admin2/transaction-qc/qc-blowroom",
+  qcBlowRoomRoutes
+);
+
 export default app;
