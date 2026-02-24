@@ -9,6 +9,7 @@ const WasteEntryDetailModel = (sequelize) => {
         autoIncrement: true,
         primaryKey: true,
       },
+
       wasteEntryId: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -16,28 +17,40 @@ const WasteEntryDetailModel = (sequelize) => {
           model: "waste_entries",
           key: "id",
         },
-        onUpdate: "CASCADE",
         onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       },
-      department: {
-        type: DataTypes.STRING(100),
-        allowNull: false, // e.g. Carding, Combing, Speed Frame, Spinning, Auto Coner
+
+      wasteMasterId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: "waste_masters",
+          key: "id",
+        },
       },
-      wasteType: {
-        type: DataTypes.STRING(100),
-        allowNull: false, // LICKERIN FLY, FLAT STRIPS, COMBER NOILS, etc.
+
+      packingTypeId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: "packing_types",
+          key: "id",
+        },
       },
-      packingType: {
-        type: DataTypes.STRING(50),
-        allowNull: false, // BALEE, etc.
+
+      godownId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: "godowns",
+          key: "id",
+        },
       },
+
       netWeight: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
-      },
-      godown: {
-        type: DataTypes.STRING(50),
-        allowNull: false, // AB, CD, etc.
       },
     },
     {

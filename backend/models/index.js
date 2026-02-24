@@ -361,6 +361,33 @@ db.WasteEntryDetail.belongsTo(db.WasteEntry, {
   foreignKey: "wasteEntryId",
   as: "entry",
 });
+db.WasteMaster.hasMany(db.WasteEntryDetail, {
+  foreignKey: "wasteMasterId",
+  as: "entryDetails",
+});
+
+db.WasteEntryDetail.belongsTo(db.WasteMaster, {
+  foreignKey: "wasteMasterId",
+  as: "waste",
+});
+db.PackingType.hasMany(db.WasteEntryDetail, {
+  foreignKey: "packingTypeId",
+  as: "entryDetails",
+});
+
+db.WasteEntryDetail.belongsTo(db.PackingType, {
+  foreignKey: "packingTypeId",
+  as: "packingType",
+});
+db.Godown.hasMany(db.WasteEntryDetail, {
+  foreignKey: "godownId",
+  as: "entryDetails",
+});
+
+db.WasteEntryDetail.belongsTo(db.Godown, {
+  foreignKey: "godownId",
+  as: "godown",
+});
 
 //admin2
 //transaction-qc entry

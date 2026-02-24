@@ -269,10 +269,10 @@ const { MixingGroup } = db;
 
 export const getNextMixingCode1 = async () => {
   try {
-    const result = await Mixing.findOne({
+    const result = await MixingGroup.findOne({
       attributes: [
         [
-          Mixing.sequelize.fn("MAX", MixingGroup.sequelize.col("mixing_code")),
+          MixingGroup.sequelize.fn("MAX", MixingGroup.sequelize.col("mixingCode")),
           "maxCode",
         ],
       ],
@@ -286,6 +286,28 @@ export const getNextMixingCode1 = async () => {
     throw error;
   }
 };
+// export const getNextMixingCode1 = async () => {
+//   try {
+//     const result = await MixingGroup.findOne({
+//       attributes: [
+//         [
+//           MixingGroup.sequelize.fn(
+//             "MAX",
+//             MixingGroup.sequelize.col("mixingCode")
+//           ),
+//           "maxCode",
+//         ],
+//       ],
+//       raw: true,
+//     });
+
+//     const maxCode = result?.maxCode || 0;
+//     return Number(maxCode) + 1;
+//   } catch (error) {
+//     console.error("Error generating mixing group code:", error);
+//     throw error;
+//   }
+// };
 
 const { PackingType } = db;
 
