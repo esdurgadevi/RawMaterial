@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import wasteLotService from "../../services/admin1/master/wasteLotService";
 import wasteMasterService from "../../services/admin1/master/wasteMasterService";
 import packingTypeService from "../../services/admin1/master/packingTypeService";
-import wastePackingService from "../../services/wastePackingService";
+import wastePackingService from "../../services/admin1/transaction-waste/wastePackingService";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import debounce from "lodash/debounce";

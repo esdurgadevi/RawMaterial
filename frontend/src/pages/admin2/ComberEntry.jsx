@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import comberEntryService from '../../services/comberEntryService';
-import simplexMachineService from '../../services/simplexMachineService';
-import spinningCountService from '../../services/spinningCountService';
+import comberEntryService from '../../services/admin2/transaction-qc/comberEntryService';
+import simplexMachineService from '../../services/admin2/master/simplexMachineService';
+import spinningCountService from '../../services/admin2/master/spinningCountService';
 
 const ComberEntry = () => {
   // View states: 'list', 'view', 'edit', 'create'

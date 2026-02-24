@@ -15,10 +15,12 @@ const PackingType = () => {
   const [editingPackingType, setEditingPackingType] = useState(null);
   const [viewingPackingType, setViewingPackingType] = useState(null);
   
-  // Form state
+  // Form state - updated with new fields
   const [formData, setFormData] = useState({
     code: '',
-    name: ''
+    name: '',
+    tareWeight: '',
+    rate: ''
   });
 
   // Load packing types on component mount
@@ -34,7 +36,7 @@ const PackingType = () => {
     try {
       const response = await packingTypeService.getAll();
       
-      // Extract packing types array from response (response.data.packingTypes)
+      // Extract packing types array from response
       const packingTypesData = Array.isArray(response) ? response : [];
       
       setPackingTypes(packingTypesData);
@@ -66,7 +68,8 @@ const PackingType = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'code' ? (value === '' ? '' : parseInt(value) || value) : value
+      [name]: name === 'code' ? (value === '' ? '' : parseInt(value) || value) : 
+               (name === 'tareWeight' || name === 'rate') ? (value === '' ? '' : parseFloat(value) || value) : value
     }));
   };
 
@@ -76,13 +79,21 @@ const PackingType = () => {
     setSuccess('');
 
     try {
+      // Prepare data with proper number formatting
+      const submitData = {
+        code: parseInt(formData.code),
+        name: formData.name,
+        tareWeight: parseFloat(formData.tareWeight) || 0,
+        rate: parseFloat(formData.rate) || 0
+      };
+
       if (editingPackingType) {
         // Update existing packing type
-        await packingTypeService.update(editingPackingType.id, formData);
+        await packingTypeService.update(editingPackingType.id, submitData);
         setSuccess('Packing type updated successfully!');
       } else {
         // Create new packing type
-        await packingTypeService.create(formData);
+        await packingTypeService.create(submitData);
         setSuccess('Packing type created successfully!');
       }
       
@@ -109,7 +120,9 @@ const PackingType = () => {
     setEditingPackingType(packingType);
     setFormData({
       code: packingType.code || '',
-      name: packingType.name || ''
+      name: packingType.name || '',
+      tareWeight: packingType.tareWeight || '',
+      rate: packingType.rate || ''
     });
     setShowModal(true);
   };
@@ -147,7 +160,9 @@ const PackingType = () => {
   const resetForm = () => {
     setFormData({
       code: '',
-      name: ''
+      name: '',
+      tareWeight: '',
+      rate: ''
     });
     setEditingPackingType(null);
     setViewingPackingType(null);
@@ -155,24 +170,24 @@ const PackingType = () => {
 
   const openCreateModal = async () => {
     resetForm();
-     try {
-    const nextCode = await packingTypeService.getNextCode();
-    setFormData((prev) => ({
-      ...prev,
-      code: nextCode,
-    }));
-  } catch (error) {
-    setError("Failed to generate packing type code");
-  }
+    try {
+      const nextCode = await packingTypeService.getNextCode();
+      setFormData((prev) => ({
+        ...prev,
+        code: nextCode,
+      }));
+    } catch (error) {
+      setError("Failed to generate packing type code");
+    }
     setShowModal(true);
   };
 
   const exportPackingTypes = async () => {
     try {
       const csvContent = "data:text/csv;charset=utf-8," +
-        "Code,Packing Type Name\n" +
+        "Code,Packing Type Name,Tare Weight (kg),Rate (₹)\n" +
         filteredPackingTypes.map(p => 
-          `${p.code},${p.name}`
+          `${p.code},${p.name},${p.tareWeight || 0},${p.rate || 0}`
         ).join("\n");
       
       const encodedUri = encodeURI(csvContent);
@@ -199,6 +214,12 @@ const PackingType = () => {
   const formatCode = (code) => {
     if (!code && code !== 0) return 'N/A';
     return code.toString().padStart(4, '0');
+  };
+
+  // Format weight/rate display
+  const formatNumber = (value) => {
+    if (value === null || value === undefined || value === '') return '0.00';
+    return parseFloat(value).toFixed(2);
   };
 
   // Format date
@@ -358,6 +379,12 @@ const PackingType = () => {
                     Packing Type Name
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tare Weight (kg)
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rate (₹)
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created Date
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -389,6 +416,12 @@ const PackingType = () => {
                         <span className="text-gray-400 mr-2">📦</span>
                         <div className="text-sm font-medium text-gray-900">{packingType.name}</div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">{formatNumber(packingType.tareWeight)} kg</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">₹ {formatNumber(packingType.rate)}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">
@@ -507,6 +540,48 @@ const PackingType = () => {
                     </div>
                   </div>
 
+                  {/* Tare Weight */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tare Weight (kg) *
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">⚖️</span>
+                      <input
+                        type="number"
+                        name="tareWeight"
+                        value={formData.tareWeight}
+                        onChange={handleInputChange}
+                        required
+                        step="0.01"
+                        min="0"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter tare weight in kg"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Rate */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Rate (₹) *
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">💰</span>
+                      <input
+                        type="number"
+                        name="rate"
+                        value={formData.rate}
+                        onChange={handleInputChange}
+                        required
+                        step="0.01"
+                        min="0"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter rate in ₹"
+                      />
+                    </div>
+                  </div>
+
                   {/* Display existing packing type info when editing */}
                   {editingPackingType && (
                     <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -600,6 +675,27 @@ const PackingType = () => {
                     <div className="mt-1 flex items-center">
                       <span className="text-gray-400 mr-2">📦</span>
                       <span className="text-lg font-medium text-gray-900">{viewingPackingType.name}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 uppercase">Tare Weight</label>
+                      <div className="mt-1 flex items-center">
+                        <span className="text-gray-400 mr-2">⚖️</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {formatNumber(viewingPackingType.tareWeight)} kg
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 uppercase">Rate</label>
+                      <div className="mt-1 flex items-center">
+                        <span className="text-gray-400 mr-2">💰</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          ₹ {formatNumber(viewingPackingType.rate)}
+                        </span>
+                      </div>
                     </div>
                   </div>
 

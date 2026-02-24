@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import lapFormerService from '../../services/lapFormerService';
-import spinningCountService from '../../services/spinningCountService';
+import lapFormerService from '../../services/admin2/transaction-qc/lapFormerService';
+import spinningCountService from '../../services/admin2/master/spinningCountService';
 
 const LapFormer = () => {
   // View states: 'list', 'view', 'edit', 'create'

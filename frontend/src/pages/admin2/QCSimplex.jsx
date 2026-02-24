@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import qcSimplexService from '../../services/qcSimplexService';
-import spinningCountService from '../../services/spinningCountService';
-import simplexMachineService from '../../services/simplexMachineService';
+import qcSimplexService from '../../services/admin2/transaction-qc/qcSimplexService';
+import spinningCountService from '../../services/admin2/master/spinningCountService';
+import simplexMachineService from '../../services/admin2/master/simplexMachineService';
 
 const QCSimplex = () => {
   // View states: 'list', 'view', 'edit', 'create'

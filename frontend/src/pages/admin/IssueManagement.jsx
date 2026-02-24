@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import issueService from '../../services/issueService';
+import issueService from '../../services/admin1/transaction-cotton/issueService';
 import mixingGroupService from '../../services/admin1/master/mixingGroupService';
 import mixingService from '../../services/admin1/master/mixingService';
-import inwardLotService from '../../services/inwardLotService';
+import inwardLotService from '../../services/admin1/transaction-cotton/inwardLotService';
 
 const IssueEntryManagement = () => {
   // States

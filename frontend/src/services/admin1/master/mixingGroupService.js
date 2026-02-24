@@ -26,6 +26,10 @@ api.interceptors.request.use(
 // ✅ Service methods (MATCHES YOUR BACKEND)
 const mixingGroupService = {
   // 🔹 Get all mixing groups
+  getNextCode: async () => {
+    const res = await api.get("/next-code");
+    return res.data.nextCode;
+  },
   getAll: async () => {
     const response = await api.get("/");
     return response.data.mixingGroups; // { mixingGroups }
@@ -35,10 +39,6 @@ const mixingGroupService = {
   getById: async (id) => {
     const response = await api.get(`/${id}`);
     return response.data.mixingGroup; // { mixingGroup }
-  },
-   getNextCode: async () => {
-    const res = await api.get("/next-code");
-    return res.data.nextCode;
   },
   // 🔹 Create mixing group
   create: async (data) => {

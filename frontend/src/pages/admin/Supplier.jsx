@@ -362,6 +362,9 @@ const Supplier = () => {
     .map(s => ({ id: s.State.id, name: s.State.state }))
   )].sort((a, b) => a.name.localeCompare(b.name));
 
+  // Account group options
+  const accountGroupOptions = ['Option A', 'Option B'];
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {/* Header */}
@@ -670,22 +673,30 @@ const Supplier = () => {
                         </div>
                       </div>
 
-                      {/* Account Group */}
+                      {/* Account Group - Now with dropdown */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Account Group *
                         </label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">📄</span>
-                          <input
-                            type="text"
+                          <select
                             name="accountGroup"
                             value={formData.accountGroup}
                             onChange={handleInputChange}
                             required
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Enter account group"
-                          />
+                            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                          >
+                            <option value="">Select Account Group</option>
+                            <option value={'Creditars_cotton'}>Creditars_cotton</option>
+                            <option value={'Debtors_others'}>Debtors_others</option>
+                            {/* {accountGroupOptions.map(option => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))} */}
+                          </select>
+                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">▼</span>
                         </div>
                       </div>
 
@@ -710,6 +721,7 @@ const Supplier = () => {
                     </div>
                   </div>
 
+                  {/* Rest of the form remains exactly the same */}
                   {/* Location Information Section */}
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-4 border-b pb-2">Location Information</h4>

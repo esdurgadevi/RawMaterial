@@ -36,15 +36,20 @@ const packingTypeService = {
     const response = await api.get(`/${id}`);
     return response.data.packingType; // { packingType }
   },
-   getNextCode: async () => {
+
+  // 🔹 Get next available code
+  getNextCode: async () => {
     const res = await api.get("/next-code");
     return res.data.nextCode;
   },
+
   // 🔹 Create packing type
   create: async (data) => {
     const payload = {
       code: Number(data.code), // ensure INTEGER
       name: data.name,
+      tareWeight: parseFloat(data.tareWeight) || 0, // ensure DECIMAL with default
+      rate: parseFloat(data.rate) || 0, // ensure DECIMAL with default
     };
 
     const response = await api.post("/", payload);
@@ -56,6 +61,8 @@ const packingTypeService = {
     const payload = {
       code: data.code !== undefined ? Number(data.code) : undefined,
       name: data.name !== undefined ? data.name : undefined,
+      tareWeight: data.tareWeight !== undefined ? parseFloat(data.tareWeight) : undefined,
+      rate: data.rate !== undefined ? parseFloat(data.rate) : undefined,
     };
 
     const response = await api.put(`/${id}`, payload);

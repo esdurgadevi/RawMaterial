@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import inwardEntryService from '../../services/inwardEntryService';
-import inwardLotService from '../../services/inwardLotService';
+import inwardEntryService from '../../services/admin1/transaction-cotton/inwardEntryService';
+import inwardLotService from '../../services/admin1/transaction-cotton/inwardLotService';
 
 const InwardLot = () => {
   const [step, setStep] = useState(1);

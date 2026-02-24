@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import invoiceService from "../../services/invoiceService";
-import salesOrderService from "../../services/salesOrderService";
+import invoiceService from "../../services/admin1/transaction-waste/invoiceService";
+import salesOrderService from "../../services/admin1/transaction-waste/salesOrderService";
 
 // Helper function to format numbers
 const formatNumber = (value, decimals = 2) => {

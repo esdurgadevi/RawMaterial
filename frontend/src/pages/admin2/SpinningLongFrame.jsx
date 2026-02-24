@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import spinningLongFrameService from '../../services/spinningLongFrameService';
-import spinningCountService from '../../services/spinningCountService';
-import simplexMachineService from '../../services/simplexMachineService';
+import spinningLongFrameService from '../../services/admin2/transaction-qc/spinningLongFrameService';
+import spinningCountService from '../../services/admin2/master/spinningCountService';
+import simplexMachineService from '../../services/admin2/master/simplexMachineService';
 
 const SpinningLongFrame = () => {
   // View states: 'list', 'view', 'edit', 'create'

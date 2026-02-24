@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import qcEntryService from '../../services/qcEntryService';
-import inwardLotService from '../../services/inwardLotService';
-import inwardEntryService from '../../services/inwardEntryService';
-import purchaseOrderService from '../../services/purchaseOrderService';
+import qcEntryService from '../../services/admin2/transaction-qc/qcEntryService';
+import inwardLotService from '../../services/admin1/transaction-cotton/inwardLotService';
+import inwardEntryService from '../../services/admin1/transaction-cotton/inwardEntryService';
+import purchaseOrderService from '../../services/admin1/transaction-cotton/purchaseOrderService';
 import supplierService from '../../services/admin1/master/supplierService';
 import varietyService from '../../services/admin1/master/varietyService';
 import stationService from '../../services/admin1/master/stationService';

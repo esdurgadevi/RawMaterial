@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import simplexMachineService from '../../services/simplexMachineService';
+import simplexMachineService from '../../services/admin2/master/simplexMachineService';
 
 const SimplexMachine = () => {
   const [machines, setMachines] = useState([]);

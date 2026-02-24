@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import wastePackingService from "../../services/wastePackingService";
+import wastePackingService from "../../services/admin1/transaction-waste/wastePackingService";
 
 const CreateWastePacking = () => {
   const [formData, setFormData] = useState({

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import spinningCountService from '../../services/spinningCountService';
+import spinningCountService from '../../services/admin2/master/spinningCountService';
 
 const SpinningCount = () => {
   const [spinningCounts, setSpinningCounts] = useState([]);

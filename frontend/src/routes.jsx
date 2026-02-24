@@ -52,6 +52,7 @@ import LapFormer from "./pages/admin2/LapFormer.jsx";
 import AutoConer from "./pages/admin2/AutoConer.jsx";
 import QCSimplex from "./pages/admin2/QCSimplex.jsx";
 import QCCarding from "./pages/admin2/QCCarding.jsx";
+import QCBlowRoom from "./pages/admin2/QCBlowRoom.jsx";
 // ================= PROTECTED ROUTE =================
 const ProtectedRoute = ({ children, role }) => {
   const userStr = localStorage.getItem("user");
@@ -142,6 +143,7 @@ const routes = [
       { path: "auto-coner", element:<AutoConer />},
       { path: "qc-simplex", element:<QCSimplex />},
       { path: "qc-carding", element:<QCCarding />},
+      { path: "qc-blowroom",element:<QCBlowRoom />},
     ],
   },
 ];

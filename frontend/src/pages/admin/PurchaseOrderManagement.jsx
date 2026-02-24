@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import purchaseOrderService from '../../services/purchaseOrderService';
+import purchaseOrderService from '../../services/admin1/transaction-cotton/purchaseOrderService';
 import supplierService from '../../services/admin1/master/supplierService';
 import brokerService from '../../services/admin1/master/brokerService';
 import varietyService from '../../services/admin1/master/varietyService';

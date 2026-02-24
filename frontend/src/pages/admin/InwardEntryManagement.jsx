@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import inwardEntryService from '../../services/inwardEntryService';
-import purchaseOrderService from '../../services/purchaseOrderService';
+import inwardEntryService from '../../services/admin1/transaction-cotton/inwardEntryService';
+import purchaseOrderService from '../../services/admin1/transaction-cotton/purchaseOrderService';
+
 import godownService from '../../services/admin1/master/godownService';
 import supplierService from '../../services/admin1/master/supplierService';
 import brokerService from '../../services/admin1/master/brokerService';

@@ -156,7 +156,7 @@ const MixingGroup = () => {
   const openCreateModal = async() => {
     resetForm();
      try {
-    const nextCode = await mixingService.getNextCode();
+    const nextCode = await mixingGroupService.getNextCode();
     setFormData((prev) => ({
       ...prev,
       mixingCode: nextCode,

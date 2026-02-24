@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import breakerDrawingService from '../../services/breakerDrawingService';
-import spinningCountService from '../../services/spinningCountService';
-import simplexMachineService from '../../services/simplexMachineService';
+import breakerDrawingService from '../../services/admin2/transaction-qc/breakerDrawingService';
+import spinningCountService from '../../services/admin2/master/spinningCountService';
+import simplexMachineService from '../../services/admin2/master/simplexMachineService';
 
 const BreakerDrawing = () => {
   // View states: 'list', 'view', 'edit', 'create'

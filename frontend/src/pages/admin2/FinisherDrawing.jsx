@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import finisherDrawingService from '../../services/finisherDrawingService';
-import spinningCountService from '../../services/spinningCountService';
+import finisherDrawingService from '../../services/admin2/transaction-qc/finisherDrawingService';
+import spinningCountService from '../../services/admin2/master/spinningCountService';
 
 const FinisherDrawing = () => {
   // View states: 'list', 'view', 'edit', 'create'

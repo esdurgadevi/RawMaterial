@@ -27,6 +27,7 @@ const AdminSidebar1 = () => {
     { to: "/admin1/auto-coner", icon: "🧪", label: "Auto Coner"},
     { to: "/admin1/qc-simplex", icon: "🧪", label: "Qc Simplex"},
     { to: "/admin1/qc-carding", icon: "🧪", label: "QC Carding"},
+    { to: "/admin1/qc-blowroom" , icon:"🧪",label: "QC Blow Room"},
   ];
 
   // ================= Logout =================

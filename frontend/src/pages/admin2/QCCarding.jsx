@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import qcCardingService from '../../services/qcCardingService';
-import spinningCountService from '../../services/spinningCountService';
-import simplexMachineService from '../../services/simplexMachineService';
+import qcCardingService from '../../services/admin2/transaction-qc/qcCardingService';
+import spinningCountService from '../../services/admin2/master/spinningCountService';
+import simplexMachineService from '../../services/admin2/master/simplexMachineService';
 
 const QCCarding = () => {
   // View states: 'list', 'view', 'edit', 'create'
