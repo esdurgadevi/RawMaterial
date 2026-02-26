@@ -52,6 +52,10 @@ const WasteEntryDetailModel = (sequelize) => {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
       },
+       department: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
     },
     {
       tableName: "waste_entry_details",

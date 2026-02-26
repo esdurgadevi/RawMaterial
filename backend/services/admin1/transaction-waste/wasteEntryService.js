@@ -37,6 +37,7 @@ export const create = async (data) => {
         packingTypeId: detail.packingTypeId,
         godownId: detail.godownId,
         netWeight: netWt,
+        department: detail.department,
       };
     });
 
@@ -173,6 +174,7 @@ export const update = async (id, data) => {
           packingTypeId: detail.packingTypeId,
           godownId: detail.godownId,
           netWeight: netWt,
+          department: detail.department,
         };
       });
 
