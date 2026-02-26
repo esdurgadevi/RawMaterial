@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import salesOrderService from "../../services/admin1/transaction-waste/salesOrderService";
+import packingTypeService from "../../services/admin1/master/packingTypeService";
+import wasteMasterService from "../../services/admin1/master/wasteMasterService";
 
 // Helper function to format numbers
 const formatNumber = (value, decimals = 2) => {
@@ -15,7 +17,8 @@ const formatNumber = (value, decimals = 2) => {
 const calculateValue = (totalWt, rate, ratePer) => {
   const wt = parseFloat(totalWt) || 0;
   const r = parseFloat(rate) || 0;
-  return wt * r;
+  const per = parseFloat(ratePer) || 1;
+  return (wt * r) / per;
 };
 
 const WasteCottonSalesPage = () => {
@@ -29,6 +32,11 @@ const WasteCottonSalesPage = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderToDelete, setOrderToDelete] = useState(null);
   
+  // Master data states
+  const [packingTypes, setPackingTypes] = useState([]);
+  const [wasteProducts, setWasteProducts] = useState([]);
+  const [loadingMasters, setLoadingMasters] = useState(false);
+
   // Form state for create/edit
   const [formData, setFormData] = useState({
     orderNo: "",
@@ -42,8 +50,8 @@ const WasteCottonSalesPage = () => {
     bank: "",
     despatchTo: "",
     details: [{
-      product: "COMBER NOILS",
-      packingType: "BALE",
+      product: "",
+      packingType: "",
       qty: 0,
       totalWt: 0,
       rate: 0,
@@ -53,8 +61,30 @@ const WasteCottonSalesPage = () => {
   });
 
   useEffect(() => {
+    fetchMasterData();
     fetchSalesOrders();
   }, []);
+
+  const fetchMasterData = async () => {
+    try {
+      setLoadingMasters(true);
+      
+      // Fetch packing types
+      const packingData = await packingTypeService.getAll();
+      setPackingTypes(Array.isArray(packingData) ? packingData : []);
+      
+      // Fetch waste products from waste master service
+      const wasteData = await wasteMasterService.getAll();
+      console.log(wasteData);
+      setWasteProducts(Array.isArray(wasteData) ? wasteData : []);
+      
+    } catch (error) {
+      console.error("Error fetching master data:", error);
+      toast.error("Failed to fetch master data");
+    } finally {
+      setLoadingMasters(false);
+    }
+  };
 
   const fetchSalesOrders = async () => {
     try {
@@ -62,7 +92,9 @@ const WasteCottonSalesPage = () => {
       const data = await salesOrderService.getAll();
       const processedData = Array.isArray(data) ? data.map(order => ({
         ...order,
-        creditDays: parseInt(order.creditDays) || 0,
+        creditDays: order.creditDays !== undefined && order.creditDays !== null 
+          ? parseInt(order.creditDays) 
+          : 0,
         details: Array.isArray(order.details) ? order.details.map(detail => ({
           ...detail,
           qty: parseInt(detail.qty) || 0,
@@ -81,26 +113,40 @@ const WasteCottonSalesPage = () => {
   };
 
   const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === "creditDays" ? parseInt(value) || 0 : value
-    }));
+    const { name, value, type } = e.target;
+    
+    // Handle creditDays as number but allow empty string temporarily
+    if (name === "creditDays") {
+      // If value is empty string, keep it as empty string for input field
+      // When submitting, it will be converted to 0
+      setFormData(prev => ({
+        ...prev,
+        [name]: value === "" ? "" : parseInt(value) || 0
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleDetailChange = (index, field, value) => {
     const updatedDetails = [...formData.details];
-    const numValue = ["qty", "totalWt", "rate", "value"].includes(field) 
-      ? parseFloat(value) || 0 
-      : value;
     
-    updatedDetails[index][field] = numValue;
+    // Handle numeric fields
+    if (["qty", "totalWt", "rate"].includes(field)) {
+      updatedDetails[index][field] = value === "" ? "" : parseFloat(value) || 0;
+    } else {
+      updatedDetails[index][field] = value;
+    }
     
-    // Auto-calculate value when totalWt or rate changes
+    // Auto-calculate value when totalWt, rate, or ratePer changes
     if (field === "totalWt" || field === "rate" || field === "ratePer") {
       const totalWt = parseFloat(updatedDetails[index].totalWt) || 0;
       const rate = parseFloat(updatedDetails[index].rate) || 0;
-      updatedDetails[index].value = totalWt * rate;
+      const ratePer = parseFloat(updatedDetails[index].ratePer) || 1;
+      updatedDetails[index].value = (totalWt * rate) / ratePer;
     }
     
     setFormData(prev => ({
@@ -115,8 +161,8 @@ const WasteCottonSalesPage = () => {
       details: [
         ...prev.details,
         {
-          product: "COMBER NOILS",
-          packingType: "BALE",
+          product: "",
+          packingType: "",
           qty: 0,
           totalWt: 0,
           rate: 0,
@@ -139,7 +185,7 @@ const WasteCottonSalesPage = () => {
   };
 
   const validateForm = () => {
-    if (!formData.orderNo.trim()) {
+    if (!formData.orderNo?.trim()) {
       toast.error("Order No. is required");
       return false;
     }
@@ -147,23 +193,57 @@ const WasteCottonSalesPage = () => {
       toast.error("Date is required");
       return false;
     }
-    if (!formData.party.trim()) {
+    if (!formData.party?.trim()) {
       toast.error("Party is required");
       return false;
     }
+    
+    // Ensure creditDays is a number (convert empty string to 0)
+    if (formData.creditDays === "") {
+      setFormData(prev => ({ ...prev, creditDays: 0 }));
+    }
+    
     if (formData.details.length === 0) {
       toast.error("At least one product detail is required");
       return false;
     }
+
+    // Validate each detail row
+    for (let i = 0; i < formData.details.length; i++) {
+      const detail = formData.details[i];
+      if (!detail.product) {
+        toast.error(`Product is required for row ${i + 1}`);
+        return false;
+      }
+      if (!detail.packingType) {
+        toast.error(`Packing type is required for row ${i + 1}`);
+        return false;
+      }
+    }
+
     return true;
   };
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prepare data for submission
+    const submitData = {
+      ...formData,
+      creditDays: formData.creditDays === "" ? 0 : parseInt(formData.creditDays) || 0,
+      details: formData.details.map(detail => ({
+        ...detail,
+        qty: parseInt(detail.qty) || 0,
+        totalWt: parseFloat(detail.totalWt) || 0,
+        rate: parseFloat(detail.rate) || 0,
+        value: parseFloat(detail.value) || 0
+      }))
+    };
+
     if (!validateForm()) return;
 
     try {
-      await salesOrderService.create(formData);
+      await salesOrderService.create(submitData);
       toast.success("Sales order created successfully!");
       setShowCreateModal(false);
       resetForm();
@@ -175,10 +255,24 @@ const WasteCottonSalesPage = () => {
 
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prepare data for submission
+    const submitData = {
+      ...formData,
+      creditDays: formData.creditDays === "" ? 0 : parseInt(formData.creditDays) || 0,
+      details: formData.details.map(detail => ({
+        ...detail,
+        qty: parseInt(detail.qty) || 0,
+        totalWt: parseFloat(detail.totalWt) || 0,
+        rate: parseFloat(detail.rate) || 0,
+        value: parseFloat(detail.value) || 0
+      }))
+    };
+
     if (!validateForm() || !selectedOrder) return;
 
     try {
-      await salesOrderService.update(selectedOrder._id, formData);
+      await salesOrderService.update(selectedOrder.id, submitData);
       toast.success("Sales order updated successfully!");
       setShowEditModal(false);
       resetForm();
@@ -213,8 +307,8 @@ const WasteCottonSalesPage = () => {
       bank: "",
       despatchTo: "",
       details: [{
-        product: "COMBER NOILS",
-        packingType: "BALE",
+        product: "",
+        packingType: "",
         qty: 0,
         totalWt: 0,
         rate: 0,
@@ -240,20 +334,20 @@ const WasteCottonSalesPage = () => {
       broker1: order.broker1 || "",
       payTerms: order.payTerms || "",
       payMode: order.payMode || "CASH",
-      creditDays: order.creditDays || 0,
+      creditDays: order.creditDays !== undefined && order.creditDays !== null ? order.creditDays : 0,
       bank: order.bank || "",
       despatchTo: order.despatchTo || "",
       details: order.details && order.details.length > 0 ? order.details.map(d => ({
-        product: d.product || "COMBER NOILS",
-        packingType: d.packingType || "BALE",
+        product: d.product || "",
+        packingType: d.packingType || "",
         qty: d.qty || 0,
         totalWt: d.totalWt || 0,
         rate: d.rate || 0,
         ratePer: d.ratePer || "1",
         value: d.value || 0
       })) : [{
-        product: "COMBER NOILS",
-        packingType: "BALE",
+        product: "",
+        packingType: "",
         qty: 0,
         totalWt: 0,
         rate: 0,
@@ -278,7 +372,25 @@ const WasteCottonSalesPage = () => {
     );
   });
 
-  const totalValue = formData.details.reduce((sum, detail) => sum + (parseFloat(detail.value) || 0), 0);
+  const totalValue = formData.details.reduce((sum, detail) => {
+    const value = parseFloat(detail.value);
+    return sum + (isNaN(value) ? 0 : value);
+  }, 0);
+
+  // Get packing type name by ID
+  const getPackingTypeName = (packingTypeId) => {
+    if (!packingTypeId) return '';
+    const packingType = packingTypes.find(pt => pt._id === packingTypeId || pt.code === packingTypeId);
+    return packingType ? packingType.name : packingTypeId;
+  };
+
+  // Get product name by ID
+  const getProductName = (productId) => {
+    console.log(productId);
+    if (!productId) return '';
+    const product = wasteProducts.find(p => p._id === productId || p.code === productId);
+    return product ? product.waste : productId;
+  };
 
   if (loading) {
     return (
@@ -333,11 +445,12 @@ const WasteCottonSalesPage = () => {
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              disabled={loadingMasters}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Create Order
+              {loadingMasters ? 'Loading...' : 'Create Order'}
             </button>
           </div>
         </div>
@@ -385,6 +498,9 @@ const WasteCottonSalesPage = () => {
                       </div>
                       <div className="text-sm text-gray-500">
                         Mode: {order.payMode || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Credit: {order.creditDays || 0} days
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -568,6 +684,7 @@ const WasteCottonSalesPage = () => {
                       onChange={handleFormChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       min="0"
+                      placeholder="0"
                     />
                   </div>
                   <div>
@@ -619,8 +736,8 @@ const WasteCottonSalesPage = () => {
                   <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Packing Type</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product *</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Packing Type *</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Wt.</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
@@ -637,11 +754,14 @@ const WasteCottonSalesPage = () => {
                               value={detail.product}
                               onChange={(e) => handleDetailChange(index, "product", e.target.value)}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              required
                             >
-                              <option value="COMBER NOILS">COMBER NOILS</option>
-                              <option value="RF">RF</option>
-                              <option value="CARD">CARD</option>
-                              <option value="OTHER">OTHER</option>
+                              <option value="">Select Product</option>
+                              {wasteProducts.map((product) => (
+                                <option key={product._id} value={product._id}>
+                                  {product.waste}
+                                </option>
+                              ))}
                             </select>
                           </td>
                           <td className="px-3 py-2">
@@ -649,11 +769,14 @@ const WasteCottonSalesPage = () => {
                               value={detail.packingType}
                               onChange={(e) => handleDetailChange(index, "packingType", e.target.value)}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              required
                             >
-                              <option value="BALE">BALE</option>
-                              <option value="BAG">BAG</option>
-                              <option value="BOX">BOX</option>
-                              <option value="BORAH">BORAH</option>
+                              <option value="">Select Packing Type</option>
+                              {packingTypes.map((type) => (
+                                <option key={type._id} value={type._id}>
+                                  {type.name}
+                                </option>
+                              ))}
                             </select>
                           </td>
                           <td className="px-3 py-2">
@@ -739,6 +862,7 @@ const WasteCottonSalesPage = () => {
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={loadingMasters}
                 >
                   Create Order
                 </button>
@@ -830,8 +954,12 @@ const WasteCottonSalesPage = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {(selectedOrder.details || []).map((detail, index) => (
                       <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-3 text-sm text-gray-900">{detail.product}</td>
-                        <td className="px-6 py-3 text-sm text-gray-500">{detail.packingType}</td>
+                        <td className="px-6 py-3 text-sm text-gray-900">
+                          {getProductName(detail.product)}
+                        </td>
+                        <td className="px-6 py-3 text-sm text-gray-500">
+                          {getPackingTypeName(detail.packingType)}
+                        </td>
                         <td className="px-6 py-3 text-sm text-gray-500">{detail.qty}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">{formatNumber(detail.totalWt, 3)}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">{formatNumber(detail.rate)}</td>
@@ -862,7 +990,7 @@ const WasteCottonSalesPage = () => {
         </div>
       )}
 
-      {/* Edit Order Modal - Similar to Create but with update functionality */}
+      {/* Edit Order Modal */}
       {showEditModal && selectedOrder && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
@@ -882,7 +1010,7 @@ const WasteCottonSalesPage = () => {
             </div>
 
             <form onSubmit={handleUpdateSubmit}>
-              {/* Same form structure as Create Modal */}
+              {/* Order Information */}
               <div className="mb-8">
                 <h4 className="text-lg font-semibold text-gray-700 mb-4">Order Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1037,8 +1165,8 @@ const WasteCottonSalesPage = () => {
                   <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Packing Type</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product *</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Packing Type *</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Wt.</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
@@ -1055,11 +1183,14 @@ const WasteCottonSalesPage = () => {
                               value={detail.product}
                               onChange={(e) => handleDetailChange(index, "product", e.target.value)}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              required
                             >
-                              <option value="COMBER NOILS">COMBER NOILS</option>
-                              <option value="RF">RF</option>
-                              <option value="CARD">CARD</option>
-                              <option value="OTHER">OTHER</option>
+                              <option value="">Select Product</option>
+                              {wasteProducts.map((product) => (
+                                <option key={product._id} value={product._id}>
+                                  {product.waste}
+                                </option>
+                              ))}
                             </select>
                           </td>
                           <td className="px-3 py-2">
@@ -1067,11 +1198,14 @@ const WasteCottonSalesPage = () => {
                               value={detail.packingType}
                               onChange={(e) => handleDetailChange(index, "packingType", e.target.value)}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              required
                             >
-                              <option value="BALE">BALE</option>
-                              <option value="BAG">BAG</option>
-                              <option value="BOX">BOX</option>
-                              <option value="BORAH">BORAH</option>
+                              <option value="">Select Packing Type</option>
+                              {packingTypes.map((type) => (
+                                <option key={type._id} value={type._id}>
+                                  {type.name}
+                                </option>
+                              ))}
                             </select>
                           </td>
                           <td className="px-3 py-2">
@@ -1156,6 +1290,7 @@ const WasteCottonSalesPage = () => {
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={loadingMasters}
                 >
                   Update Order
                 </button>
@@ -1200,7 +1335,7 @@ const WasteCottonSalesPage = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={() => handleDelete(orderToDelete._id)}
+                  onClick={() => handleDelete(orderToDelete.id)}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                 >
                   Delete
