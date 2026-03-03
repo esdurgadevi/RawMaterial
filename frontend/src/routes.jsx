@@ -42,7 +42,7 @@ import LocationTransferPage from "./pages/admin/LocationTransferPage.jsx";
 import LotAllowancePage from "./pages/admin/LotAllowancePage.jsx";
 import LotRejectedManagement from "./pages/admin/LotRejectedManagement.jsx";
 
-//admin1/transaction-cotton
+//admin1/transaction-waste
 import WastePackingPage from "./pages/admin/WastePackingPage.jsx";
 import WasteCottonSalesPage from "./pages/admin/WasteCottonSalesPage.jsx";
 import WasteCottonInvoicePage from "./pages/admin/WasteCottonInvoicePage.jsx";
