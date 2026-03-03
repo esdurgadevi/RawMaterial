@@ -1,13 +1,8 @@
+// frontend/src/pages/admin/transaction-cotton/InwardEntryManagement.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import inwardEntryService from '../../services/admin1/transaction-cotton/inwardEntryService';
 import purchaseOrderService from '../../services/admin1/transaction-cotton/purchaseOrderService';
-
 import godownService from '../../services/admin1/master/godownService';
-import supplierService from '../../services/admin1/master/supplierService';
-import brokerService from '../../services/admin1/master/brokerService';
-import varietyService from '../../services/admin1/master/varietyService';
-import mixingGroupService from '../../services/admin1/master/mixingGroupService';
-import stationService from '../../services/admin1/master/stationService';
 
 const InwardEntryManagement = () => {
   // States
@@ -32,67 +27,77 @@ const InwardEntryManagement = () => {
   const [editingEntry, setEditingEntry] = useState(null);
   const [viewingEntry, setViewingEntry] = useState(null);
   
-  // Form state
+  // Form state - aligned with database model
   const [formData, setFormData] = useState({
     inwardNo: '',
-    orderNo: '',
-    orderId: '',
+    inwardDate: new Date().toISOString().split('T')[0],
+    type: 'Upcountry', // Upcountry, Fought, Port, Polyster
+    
+    // Purchase Order details (from selection)
     purchaseOrderId: '',
+    purchaseOrderNo: '',
     
-    // Purchase Order details (read-only after selection)
-    supplierName: '',
-    brokerName: '',
-    varietyName: '',
-    mixingGroupName: '',
-    stationName: '',
-    paymentMode: '',
-    orderType: '',
+    // Related data from purchase order (read-only)
+    supplier: '',
+    broker: '',
+    variety: '',
+    mixingGroup: '',
+    station: '',
+    purchaseCandyRate: '',
+    purchaseQuantity: '',
     
-    // Inward specific fields
+    // Payment details
     lcNo: '',
     paymentDays: '',
     paymentDate: '',
-    govtForm: false,
-    companyBroker: '',
-    type: 'Upcountry',
+    govtForm: '',
     
-    // Inward details
-    inwardDate: new Date().toISOString().split('T')[0],
+    // Document details
     billNo: '',
     billDate: '',
     lotNo: '',
     lorryNo: '',
     date: '',
+    
+    // Rate and charges
     candyRate: '',
     pMark: '',
     pressRunningNo: '',
     commisType: '',
     commisValue: '',
     
-    // Godown
-    godownId: '',
-    godownName: '',
-    
-    // Weight and quantity
-    balesQty: '',
-    freight: '',
-    cooly: '',
-    bale: '',
-    
-    // Tax details (rates only - amounts will be calculated)
-    sgst: '',
-    cgst: '',
-    igst: '',
-    
-    // Weight details
+    // Quantity and weight
+    Qty: '',
     grossWeight: '',
     tareWeight: '',
     nettWeight: '',
     
+    // Freight and charges
+    freight: '',
+    cooly: '',
+    bale: '',
+    
+    // Tax percentages (editable for Port/Polyster)
+    gst: '',
+    sgst: '',
+    cgst: '',
+    igst: '',
+    
+    // Tax amounts (calculated)
+    sgstAmount: '',
+    cgstAmount: '',
+    igstAmount: '',
+    Tax: '',
+    TaxRs: '',
+    
     // Other
     permitNo: '',
     comm: '',
-    remarks: ''
+    remarks: '',
+    
+    // Godown
+    godownId: '',
+    godownName: ''
   });
 
   // Autocomplete states
@@ -107,17 +112,31 @@ const InwardEntryManagement = () => {
   const purchaseOrderRef = useRef(null);
   const godownRef = useRef(null);
 
-  // Tax rates configuration
+  // Tax rates configuration for different types
   const taxRates = {
     Upcountry: {
       sgst: 0,
       cgst: 0,
-      igst: 5
+      igst: 5,
+      gst: 5
     },
     Fought: {
       sgst: 2.5,
       cgst: 2.5,
-      igst: 0
+      igst: 0,
+      gst: 5
+    },
+    Port: {
+      sgst: '',
+      cgst: '',
+      igst: '',
+      gst: ''
+    },
+    Polyster: {
+      sgst: '',
+      cgst: '',
+      igst: '',
+      gst: ''
     }
   };
 
@@ -125,14 +144,114 @@ const InwardEntryManagement = () => {
   useEffect(() => {
     if (formData.type && taxRates[formData.type]) {
       const rates = taxRates[formData.type];
-      setFormData(prev => ({
-        ...prev,
-        sgst: rates.sgst,
-        cgst: rates.cgst,
-        igst: rates.igst
-      }));
+      
+      // For Port and Polyster, clear tax fields (user will enter)
+      if (formData.type === 'Port' || formData.type === 'Polyster') {
+        setFormData(prev => ({
+          ...prev,
+          sgst: '',
+          cgst: '',
+          igst: '',
+          gst: '',
+          sgstAmount: '',
+          cgstAmount: '',
+          igstAmount: '',
+          Tax: '',
+          TaxRs: ''
+        }));
+      } else {
+        // For Upcountry and Fought, set fixed rates
+        setFormData(prev => ({
+          ...prev,
+          sgst: rates.sgst,
+          cgst: rates.cgst,
+          igst: rates.igst,
+          gst: rates.gst
+        }));
+        
+        // Calculate tax amounts if candyRate exists
+        // if (prev.candyRate) {
+        //   calculateTaxAmounts(prev.candyRate, rates.sgst, rates.cgst, rates.igst, rates.gst);
+        // }
+      }
     }
   }, [formData.type]);
+
+  // Calculate payment date when inwardDate or paymentDays changes
+  useEffect(() => {
+    if (formData.inwardDate && formData.paymentDays) {
+      const inwardDate = new Date(formData.inwardDate);
+      const days = parseInt(formData.paymentDays);
+      
+      if (!isNaN(days) && days > 0) {
+        const paymentDate = new Date(inwardDate);
+        paymentDate.setDate(inwardDate.getDate() + days);
+        
+        const formattedDate = paymentDate.toISOString().split('T')[0];
+        
+        if (formattedDate !== formData.paymentDate) {
+          setFormData(prev => ({
+            ...prev,
+            paymentDate: formattedDate
+          }));
+        }
+      }
+    }
+  }, [formData.inwardDate, formData.paymentDays]);
+
+  // Calculate nett weight when gross or tare changes
+  useEffect(() => {
+    const gross = parseFloat(formData.grossWeight) || 0;
+    const tare = parseFloat(formData.tareWeight) || 0;
+    
+    if (gross > 0 || tare > 0) {
+      const nett = gross - tare;
+      setFormData(prev => ({
+        ...prev,
+        nettWeight: nett > 0 ? nett.toFixed(3) : '0.000'
+      }));
+    }
+  }, [formData.grossWeight, formData.tareWeight]);
+
+  // Calculate tax amounts when relevant fields change
+  const calculateTaxAmounts = (candyRate, sgst, cgst, igst, gst) => {
+    const rate = parseFloat(candyRate) || 0;
+    const sgstRate = parseFloat(sgst) || 0;
+    const cgstRate = parseFloat(cgst) || 0;
+    const igstRate = parseFloat(igst) || 0;
+    const gstRate = parseFloat(gst) || 0;
+    
+    const sgstAmt = rate * (sgstRate / 100);
+    const cgstAmt = rate * (cgstRate / 100);
+    const igstAmt = rate * (igstRate / 100);
+    
+    // Total GST amount (sum of applicable taxes)
+    const totalGstAmt = sgstAmt + cgstAmt + igstAmt;
+    
+    setFormData(prev => ({
+      ...prev,
+      sgstAmount: sgstAmt.toFixed(2),
+      cgstAmount: cgstAmt.toFixed(2),
+      igstAmount: igstAmt.toFixed(2),
+      Tax: gstRate.toFixed(2),
+      TaxRs: totalGstAmt.toFixed(2)
+    }));
+  };
+
+  // Handle tax field changes for Port/Polyster
+  useEffect(() => {
+    if ((formData.type === 'Port' || formData.type === 'Polyster') && 
+        formData.candyRate && 
+        (formData.sgst || formData.cgst || formData.igst || formData.gst)) {
+      
+      const sgst = formData.sgst || 0;
+      const cgst = formData.cgst || 0;
+      const igst = formData.igst || 0;
+      const gst = parseFloat(sgst) + parseFloat(cgst) + parseFloat(igst);
+      
+      calculateTaxAmounts(formData.candyRate, sgst, cgst, igst, gst);
+    }
+  }, [formData.candyRate, formData.sgst, formData.cgst, formData.igst, formData.type]);
 
   // Load all data on component mount
   useEffect(() => {
@@ -168,50 +287,15 @@ const InwardEntryManagement = () => {
     
     try {
       const response = await inwardEntryService.getAll();
-      const entriesData = Array.isArray(response) ? response : [];
+      // Handle the response structure from your API
+      const entriesData = response?.inwardEntries || (Array.isArray(response) ? response : []);
       setInwardEntries(entriesData);
-      setLoading(false);
     } catch (err) {
       setError(err.message || 'Failed to load inward entries');
       setInwardEntries([]);
+    } finally {
       setLoading(false);
     }
-  };
-  
-  // Calculate nett weight automatically
-  useEffect(() => {
-    const calculateNettWeight = () => {
-      const gross = parseFloat(formData.grossWeight) || 0;
-      const tare = parseFloat(formData.tareWeight) || 0;
-      
-      if (gross > 0 && tare >= 0) {
-        const nett = gross - tare;
-        return nett > 0 ? nett.toFixed(2) : '';
-      }
-      return '';
-    };
-    
-    const nettWeight = calculateNettWeight();
-    if (nettWeight !== formData.nettWeight) {
-      setFormData(prev => ({
-        ...prev,
-        nettWeight: nettWeight
-      }));
-    }
-  }, [formData.grossWeight, formData.tareWeight, formData.nettWeight]);
-
-  // Calculate tax amounts
-  const calculateTaxAmounts = () => {
-    const candyRate = parseFloat(formData.candyRate) || 0;
-    const sgstRate = parseFloat(formData.sgst) || 0;
-    const cgstRate = parseFloat(formData.cgst) || 0;
-    const igstRate = parseFloat(formData.igst) || 0;
-    
-    return {
-      sgstAmount: candyRate * (sgstRate / 100),
-      cgstAmount: candyRate * (cgstRate / 100),
-      igstAmount: candyRate * (igstRate / 100)
-    };
   };
 
   const fetchPurchaseOrders = async () => {
@@ -245,12 +329,10 @@ const InwardEntryManagement = () => {
     try {
       setInwardNoLoading(true);
       const response = await inwardEntryService.getNextInwardNo();
-      console.log(response);
       setFormData(prev => ({
         ...prev,
         inwardNo: response || ''
       }));
-      
     } catch (err) {
       console.error('Error fetching next inward number:', err);
       const currentYear = new Date().getFullYear().toString().slice(-2);
@@ -268,132 +350,49 @@ const InwardEntryManagement = () => {
     }
   };
 
-  // Handle purchase order selection - with name fetching
-  const handlePurchaseOrderSelect = async (order) => {
-    try {
-      setFetchingOrderDetails(true);
-      
-      // First set the basic form data
-      setFormData(prev => ({
-        ...prev,
-        orderNo: order.orderNo,
-        orderId: order.id,
-        purchaseOrderId: order.id,
-        candyRate: order.candyRate || ''
-      }));
-      
-      setPurchaseOrderSearch(order.orderNo);
-      setShowPurchaseOrderDropdown(false);
-      
-      // Then fetch all related data asynchronously
-      const promises = [];
-      
-      // Fetch supplier name if supplierId exists
-      if (order.supplierId) {
-        promises.push(
-          supplierService.getById(order.supplierId)
-            .then(supplier => ({ type: 'supplier', data: supplier }))
-            .catch(() => ({ type: 'supplier', data: null }))
-        );
-      }
-      
-      // Fetch broker name if brokerId exists
-      if (order.brokerId) {
-        promises.push(
-          brokerService.getById(order.brokerId)
-            .then(broker => ({ type: 'broker', data: broker }))
-            .catch(() => ({ type: 'broker', data: null }))
-        );
-      }
-      
-      // Fetch variety name if varietyId exists
-      if (order.varietyId) {
-        promises.push(
-          varietyService.getById(order.varietyId)
-            .then(variety => ({ type: 'variety', data: variety }))
-            .catch(() => ({ type: 'variety', data: null }))
-        );
-      }
-      
-      // Fetch mixing group name if mixingGroupId exists
-      if (order.mixingGroupId) {
-        promises.push(
-          mixingGroupService.getById(order.mixingGroupId)
-            .then(mixingGroup => ({ type: 'mixingGroup', data: mixingGroup }))
-            .catch(() => ({ type: 'mixingGroup', data: null }))
-        );
-      }
-      
-      // Fetch station name if stationId exists
-      if (order.stationId) {
-        promises.push(
-          stationService.getById(order.stationId)
-            .then(station => ({ type: 'station', data: station }))
-            .catch(() => ({ type: 'station', data: null }))
-        );
-      }
-      
-      // Wait for all promises to resolve
-      const results = await Promise.all(promises);
-      
-      // Update form data with fetched names
-      const updates = {};
-      
-      results.forEach(result => {
-        if (result.data) {
-          switch (result.type) {
-            case 'supplier':
-              updates.supplierName = result.data.accountName || result.data.brokerName || 'N/A';
-              break;
-            case 'broker':
-              updates.brokerName = result.data.brokerName || 'N/A';
-              break;
-            case 'variety':
-              updates.varietyName = result.data.variety || 'N/A';
-              break;
-            case 'mixingGroup':
-              updates.mixingGroupName = result.data.mixingName || 'N/A';
-              break;
-            case 'station':
-              updates.stationName = result.data.station || 'N/A';
-              break;
-          }
-        }
-      });
-      
-      // Add payment mode and order type (these should be in the order object)
-      updates.paymentMode = order.paymentMode || 'N/A';
-      updates.orderType = order.orderType || 'N/A';
-      
-      // Update form data with all fetched values
-      setFormData(prev => ({
-        ...prev,
-        ...updates
-      }));
-      
-    } catch (error) {
-      console.error('Error fetching purchase order details:', error);
-      // Still update with basic data even if fetching details fails
-      setFormData(prev => ({
-        ...prev,
-        supplierName: 'Error loading',
-        brokerName: 'Error loading',
-        varietyName: 'Error loading',
-        mixingGroupName: 'Error loading',
-        stationName: 'Error loading',
-        paymentMode: order.paymentMode || 'N/A',
-        orderType: order.orderType || 'N/A'
-      }));
-      
-      setError('Failed to load some purchase order details. Please check the related records exist.');
-    } finally {
-      setFetchingOrderDetails(false);
+  // Handle purchase order selection
+  // Handle purchase order selection - using getById to fetch complete details
+const handlePurchaseOrderSelect = async (orderId) => {
+  try {
+    setFetchingOrderDetails(true);
+    
+    // Fetch complete purchase order details by ID
+    const response = await purchaseOrderService.getById(orderId);
+    const order = response.purchaseOrder || response; // Handle different response structures
+    
+    setFormData(prev => ({
+      ...prev,
+      purchaseOrderId: order.id,
+      purchaseOrderNo: order.orderNo || '',
+      supplier: order.supplier || '',
+      broker: order.broker || '',
+      variety: order.variety || '',
+      mixingGroup: order.mixing || '',
+      station: order.station || '',
+      purchaseCandyRate: order.candyRate || '',
+      purchaseQuantity: order.quantity || '',
+      candyRate: order.candyRate || '' // Auto-populate candy rate
+    }));
+    
+    setPurchaseOrderSearch(order.orderNo || '');
+    setShowPurchaseOrderDropdown(false);
+    
+    // Calculate tax amounts if type is set and candyRate exists
+    if (formData.type && order.candyRate) {
+      const rates = taxRates[formData.type] || {};
+      calculateTaxAmounts(order.candyRate, rates.sgst, rates.cgst, rates.igst, rates.gst);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching purchase order details:', error);
+    setError('Failed to load purchase order details');
+  } finally {
+    setFetchingOrderDetails(false);
+  }
+};
 
-  // Filter based on search
+  // Filter purchase orders based on search
   const filteredPurchaseOrders = purchaseOrders.filter(order => {
-    if (!purchaseOrderSearch.trim()) return purchaseOrders;
+    if (!purchaseOrderSearch.trim()) return true;
     const searchLower = purchaseOrderSearch.toLowerCase();
     return (
       (order.orderNo && order.orderNo.toLowerCase().includes(searchLower)) ||
@@ -403,12 +402,11 @@ const InwardEntryManagement = () => {
   });
 
   const filteredGodowns = godowns.filter(godown => {
-    if (!godownSearch.trim()) return godowns;
+    if (!godownSearch.trim()) return true;
     const searchLower = godownSearch.toLowerCase();
     return (
       (godown.godownName && godown.godownName.toLowerCase().includes(searchLower)) ||
-      (godown.locationName && godown.locationName.toLowerCase().includes(searchLower)) ||
-      (godown.code && godown.code.toString().includes(searchLower))
+      (godown.locationName && godown.locationName.toLowerCase().includes(searchLower))
     );
   });
 
@@ -417,52 +415,38 @@ const InwardEntryManagement = () => {
     const entriesArray = Array.isArray(inwardEntries) ? inwardEntries : [];
     
     return entriesArray.filter(entry => {
-      if (!entry || typeof entry !== 'object') return false;
+      if (!entry) return false;
       
       const inwardNo = entry.inwardNo || '';
-      const orderNo = entry.orderNo || '';
-      const supplierName = entry.supplierName || '';
-      const varietyName = entry.varietyName || '';
+      const purchaseOrderNo = entry.purchaseOrderNo || '';
+      const supplier = entry.supplier || '';
+      const variety = entry.variety || '';
       
       return searchTerm === '' || 
         inwardNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        orderNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        varietyName.toLowerCase().includes(searchTerm.toLowerCase());
+        purchaseOrderNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        variety.toLowerCase().includes(searchTerm.toLowerCase());
     });
   })();
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    // Prevent inwardNo changes when creating new entry (editingEntry is null)
+    // Prevent inwardNo changes when creating new entry
     if (name === 'inwardNo' && !editingEntry) {
-      return; // Don't allow changes when creating
-    }
-    
-    // Handle type change - tax rates will be updated via useEffect
-    if (name === 'type') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
       return;
-    }
-    
-    // Prevent manual changes to tax fields
-    if (name === 'sgst' || name === 'cgst' || name === 'igst') {
-      return; // Disable manual editing
     }
     
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : 
               (name === 'paymentDays' || name === 'candyRate' || name === 'commisValue' || 
-               name === 'balesQty' || name === 'freight' || name === 'cooly' || name === 'bale' ||
+               name === 'Qty' || name === 'freight' || name === 'cooly' || name === 'bale' ||
                name === 'grossWeight' || name === 'tareWeight' || name === 'nettWeight' || 
-               name === 'comm')
-        ? (value === '' ? '' : parseFloat(value) || '')
-        : value
+               name === 'comm' || name === 'sgst' || name === 'cgst' || name === 'igst' || name === 'gst')
+                ? (value === '' ? '' : parseFloat(value) || 0)
+                : value
     }));
   };
 
@@ -481,16 +465,15 @@ const InwardEntryManagement = () => {
   const clearPurchaseOrderSelection = () => {
     setFormData(prev => ({
       ...prev,
-      orderNo: '',
-      orderId: '',
       purchaseOrderId: '',
-      supplierName: '',
-      brokerName: '',
-      varietyName: '',
-      mixingGroupName: '',
-      stationName: '',
-      paymentMode: '',
-      orderType: '',
+      purchaseOrderNo: '',
+      supplier: '',
+      broker: '',
+      variety: '',
+      mixingGroup: '',
+      station: '',
+      purchaseCandyRate: '',
+      purchaseQuantity: '',
       candyRate: ''
     }));
     setPurchaseOrderSearch('');
@@ -519,7 +502,7 @@ const InwardEntryManagement = () => {
       return;
     }
 
-    if (!formData.orderId) {
+    if (!formData.purchaseOrderId) {
       setError('Please select a purchase order');
       return;
     }
@@ -529,57 +512,77 @@ const InwardEntryManagement = () => {
       return;
     }
 
-    if (!formData.balesQty || parseFloat(formData.balesQty) <= 0) {
-      setError('Please enter a valid bales quantity');
+    if (!formData.Qty || parseFloat(formData.Qty) <= 0) {
+      setError('Please enter a valid quantity');
       return;
     }
 
     try {
-      // Prepare payload according to service requirements
+      // Calculate tax amounts before submission
+      const sgst = parseFloat(formData.sgst) || 0;
+      const cgst = parseFloat(formData.cgst) || 0;
+      const igst = parseFloat(formData.igst) || 0;
+      const candyRate = parseFloat(formData.candyRate) || 0;
+      
+      const sgstAmount = candyRate * (sgst / 100);
+      const cgstAmount = candyRate * (cgst / 100);
+      const igstAmount = candyRate * (igst / 100);
+      const totalTaxAmount = sgstAmount + cgstAmount + igstAmount;
+      const totalTaxPercent = sgst + cgst + igst;
+
+      // Prepare payload according to model
       const payload = {
         inwardNo: formData.inwardNo.trim(),
         inwardDate: formData.inwardDate,
+        type: formData.type,
+        
         purchaseOrderId: parseInt(formData.purchaseOrderId, 10),
-        orderNo: formData.orderNo || null,
-        godownId: parseInt(formData.godownId, 10),
         
         lcNo: formData.lcNo || null,
         paymentDays: formData.paymentDays ? parseInt(formData.paymentDays, 10) : null,
         paymentDate: formData.paymentDate || null,
-        govtForm: formData.govtForm,
-        type: formData.type,
+        govtForm: formData.govtForm || null,
         
         billNo: formData.billNo || null,
         billDate: formData.billDate || null,
         lotNo: formData.lotNo || null,
         lorryNo: formData.lorryNo || null,
+        date: formData.date || null,
         
-        candyRate: formData.candyRate ? parseFloat(formData.candyRate) : null,
+        candyRate: candyRate || null,
         pMark: formData.pMark || null,
         pressRunningNo: formData.pressRunningNo || null,
         commisType: formData.commisType || null,
         commisValue: formData.commisValue ? parseFloat(formData.commisValue) : null,
         
-        balesQty: parseFloat(formData.balesQty),
-        freight: formData.freight ? parseFloat(formData.freight) : 0,
-        
-        // Split cooly/bale into two fields
-        cooly: formData.cooly ? parseFloat(formData.cooly) : 0,
-        bale: formData.bale ? parseFloat(formData.bale) : 0,
-        
-        // Tax rates only
-        sgst: formData.sgst ? parseFloat(formData.sgst) : 0,
-        cgst: formData.cgst ? parseFloat(formData.cgst) : 0,
-        igst: formData.igst ? parseFloat(formData.igst) : 0,
-        
+        Qty: parseInt(formData.Qty) || null,
         grossWeight: formData.grossWeight ? parseFloat(formData.grossWeight) : null,
         tareWeight: formData.tareWeight ? parseFloat(formData.tareWeight) : null,
         nettWeight: formData.nettWeight ? parseFloat(formData.nettWeight) : null,
         
+        freight: formData.freight ? parseFloat(formData.freight) : null,
+        cooly: formData.cooly ? parseFloat(formData.cooly) : null,
+        bale: formData.bale ? parseFloat(formData.bale) : null,
+        
+        gst: totalTaxPercent || null,
+        sgst: sgst || null,
+        cgst: cgst || null,
+        igst: igst || null,
+        
+        sgstAmount: sgstAmount || null,
+        cgstAmount: cgstAmount || null,
+        igstAmount: igstAmount || null,
+        
+        Tax: totalTaxPercent || null,
+        TaxRs: totalTaxAmount || null,
+        
         permitNo: formData.permitNo || null,
         comm: formData.comm ? parseFloat(formData.comm) : null,
-        remarks: formData.remarks || null
+        remarks: formData.remarks || null,
+        
+        godownId: parseInt(formData.godownId, 10)
       };
+      console.log(payload);
       
       if (editingEntry) {
         // Update existing entry
@@ -614,187 +617,97 @@ const InwardEntryManagement = () => {
     }
   };
 
-  const handleEdit = async (entry) => {
-    if (!entry || !entry.id) {
-      setError('Invalid inward entry data');
-      return;
+  const handleEdit = async (id) => {
+    try {
+      const response = await inwardEntryService.getById(id);
+      const entry = response.inwardEntry || response;
+      
+      setEditingEntry(entry);
+      
+      // Map API response to form data
+      setFormData({
+        inwardNo: entry.inwardNo || '',
+        inwardDate: entry.inwardDate || new Date().toISOString().split('T')[0],
+        type: entry.type || 'Upcountry',
+        
+        purchaseOrderId: entry.purchaseOrderId || '',
+        purchaseOrderNo: entry.purchaseOrderNo || '',
+        
+        supplier: entry.supplier || '',
+        broker: entry.broker || '',
+        variety: entry.variety || '',
+        mixingGroup: entry.mixingGroup || '',
+        station: entry.station || '',
+        purchaseCandyRate: entry.purchaseCandyRate || '',
+        purchaseQuantity: entry.purchaseQuantity || '',
+        
+        lcNo: entry.lcNo || '',
+        paymentDays: entry.paymentDays || '',
+        paymentDate: entry.paymentDate || '',
+        govtForm: entry.govtForm || '',
+        
+        billNo: entry.billNo || '',
+        billDate: entry.billDate || '',
+        lotNo: entry.lotNo || '',
+        lorryNo: entry.lorryNo || '',
+        date: entry.date || '',
+        
+        candyRate: entry.candyRate || '',
+        pMark: entry.pMark || '',
+        pressRunningNo: entry.pressRunningNo || '',
+        commisType: entry.commisType || '',
+        commisValue: entry.commisValue || '',
+        
+        Qty: entry.Qty || '',
+        grossWeight: entry.grossWeight || '',
+        tareWeight: entry.tareWeight || '',
+        nettWeight: entry.nettWeight || '',
+        
+        freight: entry.freight || '',
+        cooly: entry.cooly || '',
+        bale: entry.bale || '',
+        
+        gst: entry.gst || '',
+        sgst: entry.sgst || '',
+        cgst: entry.cgst || '',
+        igst: entry.igst || '',
+        
+        sgstAmount: entry.sgstAmount || '',
+        cgstAmount: entry.cgstAmount || '',
+        igstAmount: entry.igstAmount || '',
+        Tax: entry.Tax || '',
+        TaxRs: entry.TaxRs || '',
+        
+        permitNo: entry.permitNo || '',
+        comm: entry.comm || '',
+        remarks: entry.remarks || '',
+        
+        godownId: entry.godownId || '',
+        godownName: entry.godownName || ''
+      });
+      
+      setPurchaseOrderSearch(entry.purchaseOrderNo || '');
+      setGodownSearch(entry.godownName || '');
+      
+      setShowModal(true);
+    } catch (error) {
+      console.error('Error fetching entry details:', error);
+      setError('Failed to load entry details for editing');
     }
-    
-    setEditingEntry(entry);
-    
-    // Set basic form data
-    const basicFormData = {
-      inwardNo: entry.inwardNo || '',
-      orderNo: entry.orderNo || '',
-      orderId: entry.orderId || entry.purchaseOrderId || '',
-      purchaseOrderId: entry.purchaseOrderId || '',
-      lcNo: entry.lcNo || '',
-      paymentDays: entry.paymentDays || '',
-      paymentDate: entry.paymentDate || '',
-      govtForm: entry.govtForm || false,
-      companyBroker: entry.companyBroker || '',
-      type: entry.type || 'Upcountry',
-      inwardDate: entry.inwardDate || new Date().toISOString().split('T')[0],
-      billNo: entry.billNo || '',
-      billDate: entry.billDate || '',
-      lotNo: entry.lotNo || '',
-      lorryNo: entry.lorryNo || '',
-      date: entry.date || '',
-      candyRate: entry.candyRate || '',
-      pMark: entry.pMark || '',
-      pressRunningNo: entry.pressRunningNo || '',
-      commisType: entry.commisType || '',
-      commisValue: entry.commisValue || '',
-      godownId: entry.godownId || '',
-      godownName: entry.godownName || '',
-      balesQty: entry.balesQty || '',
-      freight: entry.freight || '',
-      cooly: entry.cooly || '',
-      bale: entry.bale || '',
-      sgst: entry.sgst || '',
-      cgst: entry.cgst || '',
-      igst: entry.igst || '',
-      grossWeight: entry.grossWeight || '',
-      tareWeight: entry.tareWeight || '',
-      nettWeight: entry.nettWeight || '',
-      permitNo: entry.permitNo || '',
-      comm: entry.comm || '',
-      remarks: entry.remarks || ''
-    };
-    
-    setFormData(basicFormData);
-    setPurchaseOrderSearch(entry.orderNo || '');
-    setGodownSearch(entry.godownName || '');
-    
-    // If there's an purchaseOrderId, fetch the purchase order details
-    if (entry.purchaseOrderId || entry.orderId) {
-      try {
-        const orderId = entry.purchaseOrderId || entry.orderId;
-        const purchaseOrder = await purchaseOrderService.getById(orderId);
-        // Then fetch all related names as we did in handlePurchaseOrderSelect
-        const promises = [];
-        
-        if (purchaseOrder.supplierId) {
-          promises.push(
-            supplierService.getById(purchaseOrder.supplierId)
-              .then(supplier => ({ type: 'supplier', data: supplier }))
-              .catch(() => ({ type: 'supplier', data: null }))
-          );
-        }
-        
-        if (purchaseOrder.brokerId) {
-          promises.push(
-            brokerService.getById(purchaseOrder.brokerId)
-              .then(broker => ({ type: 'broker', data: broker }))
-              .catch(() => ({ type: 'broker', data: null }))
-          );
-        }
-        
-        if (purchaseOrder.varietyId) {
-          promises.push(
-            varietyService.getById(purchaseOrder.varietyId)
-              .then(variety => ({ type: 'variety', data: variety }))
-              .catch(() => ({ type: 'variety', data: null }))
-          );
-        }
-        
-        if (purchaseOrder.mixingGroupId) {
-          promises.push(
-            mixingGroupService.getById(purchaseOrder.mixingGroupId)
-              .then(mixingGroup => ({ type: 'mixingGroup', data: mixingGroup }))
-              .catch(() => ({ type: 'mixingGroup', data: null }))
-          );
-        }
-        
-        if (purchaseOrder.stationId) {
-          promises.push(
-            stationService.getById(purchaseOrder.stationId)
-              .then(station => ({ type: 'station', data: station }))
-              .catch(() => ({ type: 'station', data: null }))
-          );
-        }
-        
-        const results = await Promise.all(promises);
-        
-        const updates = {};
-        results.forEach(result => {
-          if (result.data) {
-            switch (result.type) {
-              case 'supplier':
-                updates.supplierName = result.data.accountName || result.data.brokerName || 'N/A';
-                break;
-              case 'broker':
-                updates.brokerName = result.data.brokerName || 'N/A';
-                break;
-              case 'variety':
-                updates.varietyName = result.data.variety || 'N/A';
-                break;
-              case 'mixingGroup':
-                updates.mixingGroupName = result.data.mixingName || 'N/A';
-                break;
-              case 'station':
-                updates.stationName = result.data.station || 'N/A';
-                break;
-            }
-          }
-        });
-        
-        updates.paymentMode = purchaseOrder.paymentMode || 'N/A';
-        updates.orderType = purchaseOrder.orderType || 'N/A';
-        
-        // Update form data with fetched names
-        setFormData(prev => ({
-          ...prev,
-          ...updates
-        }));
-        
-      } catch (error) {
-        console.error('Error loading purchase order details for edit:', error);
-        // If we can't fetch the details, at least show what we have in the entry
-        setFormData(prev => ({
-          ...prev,
-          supplierName: entry.supplierName || 'N/A',
-          brokerName: entry.brokerName || 'N/A',
-          varietyName: entry.varietyName || 'N/A',
-          mixingGroupName: entry.mixingGroupName || 'N/A',
-          stationName: entry.stationName || 'N/A',
-          paymentMode: entry.paymentMode || 'N/A',
-          orderType: entry.orderType || 'N/A'
-        }));
-      }
-    } else {
-      // If no orderId, just set the names from the entry directly
-      setFormData(prev => ({
-        ...prev,
-        supplierName: entry.supplierName || 'N/A',
-        brokerName: entry.brokerName || 'N/A',
-        varietyName: entry.varietyName || 'N/A',
-        mixingGroupName: entry.mixingGroupName || 'N/A',
-        stationName: entry.stationName || 'N/A',
-        paymentMode: entry.paymentMode || 'N/A',
-        orderType: entry.orderType || 'N/A'
-      }));
-    }
-    
-    setShowModal(true);
   };
 
-  const handleView = (entry) => {
-    if (!entry || !entry.id) {
-      setError('Invalid inward entry data');
-      return;
+  const handleView = async (id) => {
+    try {
+      const response = await inwardEntryService.getById(id);
+      setViewingEntry(response.inwardEntry || response);
+      setShowViewModal(true);
+    } catch (error) {
+      console.error('Error fetching entry details:', error);
+      setError('Failed to load entry details');
     }
-    
-    setViewingEntry(entry);
-    setShowViewModal(true);
   };
 
   const handleDelete = async (id, inwardNo) => {
-    if (!id || !inwardNo) {
-      setError('Invalid inward entry data for deletion');
-      return;
-    }
-
     if (!window.confirm(`Are you sure you want to delete inward entry "${inwardNo}"?`)) {
       return;
     }
@@ -812,48 +725,63 @@ const InwardEntryManagement = () => {
   const resetForm = () => {
     setFormData({
       inwardNo: '',
-      orderNo: '',
-      orderId: '',
+      inwardDate: new Date().toISOString().split('T')[0],
+      type: 'Upcountry',
+      
       purchaseOrderId: '',
-      supplierName: '',
-      brokerName: '',
-      varietyName: '',
-      mixingGroupName: '',
-      stationName: '',
-      paymentMode: '',
-      orderType: '',
+      purchaseOrderNo: '',
+      
+      supplier: '',
+      broker: '',
+      variety: '',
+      mixingGroup: '',
+      station: '',
+      purchaseCandyRate: '',
+      purchaseQuantity: '',
+      
       lcNo: '',
       paymentDays: '',
       paymentDate: '',
-      govtForm: false,
-      companyBroker: '',
-      type: 'Upcountry',
-      inwardDate: new Date().toISOString().split('T')[0],
+      govtForm: '',
+      
       billNo: '',
       billDate: '',
       lotNo: '',
       lorryNo: '',
       date: '',
+      
       candyRate: '',
       pMark: '',
       pressRunningNo: '',
       commisType: '',
       commisValue: '',
-      godownId: '',
-      godownName: '',
-      balesQty: '',
-      freight: '',
-      cooly: '',
-      bale: '',
-      sgst: taxRates.Upcountry.sgst,
-      cgst: taxRates.Upcountry.cgst,
-      igst: taxRates.Upcountry.igst,
+      
+      Qty: '',
       grossWeight: '',
       tareWeight: '',
       nettWeight: '',
+      
+      freight: '',
+      cooly: '',
+      bale: '',
+      
+      gst: '',
+      sgst: '',
+      cgst: '',
+      igst: '',
+      
+      sgstAmount: '',
+      cgstAmount: '',
+      igstAmount: '',
+      Tax: '',
+      TaxRs: '',
+      
       permitNo: '',
       comm: '',
-      remarks: ''
+      remarks: '',
+      
+      godownId: '',
+      godownName: ''
     });
     
     setPurchaseOrderSearch('');
@@ -866,17 +794,35 @@ const InwardEntryManagement = () => {
 
   const openCreateModal = () => {
     resetForm();
-    fetchNextInwardNumber(); // Fetch next inward number
+    fetchNextInwardNumber();
     setShowModal(true);
   };
 
   const exportEntries = async () => {
     try {
+      const headers = [
+        'Inward No', 'Date', 'Type', 'PO No', 'Supplier', 'Variety', 
+        'Qty', 'Gross Wt', 'Nett Wt', 'Godown', 'Bill No', 'Lorry No'
+      ];
+      
       const csvContent = "data:text/csv;charset=utf-8," +
-        "Inward No,Order No,Inward Date,Supplier,Variety,Godown,Bales Qty,Gross Weight,Nett Weight,Type,Bill No,Lorry No,Created Date\n" +
+        headers.join(',') + '\n' +
         filteredEntries.map(entry => {
-          return `"${entry.inwardNo}","${entry.orderNo}","${entry.inwardDate}","${entry.supplierName || ''}","${entry.varietyName || ''}","${entry.godownName || ''}","${entry.balesQty}","${entry.grossWeight || ''}","${entry.nettWeight || ''}","${entry.type}","${entry.billNo || ''}","${entry.lorryNo || ''}","${entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : 'N/A'}"`;
-        }).join("\n");
+          return [
+            `"${entry.inwardNo || ''}"`,
+            `"${entry.inwardDate || ''}"`,
+            `"${entry.type || ''}"`,
+            `"${entry.purchaseOrderNo || ''}"`,
+            `"${entry.supplier || ''}"`,
+            `"${entry.variety || ''}"`,
+            entry.Qty || '',
+            entry.grossWeight || '',
+            entry.nettWeight || '',
+            `"${entry.godownName || ''}"`,
+            `"${entry.billNo || ''}"`,
+            `"${entry.lorryNo || ''}"`
+          ].join(',');
+        }).join('\n');
       
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
@@ -893,33 +839,29 @@ const InwardEntryManagement = () => {
     }
   };
 
-  // Clear search
-  const clearSearch = () => {
-    setSearchTerm('');
-  };
-
-  // Format date
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-IN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
     });
   };
 
-  // Get tax amounts for display
-  const taxAmounts = calculateTaxAmounts();
-
-  // Get tax description based on type
   const getTaxDescription = () => {
-    if (formData.type === 'Upcountry') {
-      return "IGST 5% (Upcountry Transaction)";
-    } else if (formData.type === 'Fought') {
-      return "SGST 2.5% + CGST 2.5% (Fought Transaction)";
+    switch(formData.type) {
+      case 'Upcountry':
+        return "IGST 5% (Upcountry Transaction)";
+      case 'Fought':
+        return "SGST 2.5% + CGST 2.5% (Fought Transaction)";
+      case 'Port':
+        return "Enter tax percentages manually";
+      case 'Polyster':
+        return "Enter tax percentages manually";
+      default:
+        return "";
     }
-    return "";
   };
 
   return (
@@ -965,20 +907,19 @@ const InwardEntryManagement = () => {
       {/* Search and Actions Bar */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
         <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
-          {/* Search Input */}
           <div className="flex-1">
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
               <input
                 type="text"
-                placeholder="Search by inward number, order number, supplier, or variety..."
+                placeholder="Search by inward number, PO number, supplier, or variety..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               {searchTerm && (
                 <button
-                  onClick={clearSearch}
+                  onClick={() => setSearchTerm('')}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   ✕
@@ -987,7 +928,6 @@ const InwardEntryManagement = () => {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex space-x-2">
             <button
               onClick={exportEntries}
@@ -1014,7 +954,6 @@ const InwardEntryManagement = () => {
 
       {/* Inward Entries Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        {/* Table Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-800">
@@ -1026,7 +965,6 @@ const InwardEntryManagement = () => {
           </div>
         </div>
 
-        {/* Loading State */}
         {loading ? (
           <div className="p-8 text-center">
             <span className="text-4xl text-blue-600 animate-spin inline-block mb-4">↻</span>
@@ -1037,9 +975,7 @@ const InwardEntryManagement = () => {
             <span className="text-5xl text-gray-400 mb-4 inline-block">🚚</span>
             <p className="text-gray-600 mb-2">No inward entries found</p>
             {searchTerm ? (
-              <p className="text-sm text-gray-500">
-                Try adjusting your search
-              </p>
+              <p className="text-sm text-gray-500">Try adjusting your search</p>
             ) : (
               <button
                 onClick={openCreateModal}
@@ -1050,21 +986,20 @@ const InwardEntryManagement = () => {
             )}
           </div>
         ) : (
-          /* Entries Table */
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     INWARD DETAILS
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    WEIGHT & QUANTITY
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    QUANTITY & WEIGHT
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     INWARD DATE
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     ACTIONS
                   </th>
                 </tr>
@@ -1081,33 +1016,19 @@ const InwardEntryManagement = () => {
                           <div className="font-mono font-semibold text-gray-900">
                             {entry.inwardNo}
                           </div>
-                          <div className="text-xs mt-1">
-                            <span className={`px-2 py-1 rounded-full ${entry.type === 'Upcountry' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                              {entry.type}
-                            </span>
+                          <div className="text-xs text-gray-500 mt-1">
+                            PO: {entry.purchaseOrderNo || 'N/A'}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center">
-                          <span className="text-gray-400 mr-2">📦</span>
-                          <div className="text-sm font-medium text-gray-900">
-                            {entry.balesQty} bales
-                          </div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-gray-900">
+                          Qty: {entry.noOfBales || 0} bales
                         </div>
-                        <div className="flex items-center">
-                          <span className="text-gray-400 mr-2">⚖️</span>
-                          <div className="text-sm text-gray-600">
-                            Gross: {entry.grossWeight || 'N/A'} kg
-                          </div>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="text-gray-400 mr-2">⚖️</span>
-                          <div className="text-sm text-gray-600">
-                            Nett: {entry.nettWeight || 'N/A'} kg
-                          </div>
+                        <div className="text-sm text-gray-600">
+                          Nett: {entry.nettWeight ? parseFloat(entry.nettWeight).toFixed(3) : 'N/A'} kg
                         </div>
                       </div>
                     </td>
@@ -1115,24 +1036,18 @@ const InwardEntryManagement = () => {
                       <div className="text-sm text-gray-900">
                         {formatDate(entry.inwardDate)}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {entry.billNo && `Bill: ${entry.billNo}`}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {entry.lorryNo && `Lorry: ${entry.lorryNo}`}
-                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => handleView(entry)}
+                          onClick={() => handleView(entry.id)}
                           className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center"
                         >
                           <span className="mr-1">👁️</span>
                           View
                         </button>
                         <button
-                          onClick={() => handleEdit(entry)}
+                          onClick={() => handleEdit(entry.id)}
                           className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center"
                         >
                           <span className="mr-1">✏️</span>
@@ -1179,7 +1094,7 @@ const InwardEntryManagement = () => {
               {/* Form */}
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Left Column - Inward and Purchase Details */}
+                  {/* Left Column */}
                   <div className="space-y-6">
                     {/* Inward Basic Info */}
                     <div className="bg-gray-50 p-4 rounded-lg">
@@ -1215,7 +1130,7 @@ const InwardEntryManagement = () => {
                         {/* Purchase Order Selection */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Order Number *
+                            Purchase Order *
                           </label>
                           <div className="relative" ref={purchaseOrderRef}>
                             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10">📋</span>
@@ -1231,7 +1146,7 @@ const InwardEntryManagement = () => {
                               placeholder="Search by order number..."
                               required
                             />
-                            {formData.orderNo && (
+                            {formData.purchaseOrderId && (
                               <button
                                 type="button"
                                 onClick={clearPurchaseOrderSelection}
@@ -1257,9 +1172,9 @@ const InwardEntryManagement = () => {
                                   filteredPurchaseOrders.map((order) => (
                                     <div
                                       key={order.id}
-                                      onClick={() => handlePurchaseOrderSelect(order)}
+                                      onClick={() => handlePurchaseOrderSelect(order.id)}
                                       className={`p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
-                                        formData.orderId === order.id ? 'bg-blue-50' : ''
+                                        formData.purchaseOrderId === order.id ? 'bg-blue-50' : ''
                                       }`}
                                     >
                                       <div className="flex items-center justify-between">
@@ -1269,10 +1184,10 @@ const InwardEntryManagement = () => {
                                             Supplier: {order.supplierName || 'N/A'} | Variety: {order.varietyName || 'N/A'}
                                           </div>
                                           <div className="text-xs text-gray-500">
-                                            Quantity: {order.quantity} | Rate: ₹{order.candyRate || 'N/A'}/candy
+                                            Qty: {order.quantity} | Rate: ₹{order.candyRate || 'N/A'}/candy
                                           </div>
                                         </div>
-                                        {formData.orderId === order.id && (
+                                        {formData.purchaseOrderId === order.id && (
                                           <span className="w-4 h-4 text-blue-600">✓</span>
                                         )}
                                       </div>
@@ -1282,15 +1197,6 @@ const InwardEntryManagement = () => {
                               </div>
                             )}
                           </div>
-                          {fetchingOrderDetails && (
-                            <p className="mt-1 text-xs text-blue-600">
-                              <span className="w-3 h-3 animate-spin inline-block mr-1">↻</span>
-                              Loading order details...
-                            </p>
-                          )}
-                          {!formData.orderId && purchaseOrderSearch && (
-                            <p className="mt-1 text-xs text-red-500">Please select a purchase order from the list</p>
-                          )}
                         </div>
 
                         {/* Inward Date */}
@@ -1324,6 +1230,8 @@ const InwardEntryManagement = () => {
                           >
                             <option value="Upcountry">Upcountry</option>
                             <option value="Fought">Fought</option>
+                            <option value="Port">Port</option>
+                            <option value="Polyster">Polyster</option>
                           </select>
                         </div>
 
@@ -1358,7 +1266,7 @@ const InwardEntryManagement = () => {
                           />
                         </div>
 
-                        {/* Payment Date */}
+                        {/* Payment Date (Auto-calculated) */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Payment Date
@@ -1369,40 +1277,51 @@ const InwardEntryManagement = () => {
                               type="date"
                               name="paymentDate"
                               value={formData.paymentDate}
-                              onChange={handleInputChange}
-                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              readOnly
+                              className="w-full pl-10 pr-4 py-2 border border-gray-300 bg-gray-100 text-gray-700 rounded-lg cursor-not-allowed"
                             />
                           </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Auto-calculated: Inward Date + Payment Days
+                          </p>
                         </div>
 
-                        {/* Govt Form Checkbox */}
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="govtForm"
-                            name="govtForm"
-                            checked={formData.govtForm}
-                            onChange={handleInputChange}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <label htmlFor="govtForm" className="ml-2 text-sm text-gray-700">
-                            Govt. Form
+                        {/* Govt Form */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Govt Form
                           </label>
+                          <input
+                            type="text"
+                            name="govtForm"
+                            value={formData.govtForm}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter govt form"
+                          />
                         </div>
                       </div>
                     </div>
 
-                    {/* Purchase Details (Read-only after order selection) */}
-                    {formData.orderId && (
+                    {/* Purchase Details (Read-only) */}
+                    {formData.purchaseOrderId && (
                       <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-4">Purchase Details (Read-only)</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-4">Purchase Order Details</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-500 mb-1">
+                              PO Number
+                            </label>
+                            <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300">
+                              {formData.purchaseOrderNo || 'N/A'}
+                            </div>
+                          </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-500 mb-1">
                               Supplier
                             </label>
                             <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300">
-                              {formData.supplierName || 'N/A'}
+                              {formData.supplier || 'N/A'}
                             </div>
                           </div>
                           <div>
@@ -1410,7 +1329,7 @@ const InwardEntryManagement = () => {
                               Broker
                             </label>
                             <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300">
-                              {formData.brokerName || 'N/A'}
+                              {formData.broker || 'N/A'}
                             </div>
                           </div>
                           <div>
@@ -1418,7 +1337,7 @@ const InwardEntryManagement = () => {
                               Variety
                             </label>
                             <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300">
-                              {formData.varietyName || 'N/A'}
+                              {formData.variety || 'N/A'}
                             </div>
                           </div>
                           <div>
@@ -1426,7 +1345,7 @@ const InwardEntryManagement = () => {
                               Mixing Group
                             </label>
                             <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300">
-                              {formData.mixingGroupName || 'N/A'}
+                              {formData.mixingGroup || 'N/A'}
                             </div>
                           </div>
                           <div>
@@ -1434,31 +1353,23 @@ const InwardEntryManagement = () => {
                               Station
                             </label>
                             <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300">
-                              {formData.stationName || 'N/A'}
+                              {formData.station || 'N/A'}
                             </div>
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-500 mb-1">
-                              Payment Mode
+                              PO Candy Rate
                             </label>
                             <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300">
-                              {formData.paymentMode || 'N/A'}
+                              ₹{formData.purchaseCandyRate || 'N/A'}
                             </div>
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-500 mb-1">
-                              Order Type
+                              PO Quantity
                             </label>
                             <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300">
-                              {formData.orderType || 'N/A'}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-500 mb-1">
-                              Candy Rate
-                            </label>
-                            <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300">
-                              ₹{formData.candyRate || 'N/A'}
+                              {formData.purchaseQuantity || 'N/A'} bales
                             </div>
                           </div>
                         </div>
@@ -1521,10 +1432,7 @@ const InwardEntryManagement = () => {
                                       <div>
                                         <div className="font-medium text-gray-900">{godown.godownName}</div>
                                         <div className="text-xs text-gray-500">
-                                          Location: {godown.locationName} | Type: {godown.type}
-                                        </div>
-                                        <div className="text-xs text-gray-500">
-                                          Code: #{godown.code}
+                                          Location: {godown.locationName} | Code: #{godown.code}
                                         </div>
                                       </div>
                                       {formData.godownId === godown.id && (
@@ -1537,9 +1445,6 @@ const InwardEntryManagement = () => {
                             </div>
                           )}
                         </div>
-                        {!formData.godownId && godownSearch && (
-                          <p className="mt-1 text-xs text-red-500">Please select a godown from the list</p>
-                        )}
                       </div>
                     </div>
 
@@ -1549,69 +1454,21 @@ const InwardEntryManagement = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Bales Quantity *
+                            Quantity (Bales) *
                           </label>
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">📦</span>
                             <input
                               type="number"
-                              name="balesQty"
-                              value={formData.balesQty}
+                              name="Qty"
+                              value={formData.Qty}
                               onChange={handleInputChange}
                               required
                               min="0"
                               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="Enter bales quantity"
+                              placeholder="Enter quantity"
                             />
                           </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Freight
-                          </label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🚚</span>
-                            <input
-                              type="number"
-                              name="freight"
-                              value={formData.freight}
-                              onChange={handleInputChange}
-                              min="0"
-                              step="0.01"
-                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="Enter freight amount"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Cooly
-                          </label>
-                          <input
-                            type="number"
-                            name="cooly"
-                            value={formData.cooly}
-                            onChange={handleInputChange}
-                            min="0"
-                            step="0.01"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Enter cooly"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Bale
-                          </label>
-                          <input
-                            type="number"
-                            name="bale"
-                            value={formData.bale}
-                            onChange={handleInputChange}
-                            min="0"
-                            step="0.01"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Enter bale"
-                          />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1625,7 +1482,7 @@ const InwardEntryManagement = () => {
                               value={formData.grossWeight}
                               onChange={handleInputChange}
                               min="0"
-                              step="0.01"
+                              step="0.001"
                               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               placeholder="Enter gross weight"
                             />
@@ -1643,7 +1500,7 @@ const InwardEntryManagement = () => {
                               value={formData.tareWeight}
                               onChange={handleInputChange}
                               min="0"
-                              step="0.01"
+                              step="0.001"
                               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               placeholder="Enter tare weight"
                             />
@@ -1659,21 +1516,22 @@ const InwardEntryManagement = () => {
                               type="number"
                               name="nettWeight"
                               value={formData.nettWeight}
-                              onChange={handleInputChange}
-                              min="0"
-                              step="0.01"
-                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="Enter nett weight"
+                              readOnly
+                              className="w-full pl-10 pr-4 py-2 border border-gray-300 bg-gray-100 text-gray-700 rounded-lg cursor-not-allowed"
+                              placeholder="Auto-calculated"
                             />
                           </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Auto-calculated: Gross - Tare
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Column - Inward and Tax Details */}
+                  {/* Right Column */}
                   <div className="space-y-6">
-                    {/* Inward Document Details */}
+                    {/* Document Details */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="text-lg font-semibold text-gray-800 mb-4">Document Details</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1751,7 +1609,7 @@ const InwardEntryManagement = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Candy Rate
+                            Candy Rate (₹)
                           </label>
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">💰</span>
@@ -1810,19 +1668,68 @@ const InwardEntryManagement = () => {
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Commis. Value
                           </label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">💰</span>
-                            <input
-                              type="number"
-                              name="commisValue"
-                              value={formData.commisValue}
-                              onChange={handleInputChange}
-                              min="0"
-                              step="0.01"
-                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="Enter commission value"
-                            />
-                          </div>
+                          <input
+                            type="number"
+                            name="commisValue"
+                            value={formData.commisValue}
+                            onChange={handleInputChange}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter commission value"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Freight and Charges */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-4">Freight & Charges</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Freight
+                          </label>
+                          <input
+                            type="number"
+                            name="freight"
+                            value={formData.freight}
+                            onChange={handleInputChange}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter freight"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Cooly
+                          </label>
+                          <input
+                            type="number"
+                            name="cooly"
+                            value={formData.cooly}
+                            onChange={handleInputChange}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter cooly"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Bale
+                          </label>
+                          <input
+                            type="number"
+                            name="bale"
+                            value={formData.bale}
+                            onChange={handleInputChange}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter bale"
+                          />
                         </div>
                       </div>
                     </div>
@@ -1835,65 +1742,65 @@ const InwardEntryManagement = () => {
                           {getTaxDescription()}
                         </div>
                       </div>
-                      <div className="space-y-4">
-                        {/* SGST - Only shown for Fought */}
-                        {formData.type === 'Fought' && (
-                          <div className="grid grid-cols-2 gap-4">
+                      
+                      {(formData.type === 'Port' || formData.type === 'Polyster') ? (
+                        // Editable tax fields for Port/Polyster
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-3 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 SGST %
                               </label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">%</span>
-                                <input
-                                  type="number"
-                                  name="sgst"
-                                  value={formData.sgst}
-                                  readOnly
-                                  className="w-full pl-10 pr-4 py-2 border border-gray-300 bg-gray-100 text-gray-700 rounded-lg cursor-not-allowed"
-                                  placeholder="SGST %"
-                                />
-                              </div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Fixed rate for Fought transactions
-                              </div>
+                              <input
+                                type="number"
+                                name="sgst"
+                                value={formData.sgst}
+                                onChange={handleInputChange}
+                                min="0"
+                                step="0.01"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Enter SGST %"
+                              />
                             </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                CGST %
+                              </label>
+                              <input
+                                type="number"
+                                name="cgst"
+                                value={formData.cgst}
+                                onChange={handleInputChange}
+                                min="0"
+                                step="0.01"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Enter CGST %"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                IGST %
+                              </label>
+                              <input
+                                type="number"
+                                name="igst"
+                                value={formData.igst}
+                                onChange={handleInputChange}
+                                min="0"
+                                step="0.01"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Enter IGST %"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 SGST Amount
                               </label>
                               <div className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg">
-                                <div className="text-gray-700">
-                                  ₹{taxAmounts.sgstAmount.toFixed(2)}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  (Candy Rate × {formData.sgst || 0}%)
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* CGST - Only shown for Fought */}
-                        {formData.type === 'Fought' && (
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                CGST %
-                              </label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">%</span>
-                                <input
-                                  type="number"
-                                  name="cgst"
-                                  value={formData.cgst}
-                                  readOnly
-                                  className="w-full pl-10 pr-4 py-2 border border-gray-300 bg-gray-100 text-gray-700 rounded-lg cursor-not-allowed"
-                                  placeholder="CGST %"
-                                />
-                              </div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Fixed rate for Fought transactions
+                                ₹{parseFloat(formData.sgstAmount || 0).toFixed(2)}
                               </div>
                             </div>
                             <div>
@@ -1901,34 +1808,7 @@ const InwardEntryManagement = () => {
                                 CGST Amount
                               </label>
                               <div className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg">
-                                <div className="text-gray-700">
-                                  ₹{taxAmounts.cgstAmount.toFixed(2)}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  (Candy Rate × {formData.cgst || 0}%)
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* IGST - Only shown for Upcountry */}
-                        {formData.type === 'Upcountry' && (
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                IGST %
-                              </label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">%</span>
-                                <input
-                                  type="number"
-                                  name="igst"
-                                  value={formData.igst}
-                                  readOnly
-                                  className="w-full pl-10 pr-4 py-2 border border-gray-300 bg-gray-100 text-gray-700 rounded-lg cursor-not-allowed"
-                                  placeholder="IGST %"
-                                />
+                                ₹{parseFloat(formData.cgstAmount || 0).toFixed(2)}
                               </div>
                             </div>
                             <div>
@@ -1936,14 +1816,109 @@ const InwardEntryManagement = () => {
                                 IGST Amount
                               </label>
                               <div className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg">
-                                <div className="text-gray-700">
-                                  ₹{taxAmounts.igstAmount.toFixed(2)}
-                                </div>
+                                ₹{parseFloat(formData.igstAmount || 0).toFixed(2)}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Total Tax (₹)
+                              </label>
+                              <div className="px-4 py-2 bg-blue-100 border border-blue-300 rounded-lg font-semibold">
+                                ₹{parseFloat(formData.TaxRs || 0).toFixed(2)}
                               </div>
                             </div>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        // Read-only tax fields for Upcountry/Fought
+                        <div className="space-y-4">
+                          {formData.type === 'Fought' && (
+                            <>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    SGST %
+                                  </label>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">%</span>
+                                    <input
+                                      type="number"
+                                      value={formData.sgst}
+                                      readOnly
+                                      className="w-full pl-10 pr-4 py-2 border border-gray-300 bg-gray-100 text-gray-700 rounded-lg cursor-not-allowed"
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    SGST Amount
+                                  </label>
+                                  <div className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg">
+                                    ₹{parseFloat(formData.sgstAmount || 0).toFixed(2)}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    CGST %
+                                  </label>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">%</span>
+                                    <input
+                                      type="number"
+                                      value={formData.cgst}
+                                      readOnly
+                                      className="w-full pl-10 pr-4 py-2 border border-gray-300 bg-gray-100 text-gray-700 rounded-lg cursor-not-allowed"
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    CGST Amount
+                                  </label>
+                                  <div className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg">
+                                    ₹{parseFloat(formData.cgstAmount || 0).toFixed(2)}
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                          
+                          {formData.type === 'Upcountry' && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  IGST %
+                                </label>
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">%</span>
+                                  <input
+                                    type="number"
+                                    value={formData.igst}
+                                    readOnly
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 bg-gray-100 text-gray-700 rounded-lg cursor-not-allowed"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  IGST Amount
+                                </label>
+                                <div className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg">
+                                  ₹{parseFloat(formData.igstAmount || 0).toFixed(2)}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="text-sm font-medium text-blue-800">
+                              Total Tax: ₹{parseFloat(formData.TaxRs || 0).toFixed(2)} ({formData.Tax || 0}%)
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Other Details */}
@@ -1967,19 +1942,16 @@ const InwardEntryManagement = () => {
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Commission
                           </label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">💰</span>
-                            <input
-                              type="number"
-                              name="comm"
-                              value={formData.comm}
-                              onChange={handleInputChange}
-                              min="0"
-                              step="0.01"
-                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="Enter commission"
-                            />
-                          </div>
+                          <input
+                            type="number"
+                            name="comm"
+                            value={formData.comm}
+                            onChange={handleInputChange}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter commission"
+                          />
                         </div>
                       </div>
                     </div>
@@ -1987,17 +1959,14 @@ const InwardEntryManagement = () => {
                     {/* Remarks */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="text-lg font-semibold text-gray-800 mb-4">Remarks</h4>
-                      <div className="relative">
-                        <span className="absolute left-3 top-3 text-gray-400">📝</span>
-                        <textarea
-                          name="remarks"
-                          value={formData.remarks}
-                          onChange={handleInputChange}
-                          rows="4"
-                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Add any remarks or special instructions..."
-                        />
-                      </div>
+                      <textarea
+                        name="remarks"
+                        value={formData.remarks}
+                        onChange={handleInputChange}
+                        rows="3"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Add any remarks..."
+                      />
                     </div>
                   </div>
                 </div>
@@ -2017,8 +1986,8 @@ const InwardEntryManagement = () => {
                   <button
                     type="submit"
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50"
-                    disabled={!formData.inwardNo || !formData.inwardDate || !formData.orderId || 
-                             !formData.godownId || !formData.balesQty || fetchingOrderDetails}
+                    disabled={!formData.inwardNo || !formData.inwardDate || !formData.purchaseOrderId || 
+                             !formData.godownId || !formData.Qty}
                   >
                     {editingEntry ? 'Update Inward' : 'Create Inward'}
                   </button>
@@ -2044,9 +2013,10 @@ const InwardEntryManagement = () => {
                   ✕
                 </button>
               </div>
+
               {/* Entry Details */}
               <div className="space-y-6">
-                {/* Entry Header */}
+                {/* Header Info */}
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center">
@@ -2056,24 +2026,23 @@ const InwardEntryManagement = () => {
                     <div className="flex items-center mt-2 space-x-4">
                       <div className="flex items-center">
                         <span className="text-gray-400 mr-1">📋</span>
-                        <span className="text-sm text-gray-600">Order: {viewingEntry.orderNo}</span>
+                        <span className="text-sm text-gray-600">PO: {viewingEntry.purchaseOrderNo || 'N/A'}</span>
                       </div>
                       <div className="flex items-center">
                         <span className="text-gray-400 mr-1">📅</span>
-                        <span className="text-sm text-gray-600">Inward Date: {formatDate(viewingEntry.inwardDate)}</span>
+                        <span className="text-sm text-gray-600">Date: {formatDate(viewingEntry.inwardDate)}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${viewingEntry.type === 'Upcountry' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                      {viewingEntry.type}
+                  <div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      viewingEntry.type === 'Upcountry' ? 'bg-green-100 text-green-800' : 
+                      viewingEntry.type === 'Fought' ? 'bg-blue-100 text-blue-800' :
+                      viewingEntry.type === 'Port' ? 'bg-purple-100 text-purple-800' :
+                      'bg-orange-100 text-orange-800'
+                    }`}>
+                      {viewingEntry.type || 'N/A'}
                     </span>
-                    {viewingEntry.govtForm && (
-                      <span className="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-                        <span className="w-3 h-3 inline mr-1">✓</span>
-                        Govt. Form
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -2083,214 +2052,260 @@ const InwardEntryManagement = () => {
                     {/* Purchase Details */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h5 className="text-lg font-semibold text-gray-800 mb-3">Purchase Details</h5>
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-sm text-gray-500">Supplier</div>
-                            <div className="font-medium text-gray-900">
-                              {viewingEntry.purchaseOrderId || 'N/A'}
-                              {console.log(purchaseOrderService.getById(viewingEntry.purchaseOrderId))}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-500">Broker</div>
-                            <div className="font-medium text-gray-900">
-                              {viewingEntry.brokerName || 'N/A'}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-500">Variety</div>
-                            <div className="font-medium text-gray-900">
-                              {viewingEntry.varietyName || 'N/A'}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-500">Mixing Group</div>
-                            <div className="font-medium text-gray-900">
-                              {viewingEntry.mixingGroupName || 'N/A'}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-500">Station</div>
-                            <div className="font-medium text-gray-900">
-                              {viewingEntry.stationName || 'N/A'}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-500">Payment Mode</div>
-                            <div className="font-medium text-gray-900">
-                              {viewingEntry.paymentMode || 'N/A'}
-                            </div>
-                          </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-sm text-gray-500">Supplier</div>
+                          <div className="font-medium">{viewingEntry.supplier || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Broker</div>
+                          <div className="font-medium">{viewingEntry.broker || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Variety</div>
+                          <div className="font-medium">{viewingEntry.variety || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Mixing Group</div>
+                          <div className="font-medium">{viewingEntry.mixingGroup || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Station</div>
+                          <div className="font-medium">{viewingEntry.station || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Candy Rate</div>
+                          <div className="font-medium">₹{viewingEntry.candyRate || 'N/A'}</div>
                         </div>
                       </div>
                     </div>
 
                     {/* Godown Details */}
                     <div className="bg-gray-50 p-4 rounded-lg">
-                      <h5 className="text-lg font-semibold text-gray-800 mb-3">Godown Details</h5>
-                      <div className="space-y-2">
+                      <h5 className="text-lg font-semibold text-gray-800 mb-3">Godown</h5>
+                      <div className="font-medium">{viewingEntry.godownName || 'N/A'}</div>
+                    </div>
+
+                    {/* Quantity & Weight */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h5 className="text-lg font-semibold text-gray-800 mb-3">Quantity & Weight</h5>
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <div className="text-sm text-gray-500">Godown Name</div>
-                          <div className="font-medium text-gray-900">
-                            {viewingEntry.godownName || 'N/A'}
-                          </div>
+                          <div className="text-sm text-gray-500">Quantity</div>
+                          <div className="font-bold text-xl">{viewingEntry.Qty || 0} bales</div>
                         </div>
                         <div>
-                          <div className="text-sm text-gray-500">Location</div>
-                          <div className="text-gray-700">
-                            {viewingEntry.godownLocation || 'N/A'}
-                          </div>
+                          <div className="text-sm text-gray-500">Gross Weight</div>
+                          <div>{viewingEntry.grossWeight ? parseFloat(viewingEntry.grossWeight).toFixed(3) : 'N/A'} kg</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Tare Weight</div>
+                          <div>{viewingEntry.tareWeight ? parseFloat(viewingEntry.tareWeight).toFixed(3) : 'N/A'} kg</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Nett Weight</div>
+                          <div className="font-semibold">{viewingEntry.nettWeight ? parseFloat(viewingEntry.nettWeight).toFixed(3) : 'N/A'} kg</div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Payment Details */}
+                    {(viewingEntry.lcNo || viewingEntry.paymentDays || viewingEntry.paymentDate) && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h5 className="text-lg font-semibold text-gray-800 mb-3">Payment Details</h5>
+                        <div className="grid grid-cols-2 gap-3">
+                          {viewingEntry.lcNo && (
+                            <div>
+                              <div className="text-sm text-gray-500">LC No.</div>
+                              <div>{viewingEntry.lcNo}</div>
+                            </div>
+                          )}
+                          {viewingEntry.paymentDays && (
+                            <div>
+                              <div className="text-sm text-gray-500">Payment Days</div>
+                              <div>{viewingEntry.paymentDays} days</div>
+                            </div>
+                          )}
+                          {viewingEntry.paymentDate && (
+                            <div>
+                              <div className="text-sm text-gray-500">Payment Date</div>
+                              <div>{formatDate(viewingEntry.paymentDate)}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Column */}
                   <div className="space-y-4">
-                    {/* Quantity & Weight Info */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h5 className="text-lg font-semibold text-gray-800 mb-3">Quantity & Weight</h5>
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-sm text-gray-500">Bales Quantity</div>
-                            <div className="font-bold text-gray-900 text-xl">
-                              {viewingEntry.balesQty} bales
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-500">Candy Rate</div>
-                            <div className="font-bold text-green-700 text-xl">
-                              ₹{viewingEntry.candyRate || 'N/A'}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-500">Gross Weight</div>
-                            <div className="font-medium text-gray-900">
-                              {viewingEntry.grossWeight || 'N/A'} kg
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-500">Tare Weight</div>
-                            <div className="font-medium text-gray-900">
-                              {viewingEntry.tareWeight || 'N/A'} kg
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-500">Nett Weight</div>
-                            <div className="font-medium text-gray-900">
-                              {viewingEntry.nettWeight || 'N/A'} kg
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-500">Freight</div>
-                            <div className="font-medium text-gray-900">
-                              {viewingEntry.freight ? `₹${viewingEntry.freight}` : 'N/A'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tax Details */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h5 className="text-lg font-semibold text-gray-800 mb-3">Tax Details ({viewingEntry.type})</h5>
-                      <div className="space-y-3">
-                        {viewingEntry.type === 'Upcountry' ? (
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <div className="text-sm text-gray-500">IGST %</div>
-                              <div className="font-medium text-gray-900">
-                                {viewingEntry.igst || 5}%
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">IGST Amount</div>
-                              <div className="font-medium text-gray-900">
-                                ₹{((viewingEntry.candyRate || 0) * ((viewingEntry.igst || 5) / 100)).toFixed(2)}
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <div className="text-sm text-gray-500">SGST %</div>
-                              <div className="font-medium text-gray-900">
-                                {viewingEntry.sgst || 2.5}%
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">SGST Amount</div>
-                              <div className="font-medium text-gray-900">
-                                ₹{((viewingEntry.candyRate || 0) * ((viewingEntry.sgst || 2.5) / 100)).toFixed(2)}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">CGST %</div>
-                              <div className="font-medium text-gray-900">
-                                {viewingEntry.cgst || 2.5}%
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">CGST Amount</div>
-                              <div className="font-medium text-gray-900">
-                                ₹{((viewingEntry.candyRate || 0) * ((viewingEntry.cgst || 2.5) / 100)).toFixed(2)}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="text-sm font-medium text-blue-800">
-                            {viewingEntry.type === 'Upcountry' ? 
-                              `Total IGST: ₹${((viewingEntry.candyRate || 0) * ((viewingEntry.igst || 5) / 100)).toFixed(2)}` :
-                              `Combined GST: ₹${((viewingEntry.candyRate || 0) * (((viewingEntry.sgst || 2.5) + (viewingEntry.cgst || 2.5)) / 100)).toFixed(2)}`
-                            }
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Document Details */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h5 className="text-lg font-semibold text-gray-800 mb-3">Document Details</h5>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <div className="text-gray-500">Bill No.</div>
-                          <div className="font-medium text-gray-900">{viewingEntry.billNo || 'N/A'}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Bill Date</div>
-                          <div className="font-medium text-gray-900">
-                            {viewingEntry.billDate ? formatDate(viewingEntry.billDate) : 'N/A'}
+                      <div className="grid grid-cols-2 gap-3">
+                        {viewingEntry.billNo && (
+                          <>
+                            <div>
+                              <div className="text-sm text-gray-500">Bill No.</div>
+                              <div>{viewingEntry.billNo}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-gray-500">Bill Date</div>
+                              <div>{formatDate(viewingEntry.billDate)}</div>
+                            </div>
+                          </>
+                        )}
+                        {viewingEntry.lotNo && (
+                          <div>
+                            <div className="text-sm text-gray-500">Lot No.</div>
+                            <div>{viewingEntry.lotNo}</div>
                           </div>
+                        )}
+                        {viewingEntry.lorryNo && (
+                          <div>
+                            <div className="text-sm text-gray-500">Lorry No.</div>
+                            <div>{viewingEntry.lorryNo}</div>
+                          </div>
+                        )}
+                        {viewingEntry.pMark && (
+                          <div>
+                            <div className="text-sm text-gray-500">P. Mark</div>
+                            <div>{viewingEntry.pMark}</div>
+                          </div>
+                        )}
+                        {viewingEntry.pressRunningNo && (
+                          <div>
+                            <div className="text-sm text-gray-500">Press Running No.</div>
+                            <div>{viewingEntry.pressRunningNo}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Freight & Charges */}
+                    {(viewingEntry.freight || viewingEntry.cooly || viewingEntry.bale) && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h5 className="text-lg font-semibold text-gray-800 mb-3">Freight & Charges</h5>
+                        <div className="grid grid-cols-3 gap-3">
+                          {viewingEntry.freight && (
+                            <div>
+                              <div className="text-sm text-gray-500">Freight</div>
+                              <div>₹{parseFloat(viewingEntry.freight).toFixed(2)}</div>
+                            </div>
+                          )}
+                          {viewingEntry.cooly && (
+                            <div>
+                              <div className="text-sm text-gray-500">Cooly</div>
+                              <div>₹{parseFloat(viewingEntry.cooly).toFixed(2)}</div>
+                            </div>
+                          )}
+                          {viewingEntry.bale && (
+                            <div>
+                              <div className="text-sm text-gray-500">Bale</div>
+                              <div>₹{parseFloat(viewingEntry.bale).toFixed(2)}</div>
+                            </div>
+                          )}
                         </div>
-                        <div>
-                          <div className="text-gray-500">Lot No.</div>
-                          <div className="font-medium text-gray-900">{viewingEntry.lotNo || 'N/A'}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Lorry No.</div>
-                          <div className="font-medium text-gray-900">{viewingEntry.lorryNo || 'N/A'}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">LC No.</div>
-                          <div className="font-medium text-gray-900">{viewingEntry.lcNo || 'N/A'}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Permit No.</div>
-                          <div className="font-medium text-gray-900">{viewingEntry.permitNo || 'N/A'}</div>
+                      </div>
+                    )}
+
+                    {/* Tax Details */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h5 className="text-lg font-semibold text-gray-800 mb-3">Tax Details</h5>
+                      <div className="space-y-3">
+                        {viewingEntry.type === 'Upcountry' && (
+                          <div>
+                            <div className="text-sm text-gray-500">IGST</div>
+                            <div className="font-medium">{viewingEntry.igst || 5}%</div>
+                            <div className="text-sm">Amount: ₹{parseFloat(viewingEntry.igstAmount || 0).toFixed(2)}</div>
+                          </div>
+                        )}
+                        
+                        {viewingEntry.type === 'Fought' && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <div className="text-sm text-gray-500">SGST</div>
+                              <div className="font-medium">{viewingEntry.sgst || 2.5}%</div>
+                              <div className="text-sm">₹{parseFloat(viewingEntry.sgstAmount || 0).toFixed(2)}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-gray-500">CGST</div>
+                              <div className="font-medium">{viewingEntry.cgst || 2.5}%</div>
+                              <div className="text-sm">₹{parseFloat(viewingEntry.cgstAmount || 0).toFixed(2)}</div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {(viewingEntry.type === 'Port' || viewingEntry.type === 'Polyster') && (
+                          <div className="grid grid-cols-3 gap-2">
+                            {viewingEntry.sgst > 0 && (
+                              <div>
+                                <div className="text-xs text-gray-500">SGST</div>
+                                <div className="font-medium">{viewingEntry.sgst}%</div>
+                                <div className="text-xs">₹{parseFloat(viewingEntry.sgstAmount || 0).toFixed(2)}</div>
+                              </div>
+                            )}
+                            {viewingEntry.cgst > 0 && (
+                              <div>
+                                <div className="text-xs text-gray-500">CGST</div>
+                                <div className="font-medium">{viewingEntry.cgst}%</div>
+                                <div className="text-xs">₹{parseFloat(viewingEntry.cgstAmount || 0).toFixed(2)}</div>
+                              </div>
+                            )}
+                            {viewingEntry.igst > 0 && (
+                              <div>
+                                <div className="text-xs text-gray-500">IGST</div>
+                                <div className="font-medium">{viewingEntry.igst}%</div>
+                                <div className="text-xs">₹{parseFloat(viewingEntry.igstAmount || 0).toFixed(2)}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        <div className="p-2 bg-blue-50 rounded mt-2">
+                          <div className="text-sm font-medium text-blue-800">
+                            Total Tax: ₹{parseFloat(viewingEntry.TaxRs || 0).toFixed(2)} ({viewingEntry.Tax || 0}%)
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Other Details */}
+                    {(viewingEntry.permitNo || viewingEntry.comm) && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h5 className="text-lg font-semibold text-gray-800 mb-3">Other Details</h5>
+                        <div className="grid grid-cols-2 gap-3">
+                          {viewingEntry.permitNo && (
+                            <div>
+                              <div className="text-sm text-gray-500">Permit No.</div>
+                              <div>{viewingEntry.permitNo}</div>
+                            </div>
+                          )}
+                          {viewingEntry.comm && (
+                            <div>
+                              <div className="text-sm text-gray-500">Commission</div>
+                              <div>₹{parseFloat(viewingEntry.comm).toFixed(2)}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Remarks */}
+                    {viewingEntry.remarks && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h5 className="text-lg font-semibold text-gray-800 mb-3">Remarks</h5>
+                        <div className="text-gray-700">{viewingEntry.remarks}</div>
+                      </div>
+                    )}
 
                     {/* Timestamps */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h5 className="text-lg font-semibold text-gray-800 mb-3">Timestamps</h5>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <div className="text-gray-500">Created Date</div>
-                          <div className="font-medium text-gray-900">
+                          <div className="text-sm text-gray-500">Created</div>
+                          <div className="text-sm">
                             {viewingEntry.createdAt ? new Date(viewingEntry.createdAt).toLocaleDateString() : 'N/A'}
                           </div>
                           <div className="text-xs text-gray-500">
@@ -2298,8 +2313,8 @@ const InwardEntryManagement = () => {
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-500">Last Updated</div>
-                          <div className="font-medium text-gray-900">
+                          <div className="text-sm text-gray-500">Updated</div>
+                          <div className="text-sm">
                             {viewingEntry.updatedAt ? new Date(viewingEntry.updatedAt).toLocaleDateString() : 'N/A'}
                           </div>
                           <div className="text-xs text-gray-500">
@@ -2311,34 +2326,22 @@ const InwardEntryManagement = () => {
                   </div>
                 </div>
 
-                {/* Remarks */}
-                {viewingEntry.remarks && (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h5 className="text-lg font-semibold text-gray-800 mb-3">Remarks</h5>
-                    <div className="text-gray-700">
-                      {viewingEntry.remarks}
-                    </div>
-                  </div>
-                )}
-
                 {/* Action Buttons */}
-                <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
                   <button
-                    type="button"
                     onClick={() => setShowViewModal(false)}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                   >
                     Close
                   </button>
                   <button
-                    type="button"
                     onClick={() => {
                       setShowViewModal(false);
-                      handleEdit(viewingEntry);
+                      handleEdit(viewingEntry.id);
                     }}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
                   >
-                    Edit Inward
+                    Edit Entry
                   </button>
                 </div>
               </div>

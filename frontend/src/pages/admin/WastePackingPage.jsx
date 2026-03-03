@@ -1,5 +1,5 @@
 // frontend/src/pages/admin/WastePackingPage.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import wasteLotService from "../../services/admin1/master/wasteLotService";
 import wasteMasterService from "../../services/admin1/master/wasteMasterService";
 import packingTypeService from "../../services/admin1/master/packingTypeService";
@@ -9,6 +9,9 @@ import "react-toastify/dist/ReactToastify.css";
 import debounce from "lodash/debounce";
 
 const WastePackingPage = () => {
+  // Refs for keyboard navigation
+  const inputRefs = useRef({});
+  
   // State for showing create form modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   
@@ -173,6 +176,9 @@ const WastePackingPage = () => {
 
     setBales(newBales);
     setFormData(prev => ({ ...prev, totalWeight: "" }));
+    
+    // Clear input refs for new rows
+    inputRefs.current = {};
   };
 
   // Handle number of bales change
@@ -259,6 +265,27 @@ const WastePackingPage = () => {
     }
     
     setBales(updatedBales);
+  };
+
+  // Handle key down events for keyboard navigation
+  const handleKeyDown = (e, index) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      
+      // Move to next row's gross weight input
+      const nextIndex = index + 1;
+      if (nextIndex < bales.length) {
+        const nextInputId = `gross-${nextIndex}`;
+        const nextInput = inputRefs.current[nextInputId];
+        if (nextInput) {
+          nextInput.focus();
+        }
+      } else {
+        // If it's the last row, you might want to focus on the submit button or something
+        // For now, we'll just keep it as is
+        console.log('Last row reached');
+      }
+    }
   };
 
   const validateForm = () => {
@@ -350,6 +377,7 @@ const WastePackingPage = () => {
     setLotSuggestions([]);
     setBales([]);
     setTotals({ grossWeight: 0, tareWeight: 0, netWeight: 0 });
+    inputRefs.current = {};
   };
 
   // Fetch existing packings
@@ -422,6 +450,11 @@ const WastePackingPage = () => {
   const handleEdit = (packing) => {
     setEditingEntry(packing);
     setShowEditModal(true);
+    
+    // Clear input refs for edit mode
+    setTimeout(() => {
+      inputRefs.current = {};
+    }, 100);
   };
 
   const handleUpdate = async (updatedEntry) => {
@@ -935,7 +968,7 @@ const WastePackingPage = () => {
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-800">Bale Details</h3>
                   <span className="text-sm text-gray-600">
-                    Enter gross weight for each bale (Net weight = Gross - Tare)
+                    Enter gross weight for each bale (Press Enter to move to next row)
                   </span>
                 </div>
                 
@@ -971,14 +1004,17 @@ const WastePackingPage = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input
+                              ref={el => inputRefs.current[`gross-${index}`] = el}
                               type="number"
                               value={bale.grossWeight}
                               onChange={(e) => handleBaleChange(index, "grossWeight", e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, index)}
                               step="0.001"
                               min="0"
                               className="w-32 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                               placeholder="Enter weight"
                               required
+                              autoFocus={index === 0} // Auto-focus first input when table appears
                             />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -1382,7 +1418,7 @@ const WastePackingPage = () => {
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold text-gray-800">Bale Details</h3>
                     <span className="text-sm text-gray-600">
-                      You can edit the gross weight for each bale (Net weight = Gross - Tare)
+                      You can edit the gross weight for each bale (Press Enter to move to next row)
                     </span>
                   </div>
                   
@@ -1418,6 +1454,7 @@ const WastePackingPage = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <input
+                                ref={el => inputRefs.current[`edit-gross-${index}`] = el}
                                 type="number"
                                 value={detail.grossWeight}
                                 onChange={(e) => {
@@ -1438,6 +1475,18 @@ const WastePackingPage = () => {
                                     details: newDetails,
                                     totalWeight: newTotal
                                   });
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const nextIndex = index + 1;
+                                    if (nextIndex < editingEntry.details.length) {
+                                      const nextInput = inputRefs.current[`edit-gross-${nextIndex}`];
+                                      if (nextInput) {
+                                        nextInput.focus();
+                                      }
+                                    }
+                                  }
                                 }}
                                 step="0.001"
                                 min="0"

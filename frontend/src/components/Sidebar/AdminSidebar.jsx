@@ -40,6 +40,11 @@ const AdminSidebar = () => {
     { to: "/admin/inward-entries", icon: "📦", label: "Inward Entries" },
     { to: "/admin/inward-lot", icon: "📦", label: "Inward Lot" },
     { to: "/admin/issue", icon: "📦", label: "Issue" },
+     { to: "/admin/final-invoice",icon:"📦",label: "Final Invoice"},
+    { to: "/admin/lot-entry",icon:"📦",label: "Lot Test Result Entry"},
+    { to: "/admin/location-transfer",icon:"📦",label: "Location Transfer"},
+    { to: "/admin/lot-allowance",icon:"📦",label:"LotAllowance"},
+    { to: "/admin/lot-reject",icon : "📦",label:"Lot Rejection"}
   ];
 
   const wasteTransactionItems = [
