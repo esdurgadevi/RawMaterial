@@ -96,7 +96,7 @@ const LotTestResultEntryPage = () => {
 
   const fetchLots = async () => {
     try {
-      const data = await inwardLotService.getAllLotNumbers();
+      const data = await inwardLotService.getAll();
       setLots(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch lots:', error);
@@ -129,56 +129,76 @@ const LotTestResultEntryPage = () => {
   };
 
   // Handle lot selection with proper data mapping from the API response
-  const handleLotSelect = (lot) => {
-    setSelectedLot(lot);
-    setSelectedLotId(lot.id || lot._id);
-    
-    // Extract data from the nested structure for display
-    const inwardEntry = lot.InwardEntry || {};
-    const purchaseOrder = inwardEntry.purchaseOrder || {};
-    const supplier = purchaseOrder.supplier || {};
-    const variety = purchaseOrder.variety || {};
-    const station = purchaseOrder.station || {};
+  const handleLotSelect = async (lot) => {
+    try {
+      setModalLoading(true);
+      
+      // Get the lot ID
+      const lotId = lot.id || lot._id;
+      console.log('Selected lot:', lot);
+      console.log('Fetching details for lot ID:', lotId);
+      
+      // Fetch complete lot details using getById
+      const completeLot = await inwardLotService.getById(lotId);
+      console.log('Complete lot details:', completeLot);
+      
+      setSelectedLot(completeLot);
+      setSelectedLotId(lotId);
+      
+      // Extract data from the complete lot details - handle different possible structures
+      const inwardEntry = completeLot.InwardEntry || completeLot.inwardEntry || {};
+      const purchaseOrder = inwardEntry.purchaseOrder || inwardEntry.PurchaseOrder || {};
+      const supplier = completeLot.supplier || {};
+      const variety = completeLot.variety || {};
+      const station = completeLot.station || purchaseOrder.Station || {};
 
-    // Set lot display information (read-only)
-    setLotDisplay({
-      lotNo: lot.lotNo || '',
-      lotDate: lot.createdAt ? formatDateForInput(lot.createdAt) : '',
-      billNo: inwardEntry.billNo || '',
-      billDate: inwardEntry.billDate ? formatDateForInput(inwardEntry.billDate) : '',
-      supplier: supplier.accountName || purchaseOrder.supplierName || '',
-      variety: variety.variety || purchaseOrder.varietyName || '',
-      station: station.station || purchaseOrder.stationName || '',
-      candyRate: lot.candyRate || inwardEntry.candyRate || '',
-      weight: lot.nettWeight || inwardEntry.nettWeight || ''
-    });
+      // Set lot display information (read-only) - including bill details from inward entry
+      setLotDisplay({
+        lotNo: completeLot.lotNo || completeLot.lot_number || '',
+        lotDate: completeLot.lotDate || completeLot.lot_date || '',
+        billNo: completeLot.billNo || '',
+        billDate: completeLot.billDate || inwardEntry.bill_date || '',
+        supplier: supplier ||  '',
+        variety: variety ||  '',
+        station: station || '',
+        candyRate: completeLot.candyRate || '',
+        weight: completeLot.nettWeight || completeLot.weight || inwardEntry.nettWeight || ''
+      });
 
-    // Set form data with lotId and pre-filled values from purchase order if available
-    setFormData(prev => ({
-      ...prev,
-      lotId: lot.id || lot._id,
-      permitNo: inwardEntry.permitNo || '',
-      staple: purchaseOrder.staple || '',
-      moist: purchaseOrder.moist || '',
-      strength: purchaseOrder.str || '',
-      mic: purchaseOrder.mic || '',
-      // Other fields remain empty for user to fill
-      rd: '',
-      plusB: '',
-      mr: '',
-      twoPointFive: '',
-      grade: '',
-      ui: '',
-      eLog: '',
-      sfi: '',
-      ml50: '',
-      strMode: 'HVI',
-      conStaple: '',
-      sci: ''
-    }));
+      // Set form data with lotId and pre-filled values from purchase order if available
+      setFormData(prev => ({
+        ...prev,
+        lotId: lotId,
+        permitNo: inwardEntry.permitNo || purchaseOrder.permit_no || '',
+        staple: purchaseOrder.staple || '',
+        moist: purchaseOrder.moist || '',
+        strength: purchaseOrder.str || purchaseOrder.strength || '',
+        mic: purchaseOrder.mic || '',
+        // Other fields remain empty for user to fill
+        rd: '',
+        plusB: '',
+        mr: '',
+        twoPointFive: '',
+        grade: '',
+        ui: '',
+        eLog: '',
+        sfi: '',
+        ml50: '',
+        strMode: 'HVI',
+        conStaple: '',
+        sci: ''
+      }));
 
-    setLotSearch(`${lot.lotNo} - ${supplier.accountName || purchaseOrder.supplierName || ''}`);
-    setShowLotDropdown(false);
+      setLotSearch(`${completeLot.lotNo || completeLot.lot_number} - ${supplier.accountName || supplier.name || purchaseOrder.supplierName || ''}`);
+      setShowLotDropdown(false);
+      
+      showNotification('Lot details loaded successfully', 'success');
+    } catch (error) {
+      console.error('Failed to fetch complete lot details:', error);
+      showNotification('Failed to load lot details: ' + (error.message || 'Unknown error'), 'error');
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   // Filter lots based on search
@@ -662,8 +682,8 @@ const LotTestResultEntryPage = () => {
                           <div className="p-3 text-center text-gray-500">No lots found</div>
                         ) : (
                           getFilteredLots().map(lot => {
-                            const supplier = lot.InwardEntry?.purchaseOrder?.supplier?.accountName || 
-                                           lot.InwardEntry?.purchaseOrder?.supplierName || '';
+                            const nettWeight = lot.nettWeight || '';
+                            const qty = lot.qty || 0;
                             return (
                               <div
                                 key={lot.id || lot._id}
@@ -672,7 +692,7 @@ const LotTestResultEntryPage = () => {
                               >
                                 <div className="font-medium text-gray-900">{lot.lotNo}</div>
                                 <div className="text-xs text-gray-500">
-                                  {supplier} • {lot.InwardEntry?.purchaseOrder?.variety?.variety || ''} • {lot.InwardEntry?.purchaseOrder?.station?.station || ''}
+                                  {qty} • {nettWeight} 
                                 </div>
                               </div>
                             );
@@ -1007,173 +1027,173 @@ const LotTestResultEntryPage = () => {
       )}
 
       {/* View Modal */}
-{openViewModal && viewEntry && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-      {/* Modal Header */}
-      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
-        <h3 className="text-xl font-semibold text-gray-800">Lot Test Result Details</h3>
-        <button
-          onClick={handleCloseViewModal}
-          className="text-gray-400 hover:text-gray-600 text-2xl"
-        >
-          ×
-        </button>
-      </div>
+      {openViewModal && viewEntry && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
+              <h3 className="text-xl font-semibold text-gray-800">Lot Test Result Details</h3>
+              <button
+                onClick={handleCloseViewModal}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
 
-      {/* Modal Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {/* Header Information */}
-        <div className="mb-6 p-5 bg-gray-50 rounded-lg">
-          <h4 className="text-base font-medium text-gray-700 mb-4">Lot Information</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <p className="text-sm text-gray-500">Lot No.</p>
-              <p className="text-base font-medium text-gray-900">{viewEntry.lot?.lotNo || '-'}</p>
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Header Information */}
+              <div className="mb-6 p-5 bg-gray-50 rounded-lg">
+                <h4 className="text-base font-medium text-gray-700 mb-4">Lot Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Lot No.</p>
+                    <p className="text-base font-medium text-gray-900">{viewEntry.lot?.lotNo || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Test Date</p>
+                    <p className="text-base text-gray-900">{formatDate(viewEntry.createdAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Supplier</p>
+                    <p className="text-base text-gray-900">
+                      {viewEntry.lot?.InwardEntry?.purchaseOrder?.supplier?.accountName || '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Variety</p>
+                    <p className="text-base text-gray-900">
+                      {viewEntry.lot?.InwardEntry?.purchaseOrder?.variety?.variety || '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Station</p>
+                    <p className="text-base text-gray-900">
+                      {viewEntry.lot?.InwardEntry?.purchaseOrder?.station?.station || '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Bill No.</p>
+                    <p className="text-base text-gray-900">
+                      {viewEntry.lot?.InwardEntry?.billNo || '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Bill Date</p>
+                    <p className="text-base text-gray-900">
+                      {viewEntry.lot?.InwardEntry?.billDate ? formatDate(viewEntry.lot.InwardEntry.billDate) : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Candy Rate</p>
+                    <p className="text-base text-gray-900">
+                      {viewEntry.lot?.InwardEntry?.purchaseOrder?.candyRate || '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Test Results */}
+              <div className="mb-6">
+                <h4 className="text-base font-medium text-gray-700 mb-4">Test Results</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Permit No</p>
+                    <p className="text-base font-semibold">{viewEntry.permitNo || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">RD</p>
+                    <p className="text-base font-semibold">{viewEntry.rd || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Staple</p>
+                    <p className="text-base font-semibold">{viewEntry.staple || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">+B</p>
+                    <p className="text-base font-semibold">{viewEntry.plusB || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Moist</p>
+                    <p className="text-base font-semibold">{viewEntry.moist || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">MR</p>
+                    <p className="text-base font-semibold">{viewEntry.mr || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">2.5%</p>
+                    <p className="text-base font-semibold">{viewEntry.twoPointFive || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Grade</p>
+                    <p className="text-base font-semibold">{viewEntry.grade || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">UI</p>
+                    <p className="text-base font-semibold">{viewEntry.ui || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">E Log</p>
+                    <p className="text-base font-semibold">{viewEntry.eLog || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Strength</p>
+                    <p className="text-base font-semibold">{viewEntry.strength || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">SFI</p>
+                    <p className="text-base font-semibold">{viewEntry.sfi || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Mic</p>
+                    <p className="text-base font-semibold">{viewEntry.mic || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">ML 50%</p>
+                    <p className="text-base font-semibold">{viewEntry.ml50 || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Str. Mode</p>
+                    <p className="text-base font-semibold">{viewEntry.strMode || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Con. Staple</p>
+                    <p className="text-base font-semibold">{viewEntry.conStaple || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">SCI</p>
+                    <p className="text-base font-semibold">{viewEntry.sci || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Metadata */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-400 border-t border-gray-100 pt-4">
+                <div>
+                  <p>Created: {viewEntry.createdAt ? new Date(viewEntry.createdAt).toLocaleString() : 'N/A'}</p>
+                </div>
+                <div>
+                  <p>Last Updated: {viewEntry.updatedAt ? new Date(viewEntry.updatedAt).toLocaleString() : 'N/A'}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Test Date</p>
-              <p className="text-base text-gray-900">{formatDate(viewEntry.createdAt)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Supplier</p>
-              <p className="text-base text-gray-900">
-                {viewEntry.lot?.InwardEntry?.purchaseOrder?.supplier?.accountName || '-'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Variety</p>
-              <p className="text-base text-gray-900">
-                {viewEntry.lot?.InwardEntry?.purchaseOrder?.variety?.variety || '-'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Station</p>
-              <p className="text-base text-gray-900">
-                {viewEntry.lot?.InwardEntry?.purchaseOrder?.station?.station || '-'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Bill No.</p>
-              <p className="text-base text-gray-900">
-                {viewEntry.lot?.InwardEntry?.bill_no || '-'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Bill Date</p>
-              <p className="text-base text-gray-900">
-                {viewEntry.lot?.InwardEntry?.bill_date ? formatDate(viewEntry.lot.InwardEntry.bill_date) : '-'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Candy Rate</p>
-              <p className="text-base text-gray-900">
-                {viewEntry.lot?.InwardEntry?.purchaseOrder?.candy_rate || '-'}
-              </p>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
+              <div className="flex justify-end">
+                <button
+                  onClick={handleCloseViewModal}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Test Results */}
-        <div className="mb-6">
-          <h4 className="text-base font-medium text-gray-700 mb-4">Test Results</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">Permit No</p>
-              <p className="text-base font-semibold">{viewEntry.permitNo || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">RD</p>
-              <p className="text-base font-semibold">{viewEntry.rd || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">Staple</p>
-              <p className="text-base font-semibold">{viewEntry.staple || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">+B</p>
-              <p className="text-base font-semibold">{viewEntry.plusB || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">Moist</p>
-              <p className="text-base font-semibold">{viewEntry.moist || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">MR</p>
-              <p className="text-base font-semibold">{viewEntry.mr || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">2.5%</p>
-              <p className="text-base font-semibold">{viewEntry.twoPointFive || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">Grade</p>
-              <p className="text-base font-semibold">{viewEntry.grade || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">UI</p>
-              <p className="text-base font-semibold">{viewEntry.ui || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">E Log</p>
-              <p className="text-base font-semibold">{viewEntry.eLog || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">Strength</p>
-              <p className="text-base font-semibold">{viewEntry.strength || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">SFI</p>
-              <p className="text-base font-semibold">{viewEntry.sfi || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">Mic</p>
-              <p className="text-base font-semibold">{viewEntry.mic || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">ML 50%</p>
-              <p className="text-base font-semibold">{viewEntry.ml50 || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">Str. Mode</p>
-              <p className="text-base font-semibold">{viewEntry.strMode || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">Con. Staple</p>
-              <p className="text-base font-semibold">{viewEntry.conStaple || '-'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500">SCI</p>
-              <p className="text-base font-semibold">{viewEntry.sci || '-'}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Metadata */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-400 border-t border-gray-100 pt-4">
-          <div>
-            <p>Created: {viewEntry.createdAt ? new Date(viewEntry.createdAt).toLocaleString() : 'N/A'}</p>
-          </div>
-          <div>
-            <p>Last Updated: {viewEntry.updatedAt ? new Date(viewEntry.updatedAt).toLocaleString() : 'N/A'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Modal Footer */}
-      <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
-        <div className="flex justify-end">
-          <button
-            onClick={handleCloseViewModal}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 };

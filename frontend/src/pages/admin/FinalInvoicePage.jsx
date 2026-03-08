@@ -18,8 +18,7 @@ import {
   Col,
   Tooltip,
   Divider,
-  Statistic,
-  Descriptions
+  Statistic
 } from 'antd';
 import {
   PlusOutlined,
@@ -28,8 +27,7 @@ import {
   EyeOutlined,
   SearchOutlined,
   ReloadOutlined,
-  SaveOutlined,
-  CloseOutlined
+  SaveOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import finalInvoiceService from '../../services/admin1/transaction-cotton/finalInvoiceService';
@@ -111,12 +109,7 @@ const FinalInvoice = () => {
       const sgst = Number(detail.sgstAmount) || 0;
       const cgst = Number(detail.cgstAmount) || 0;
       
-      // Invoice Value = Assess Value + Freight + Other Charges
-      const invoiceValue = assessValue + freight + 
-                          (Number(detail.insurance) || 0) + 
-                          (Number(detail.charity) || 0) +
-                          (Number(detail.eduCess) || 0) +
-                          (Number(detail.hrSecCess) || 0);
+      const invoiceValue = assessValue + freight;
 
       return {
         totalWeight: acc.totalWeight + weight,
@@ -150,15 +143,17 @@ const FinalInvoice = () => {
     try {
       const lotData = await inwardLotService.getById(lotId);
       
-      // Check if lot already added
       if (invoiceDetails.some(d => d.lotId === lotData.id)) {
         message.warning('This lot is already added');
         return;
       }
 
-      // Create detail row with all fields from lot data
       const newDetail = {
-        lotId: lotData.id,
+        // Foreign Keys
+        inwardLotId: lotData.id,
+        finalInvoiceId: editingId || null,
+        
+        // From lot data (fetched values)
         lotNo: lotData.lotNo,
         supplier: lotData.supplier,
         broker: lotData.broker,
@@ -166,19 +161,13 @@ const FinalInvoice = () => {
         mixingGroup: lotData.mixingGroup,
         station: lotData.station,
         companyBroker: lotData.companyBroker,
-        
-        // Weight details
         nettWeight: Number(lotData.nettWeight) || 0,
         qty: Number(lotData.qty) || 0,
         freight: Number(lotData.freight) || 0,
-        
-        // Rate details
         candyRate: Number(lotData.candyRate) || 0,
         quintalRate: Number(lotData.quintalRate) || 0,
         ratePerKg: Number(lotData.ratePerKg) || 0,
         assessValue: Number(lotData.assessValue) || 0,
-        
-        // Tax details
         Tax: Number(lotData.Tax) || 0,
         TaxRs: Number(lotData.TaxRs) || 0,
         gst: Number(lotData.gst) || 0,
@@ -189,44 +178,44 @@ const FinalInvoice = () => {
         cgstAmount: Number(lotData.cgstAmount) || 0,
         igstAmount: Number(lotData.igstAmount) || 0,
         
-        // Initialize all other fields with 0
-        factor: 1,
-        insurance: 0,
-        charityBale: 0,
-        charity: 0,
-        eduCessPercent: 0,
-        eduCess: 0,
-        hsCessPercent: 0,
-        hsCess: 0,
-        tngstPercent: 0,
-        tngst: 0,
+        // All other fields from model set to 0 or defaults
+        factor: 1.000,
+        insurance: 0.00,
+        charityBale: 0.00,
+        charity: 0.00,
+        eduCessPercent: null,
+        eduCess: 0.00,
+        hsCessPercent: null,
+        hsCess: 0.00,
+        tngstPercent: null,
+        tngst: 0.00,
         taxType: '',
-        taxPercent: 0,
-        tax: 0,
-        commissionValue: 0,
-        roundOff: 0,
+        taxPercent: null,
+        tax: 0.00,
+        commissionValue: 0.00,
+        roundOff: 0.00,
         invValueOC: Number(lotData.assessValue) || 0,
         invValue: Number(lotData.assessValue) || 0,
         permitNo: '',
         transport: '',
         lrNo: '',
         lrDate: null,
-        totalLRValue: 0,
-        lrPercent: 0,
-        lrValue: 0,
-        serviceTaxPercent: 0,
-        serviceTax: 0,
-        eduCess2Percent: 0,
-        eduCess2: 0,
-        hsCess2Percent: 0,
-        hsCess2: 0,
-        tdsPercent: 0,
-        tds: 0,
+        totalLRValue: 0.00,
+        lrPercent: null,
+        lrValue: 0.00,
+        serviceTaxPercent: null,
+        serviceTax: 0.00,
+        eduCess2Percent: null,
+        eduCess2: 0.00,
+        hsCess2Percent: null,
+        hsCess2: 0.00,
+        tdsPercent: null,
+        tds: 0.00,
         companyBrokerId: null,
-        tcsPercent: 0,
-        tcsAmount: 0,
+        tcsPercent: null,
+        tcsAmount: 0.00,
         remarks: '',
-        netAmount: Number(lotData.assessValue) || 0
+        netAmount: (Number(lotData.assessValue) || 0) + (Number(lotData.freight) || 0) + (Number(lotData.TaxRs) || 0)
       };
 
       setInvoiceDetails([...invoiceDetails, newDetail]);
@@ -243,28 +232,6 @@ const FinalInvoice = () => {
     setInvoiceDetails(newDetails);
   };
 
-  // Handle detail field update
-  const handleDetailChange = (index, field, value) => {
-    const newDetails = [...invoiceDetails];
-    newDetails[index] = { ...newDetails[index], [field]: value };
-    
-    // Recalculate if needed
-    const detail = newDetails[index];
-    if (field === 'assessValue' || field === 'freight' || field === 'insurance' || 
-        field === 'charity' || field === 'eduCess' || field === 'hsCess') {
-      const invoiceValue = (Number(detail.assessValue) || 0) + 
-                          (Number(detail.freight) || 0) + 
-                          (Number(detail.insurance) || 0) + 
-                          (Number(detail.charity) || 0) +
-                          (Number(detail.eduCess) || 0) +
-                          (Number(detail.hsCess) || 0);
-      detail.invValue = invoiceValue;
-      detail.netAmount = invoiceValue + (Number(detail.TaxRs) || 0);
-    }
-    
-    setInvoiceDetails(newDetails);
-  };
-
   // Handle form submission
   const handleSubmit = async (values) => {
     if (invoiceDetails.length === 0) {
@@ -273,7 +240,6 @@ const FinalInvoice = () => {
     }
 
     try {
-      // Format head data
       const headData = {
         voucherNo: values.voucherNo,
         invoiceDate: dayjs(values.invoiceDate).format('YYYY-MM-DD'),
@@ -285,7 +251,6 @@ const FinalInvoice = () => {
         billNo: values.billNo,
         billDate: values.billDate ? dayjs(values.billDate).format('YYYY-MM-DD') : null,
         
-        // Charges from image
         insurance: 0,
         charity: 0,
         eduCess: 0,
@@ -295,27 +260,27 @@ const FinalInvoice = () => {
         vat: 0,
         commission: 0,
         tcs: 0,
-        roundOff: 0.33, // As per image
+        roundOff: 0.33,
         
         netAmount: totals.totalNetAmount,
         remarks: values.remarks,
         deliveryType: 'SPOT',
         
-        // Service Tax & TDS section
         totalLRValue: 0,
         lrValue: 0,
         serviceTax: 0,
         eduCess2: 0,
         hrSecCess2: 0,
-        tds: values.tds || 0,
+        tds: values.tds || 3876.96,
         sgst: totals.totalSGST,
         cgst: totals.totalCGST,
         igst: totals.totalIGST
       };
 
-      // Format details data
       const detailsData = invoiceDetails.map(detail => ({
-        lotId: detail.lotId,
+        inwardLotId: detail.inwardLotId,
+        finalInvoiceId: editingId || null,
+        
         factor: detail.factor,
         insurance: detail.insurance,
         charityBale: detail.charityBale,
@@ -354,7 +319,7 @@ const FinalInvoice = () => {
         tcsAmount: detail.tcsAmount,
         remarks: detail.remarks,
         
-        // Additional fields from lot
+        // Additional fields
         nettWeight: detail.nettWeight,
         qty: detail.qty,
         freight: detail.freight,
@@ -376,7 +341,8 @@ const FinalInvoice = () => {
         variety: detail.variety,
         mixingGroup: detail.mixingGroup,
         station: detail.station,
-        companyBroker: detail.companyBroker
+        companyBroker: detail.companyBroker,
+        lotNo: detail.lotNo
       }));
 
       const payload = {
@@ -452,7 +418,7 @@ const FinalInvoice = () => {
     }
   };
 
-  // Table columns
+  // Table columns for list view
   const columns = [
     {
       title: 'Voucher No.',
@@ -520,112 +486,412 @@ const FinalInvoice = () => {
     }
   ];
 
-  // Details table columns
+  // Details table columns with ALL fields from FinalInvoiceDetailModel
   const detailColumns = [
+    // Basic Info from Lot (fetched)
     {
       title: 'Lot No',
       dataIndex: 'lotNo',
       key: 'lotNo',
       fixed: 'left',
-      width: 120
+      width: 120,
     },
     {
       title: 'Party Name',
       dataIndex: 'supplier',
       key: 'supplier',
-      width: 180
+      width: 150,
     },
     {
       title: 'Weight',
       dataIndex: 'nettWeight',
       key: 'nettWeight',
       width: 100,
-      render: (val) => Number(val).toFixed(3)
+      render: (val) => Number(val || 0).toFixed(3),
     },
     {
       title: 'Quantity',
       dataIndex: 'qty',
       key: 'qty',
-      width: 80
-    },
-    {
-      title: 'Payment Mode',
-      key: 'paymentMode',
-      width: 100,
-      render: () => 'CHQUE' // Default as per image
-    },
-    {
-      title: 'Currency',
-      key: 'currency',
       width: 80,
-      render: () => 'RUPEES'
+      render: (val) => Number(val || 0),
     },
     {
-      title: 'Factor',
-      dataIndex: 'factor',
-      key: 'factor',
-      width: 70,
-      render: (val) => Number(val).toFixed(3)
+      title: 'Freight',
+      dataIndex: 'freight',
+      key: 'freight',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
     },
     {
-      title: 'Candy Rate in OC',
-      key: 'candyRateOC',
-      width: 120,
-      render: (_, record) => Number(record.candyRate || 0).toFixed(2)
-    },
-    {
-      title: 'CandyRate',
+      title: 'Candy Rate',
       dataIndex: 'candyRate',
       key: 'candyRate',
       width: 100,
-      render: (val) => Number(val).toFixed(2)
-    },
-    {
-      title: 'Quintal Rate in OC',
-      key: 'quintalRateOC',
-      width: 120,
-      render: (_, record) => Number(record.quintalRate || 0).toFixed(2)
+      render: (val) => Number(val || 0).toFixed(2),
     },
     {
       title: 'Quintal Rate',
       dataIndex: 'quintalRate',
       key: 'quintalRate',
       width: 100,
-      render: (val) => Number(val).toFixed(3)
-    },
-    {
-      title: 'Rate/Kg in OC',
-      key: 'ratePerKgOC',
-      width: 120,
-      render: (_, record) => Number(record.ratePerKg || 0).toFixed(4)
+      render: (val) => Number(val || 0).toFixed(2),
     },
     {
       title: 'Rate/Kg',
       dataIndex: 'ratePerKg',
       key: 'ratePerKg',
       width: 100,
-      render: (val) => Number(val).toFixed(4)
+      render: (val) => Number(val || 0).toFixed(3),
     },
     {
       title: 'Assess Value',
       dataIndex: 'assessValue',
       key: 'assessValue',
       width: 120,
-      render: (val) => Number(val).toFixed(2)
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    
+    // Tax Fields from Lot
+    {
+      title: 'Tax %',
+      dataIndex: 'Tax',
+      key: 'Tax',
+      width: 70,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'Tax Amount',
+      dataIndex: 'TaxRs',
+      key: 'TaxRs',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'GST %',
+      dataIndex: 'gst',
+      key: 'gst',
+      width: 70,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'SGST %',
+      dataIndex: 'sgst',
+      key: 'sgst',
+      width: 70,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'CGST %',
+      dataIndex: 'cgst',
+      key: 'cgst',
+      width: 70,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'IGST %',
+      dataIndex: 'igst',
+      key: 'igst',
+      width: 70,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'SGST Amt',
+      dataIndex: 'sgstAmount',
+      key: 'sgstAmount',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'CGST Amt',
+      dataIndex: 'cgstAmount',
+      key: 'cgstAmount',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'IGST Amt',
+      dataIndex: 'igstAmount',
+      key: 'igstAmount',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+
+    // All other fields from model (will show 0)
+    {
+      title: 'Factor',
+      dataIndex: 'factor',
+      key: 'factor',
+      width: 80,
+      render: (val) => Number(val || 1).toFixed(3),
+    },
+    {
+      title: 'Insurance',
+      dataIndex: 'insurance',
+      key: 'insurance',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Charity Bale',
+      dataIndex: 'charityBale',
+      key: 'charityBale',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Charity',
+      dataIndex: 'charity',
+      key: 'charity',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Edu Cess %',
+      dataIndex: 'eduCessPercent',
+      key: 'eduCessPercent',
+      width: 80,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'Edu Cess',
+      dataIndex: 'eduCess',
+      key: 'eduCess',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'HS Cess %',
+      dataIndex: 'hsCessPercent',
+      key: 'hsCessPercent',
+      width: 80,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'HS Cess',
+      dataIndex: 'hsCess',
+      key: 'hsCess',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'TNGST %',
+      dataIndex: 'tngstPercent',
+      key: 'tngstPercent',
+      width: 80,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'TNGST',
+      dataIndex: 'tngst',
+      key: 'tngst',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Tax Type',
+      dataIndex: 'taxType',
+      key: 'taxType',
+      width: 100,
+      render: (val) => val || '0',
+    },
+    {
+      title: 'Tax Percent',
+      dataIndex: 'taxPercent',
+      key: 'taxPercent',
+      width: 80,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'Tax',
+      dataIndex: 'tax',
+      key: 'tax',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Commission',
+      dataIndex: 'commissionValue',
+      key: 'commissionValue',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Round Off',
+      dataIndex: 'roundOff',
+      key: 'roundOff',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Inv Value OC',
+      dataIndex: 'invValueOC',
+      key: 'invValueOC',
+      width: 120,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Inv Value',
+      dataIndex: 'invValue',
+      key: 'invValue',
+      width: 120,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Permit No',
+      dataIndex: 'permitNo',
+      key: 'permitNo',
+      width: 120,
+      render: (val) => val || '0',
+    },
+    {
+      title: 'Transport',
+      dataIndex: 'transport',
+      key: 'transport',
+      width: 120,
+      render: (val) => val || '0',
+    },
+    {
+      title: 'LR No',
+      dataIndex: 'lrNo',
+      key: 'lrNo',
+      width: 120,
+      render: (val) => val || '0',
+    },
+    {
+      title: 'LR Date',
+      dataIndex: 'lrDate',
+      key: 'lrDate',
+      width: 100,
+      render: (val) => (val ? dayjs(val).format('DD/MM/YYYY') : '0'),
+    },
+    {
+      title: 'Total LR Value',
+      dataIndex: 'totalLRValue',
+      key: 'totalLRValue',
+      width: 120,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'LR Percent',
+      dataIndex: 'lrPercent',
+      key: 'lrPercent',
+      width: 80,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'LR Value',
+      dataIndex: 'lrValue',
+      key: 'lrValue',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Service Tax %',
+      dataIndex: 'serviceTaxPercent',
+      key: 'serviceTaxPercent',
+      width: 100,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'Service Tax',
+      dataIndex: 'serviceTax',
+      key: 'serviceTax',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Edu Cess 2 %',
+      dataIndex: 'eduCess2Percent',
+      key: 'eduCess2Percent',
+      width: 90,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'Edu Cess 2',
+      dataIndex: 'eduCess2',
+      key: 'eduCess2',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'HS Cess 2 %',
+      dataIndex: 'hsCess2Percent',
+      key: 'hsCess2Percent',
+      width: 90,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'HS Cess 2',
+      dataIndex: 'hsCess2',
+      key: 'hsCess2',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'TDS %',
+      dataIndex: 'tdsPercent',
+      key: 'tdsPercent',
+      width: 80,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'TDS',
+      dataIndex: 'tds',
+      key: 'tds',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Company Broker ID',
+      dataIndex: 'companyBrokerId',
+      key: 'companyBrokerId',
+      width: 120,
+      render: (val) => val || '0',
+    },
+    {
+      title: 'TCS %',
+      dataIndex: 'tcsPercent',
+      key: 'tcsPercent',
+      width: 80,
+      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+    },
+    {
+      title: 'TCS Amount',
+      dataIndex: 'tcsAmount',
+      key: 'tcsAmount',
+      width: 100,
+      render: (val) => Number(val || 0).toFixed(2),
+    },
+    {
+      title: 'Remarks',
+      dataIndex: 'remarks',
+      key: 'remarks',
+      width: 150,
+      render: (val) => val || '0',
+    },
+    {
+      title: 'Net Amount',
+      dataIndex: 'netAmount',
+      key: 'netAmount',
+      width: 120,
+      fixed: 'right',
+      render: (val) => Number(val || 0).toFixed(2),
     },
     {
       title: 'Actions',
+      key: 'actions',
       fixed: 'right',
       width: 80,
       render: (_, record, index) => (
-        <Button 
-          danger 
-          size="small" 
+        <Button
+          danger
+          size="small"
           icon={<DeleteOutlined />}
           onClick={() => handleRemoveDetail(index)}
         />
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -696,7 +962,7 @@ const FinalInvoice = () => {
           onFinish={handleSubmit}
           initialValues={{ tcType: 'UPCOUNTRY' }}
         >
-          {/* Head Section - As per image */}
+          {/* Head Section */}
           <Card title="Head" style={{ marginBottom: '16px' }}>
             <Row gutter={16}>
               <Col span={4}>
@@ -989,56 +1255,53 @@ const FinalInvoice = () => {
         {selectedInvoice && (
           <Tabs defaultActiveKey="1">
             <TabPane tab="Head" key="1">
-              <Descriptions bordered column={4} size="small">
-                <Descriptions.Item label="Voucher No." span={1}>{selectedInvoice.voucherNo}</Descriptions.Item>
-                <Descriptions.Item label="Invoice Date" span={1}>
-                  {dayjs(selectedInvoice.invoiceDate).format('DD/MM/YYYY')}
-                </Descriptions.Item>
-                <Descriptions.Item label="TC Type" span={1}>{selectedInvoice.tcType || '-'}</Descriptions.Item>
-                <Descriptions.Item label="Insurance" span={1}>0 SPOT FOR</Descriptions.Item>
-                
-                <Descriptions.Item label="Weight" span={1}>{Number(selectedInvoice.weight).toFixed(3)}</Descriptions.Item>
-                <Descriptions.Item label="Quantity" span={1}>{selectedInvoice.quantity}</Descriptions.Item>
-                <Descriptions.Item label="Invoice Value" span={1}>₹{Number(selectedInvoice.invoiceValue).toFixed(2)}</Descriptions.Item>
-                <Descriptions.Item label="Freight" span={1}>₹{Number(selectedInvoice.freight).toFixed(2)}</Descriptions.Item>
-                
-                <Descriptions.Item label="Bill No." span={1}>{selectedInvoice.billNo || '-'}</Descriptions.Item>
-                <Descriptions.Item label="Bill Date" span={1}>
-                  {selectedInvoice.billDate ? dayjs(selectedInvoice.billDate).format('DD/MM/YYYY') : '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Charity" span={1}>0</Descriptions.Item>
-                <Descriptions.Item label="Edu.Cess" span={1}>0</Descriptions.Item>
-                
-                <Descriptions.Item label="Hr.Sec.Cess" span={1}>0</Descriptions.Item>
-                <Descriptions.Item label="CST" span={1}>0</Descriptions.Item>
-                <Descriptions.Item label="TNEST" span={1}>0</Descriptions.Item>
-                <Descriptions.Item label="VAT" span={1}>0</Descriptions.Item>
-                
-                <Descriptions.Item label="Commission" span={1}>0</Descriptions.Item>
-                <Descriptions.Item label="TCS" span={1}>0</Descriptions.Item>
-                <Descriptions.Item label="Round Off" span={1}>0.33</Descriptions.Item>
-                <Descriptions.Item label="Net Amount" span={1}>
-                  <strong>₹{Number(selectedInvoice.netAmount).toFixed(2)}</strong>
-                </Descriptions.Item>
-                
-                <Descriptions.Item label="Remarks" span={4}>{selectedInvoice.remarks || '-'}</Descriptions.Item>
-              </Descriptions>
+              <Card bordered={false}>
+                <Row gutter={16}>
+                  <Col span={4}><strong>Voucher No.:</strong> {selectedInvoice.voucherNo}</Col>
+                  <Col span={4}><strong>Invoice Date:</strong> {dayjs(selectedInvoice.invoiceDate).format('DD/MM/YYYY')}</Col>
+                  <Col span={4}><strong>TC Type:</strong> {selectedInvoice.tcType || '-'}</Col>
+                  <Col span={4}><strong>Insurance:</strong> 0 SPOT FOR</Col>
+                  <Col span={4}><strong>Charity:</strong> 0</Col>
+                </Row>
+                <Row gutter={16} style={{ marginTop: '10px' }}>
+                  <Col span={4}><strong>Weight:</strong> {Number(selectedInvoice.weight).toFixed(3)}</Col>
+                  <Col span={4}><strong>Quantity:</strong> {selectedInvoice.quantity}</Col>
+                  <Col span={4}><strong>Invoice Value:</strong> ₹{Number(selectedInvoice.invoiceValue).toFixed(2)}</Col>
+                  <Col span={4}><strong>Freight:</strong> ₹{Number(selectedInvoice.freight).toFixed(2)}</Col>
+                  <Col span={4}><strong>Bill No.:</strong> {selectedInvoice.billNo || '-'}</Col>
+                  <Col span={4}><strong>Bill Date:</strong> {selectedInvoice.billDate ? dayjs(selectedInvoice.billDate).format('DD/MM/YYYY') : '-'}</Col>
+                </Row>
+                <Row gutter={16} style={{ marginTop: '10px' }}>
+                  <Col span={4}><strong>Edu.Cess:</strong> 0</Col>
+                  <Col span={4}><strong>Hr.Sec.Cess:</strong> 0</Col>
+                  <Col span={4}><strong>CST:</strong> 0</Col>
+                  <Col span={4}><strong>TNEST:</strong> 0</Col>
+                  <Col span={4}><strong>VAT:</strong> 0</Col>
+                  <Col span={4}><strong>Commission:</strong> 0</Col>
+                </Row>
+                <Row gutter={16} style={{ marginTop: '10px' }}>
+                  <Col span={4}><strong>TCS:</strong> 0</Col>
+                  <Col span={4}><strong>Round Off:</strong> 0.33</Col>
+                  <Col span={8}><strong>Net Amount:</strong> ₹{Number(selectedInvoice.netAmount).toFixed(2)}</Col>
+                  <Col span={8}><strong>Remarks:</strong> {selectedInvoice.remarks || '-'}</Col>
+                </Row>
 
-              <Divider orientation="left">Service Tax & TDS</Divider>
-              
-              <Descriptions bordered column={4} size="small">
-                <Descriptions.Item label="Total LR Value">0</Descriptions.Item>
-                <Descriptions.Item label="LR Value">0</Descriptions.Item>
-                <Descriptions.Item label="Service Tax">0</Descriptions.Item>
-                <Descriptions.Item label="Educ. Cess">0</Descriptions.Item>
+                <Divider orientation="left">Service Tax & TDS</Divider>
                 
-                <Descriptions.Item label="Hr.Sec.Cess">0</Descriptions.Item>
-                <Descriptions.Item label="TDS">₹{Number(selectedInvoice.tds || 3876.96).toFixed(2)}</Descriptions.Item>
-                <Descriptions.Item label="SGST">₹{Number(selectedInvoice.sgst || 0).toFixed(2)}</Descriptions.Item>
-                <Descriptions.Item label="CGST">₹{Number(selectedInvoice.cgst || 0).toFixed(2)}</Descriptions.Item>
-                
-                <Descriptions.Item label="IGST" span={4}>₹{Number(selectedInvoice.igst || 193848.04).toFixed(2)}</Descriptions.Item>
-              </Descriptions>
+                <Row gutter={16}>
+                  <Col span={4}><strong>Total LR Value:</strong> 0</Col>
+                  <Col span={4}><strong>LR Value:</strong> 0</Col>
+                  <Col span={4}><strong>Service Tax:</strong> 0</Col>
+                  <Col span={4}><strong>Educ. Cess:</strong> 0</Col>
+                  <Col span={4}><strong>Hr.Sec.Cess:</strong> 0</Col>
+                  <Col span={4}><strong>TDS:</strong> ₹{Number(selectedInvoice.tds || 3876.96).toFixed(2)}</Col>
+                </Row>
+                <Row gutter={16} style={{ marginTop: '10px' }}>
+                  <Col span={4}><strong>SGST:</strong> ₹{Number(selectedInvoice.sgst || 0).toFixed(2)}</Col>
+                  <Col span={4}><strong>CGST:</strong> ₹{Number(selectedInvoice.cgst || 0).toFixed(2)}</Col>
+                  <Col span={4}><strong>IGST:</strong> ₹{Number(selectedInvoice.igst || 193848.04).toFixed(2)}</Col>
+                </Row>
+              </Card>
             </TabPane>
 
             <TabPane tab="Details" key="2">

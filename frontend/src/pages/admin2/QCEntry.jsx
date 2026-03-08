@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import qcEntryService from '../../services/admin2/transaction-qc/qcEntryService';
 import inwardLotService from '../../services/admin1/transaction-cotton/inwardLotService';
-import inwardEntryService from '../../services/admin1/transaction-cotton/inwardEntryService';
-import purchaseOrderService from '../../services/admin1/transaction-cotton/purchaseOrderService';
-import supplierService from '../../services/admin1/master/supplierService';
-import varietyService from '../../services/admin1/master/varietyService';
-import stationService from '../../services/admin1/master/stationService';
 
 const QCEntryManagement = () => {
   // View states: 'list', 'view', 'edit', 'create'
@@ -18,75 +13,53 @@ const QCEntryManagement = () => {
   const [qcEntries, setQcEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [lotDetails, setLotDetails] = useState({});
   
   // Detail view states
   const [lots, setLots] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [strMode, setStrMode] = useState('HVI'); // Default as per model
+  const [strMode, setStrMode] = useState('HVI');
   const [lotData, setLotData] = useState(null);
-  const [inwardData, setInwardData] = useState(null);
-  const [poData, setPoData] = useState(null);
-  const [supplierData, setSupplierData] = useState(null);
-  const [varietyData, setVarietyData] = useState(null);
-  const [stationData, setStationData] = useState(null);
   
-  // QC Form fields - matching model field names
+  // QC Form fields - matching backend model field names
   const [formData, setFormData] = useState({
-    // Read-only fields from lot/inward
+    // Read-only fields from lot
     candyRate: '',
     weight: '',
     permitNo: '',
     
-    // Test fields (matching model)
+    // Test fields (matching backend model)
     rd: '',
     staple: '',
     plusB: '',
     moist: '',
     mr: '',
-    twoPointFiveMm: '', // 2.5mm in model
-    grade: '',
     ui: '',
     eLog: '',
     strength: '',
-    sfi: '', // This might be sfcStaple or something else in model
     mic: '',
-    ml50: '',
-    sfcn: '', // sfcN in model
-    conStaple: '',
-    tsfn: '', // tsfN in model
-    sfcw: '', // sfcCW in model
+    sfcN: '',
+    tsfN: '',
     neps: '',
-    tsfw: '', // tsfW in model
     sci: '',
+    grade: '',
+    ml50: '',
+    conStaple: '',
+    sfcStaple: '',
+    sfcCW: '',
+    tsfW: '',
     fqi: '',
+    twoPointFiveMm: '',
   });
 
   // ============= LIST VIEW FUNCTIONS =============
   const fetchQCEntries = async () => {
     setLoading(true);
     try {
-      // Fetch all QC entries directly from the API
       const entries = await qcEntryService.getAll();
       console.log("Fetched QC entries:", entries);
       
-      // If entries is an array, set it directly
       if (Array.isArray(entries)) {
         setQcEntries(entries);
-        
-        // Also fetch lot details for each entry to get supplier info
-        const tempLotDetails = {};
-        for (const entry of entries) {
-          try {
-            const lotResponse = await inwardLotService.getByLotNo(entry.lotNo);
-            if (lotResponse?.lot) {
-              tempLotDetails[entry.lotNo] = lotResponse.lot;
-            }
-          } catch (error) {
-            console.log(`Could not fetch lot details for ${entry.lotNo}`);
-          }
-        }
-        setLotDetails(tempLotDetails);
       } else {
         console.error("Unexpected response format:", entries);
         setQcEntries([]);
@@ -109,7 +82,7 @@ const QCEntryManagement = () => {
 
   const loadLotsForSelection = async () => {
     try {
-      const response = await inwardLotService.getAllLotNumbers();
+      const response = await inwardLotService.getAll();
       const lotsList = response?.lots || response || [];
       setLots(lotsList);
     } catch (error) {
@@ -124,7 +97,7 @@ const QCEntryManagement = () => {
     setDetailLoading(true);
     try {
       // First, get all lots to find the one with matching lotNo
-      const response = await inwardLotService.getAllLotNumbers();
+      const response = await inwardLotService.getAll();
       const lotsList = response?.lots || response || [];
       const foundLot = lotsList.find(l => l.lotNo === lotNo);
       
@@ -134,51 +107,20 @@ const QCEntryManagement = () => {
         return;
       }
 
-      setSelectedLotId(foundLot.id);
-      setLotData(foundLot);
+      // Now get complete lot details by ID
+      const lotDetails = await inwardLotService.getById(foundLot.id);
+      console.log("Lot details fetched:", lotDetails);
+      
+      setSelectedLotId(lotDetails.id);
+      setLotData(lotDetails);
 
-      // Fetch inward entry using the lot's inwardId
-      if (foundLot.inwardId) {
-        const inward = await inwardEntryService.getById(foundLot.inwardId);
-        setInwardData(inward);
-        
-        setFormData(prev => ({
-          ...prev,
-          candyRate: foundLot.candyRate || '',
-          weight: foundLot.nettWeight || '',
-          permitNo: inward.permitNo || '',
-        }));
-
-        // Fetch purchase order using inward's purchaseOrderId
-        if (inward?.purchaseOrderId) {
-          const po = await purchaseOrderService.getById(inward.purchaseOrderId);
-          setPoData(po);
-          
-          setFormData(prev => ({
-            ...prev,
-            rd: po.rd || '',
-            staple: po.staple || '',
-          }));
-
-          // Fetch supplier using po's supplierId
-          if (po?.supplierId) {
-            const supplier = await supplierService.getById(po.supplierId);
-            setSupplierData(supplier);
-          }
-
-          // Fetch variety using po's varietyId
-          if (po?.varietyId) {
-            const variety = await varietyService.getById(po.varietyId);
-            setVarietyData(variety);
-          }
-
-          // Fetch station using po's stationId
-          if (po?.stationId) {
-            const station = await stationService.getById(po.stationId);
-            setStationData(station);
-          }
-        }
-      }
+      // Update form data with lot information
+      setFormData(prev => ({
+        ...prev,
+        candyRate: lotDetails.candyRate || '',
+        weight: lotDetails.nettWeight || '',
+        permitNo: lotDetails.billNo || '',
+      }));
 
       // For view/edit mode, fetch the QC entry by its ID
       if ((currentView === 'view' || currentView === 'edit') && selectedEntryId) {
@@ -190,26 +132,28 @@ const QCEntryManagement = () => {
           if (qcEntry) {
             setFormData(prev => ({
               ...prev,
-              // QC entry fields
+              // QC entry fields (matching backend model)
+              rd: qcEntry.rd || '',
+              staple: qcEntry.staple || '',
               plusB: qcEntry.plusB || '',
               moist: qcEntry.moist || '',
               mr: qcEntry.mr || '',
-              twoPointFiveMm: qcEntry.twoPointFiveMm || '',
-              grade: qcEntry.grade || '',
               ui: qcEntry.ui || '',
               eLog: qcEntry.eLog || '',
               strength: qcEntry.strength || '',
-              sfi: qcEntry.sfcStaple || '',
               mic: qcEntry.mic || '',
-              ml50: qcEntry.ml50 || '',
-              sfcn: qcEntry.sfcN || '',
-              conStaple: qcEntry.conStaple || '',
-              tsfn: qcEntry.tsfN || '',
-              sfcw: qcEntry.sfcCW || '',
+              sfcN: qcEntry.sfcN || '',
+              tsfN: qcEntry.tsfN || '',
               neps: qcEntry.neps || '',
-              tsfw: qcEntry.tsfW || '',
               sci: qcEntry.sci || '',
+              grade: qcEntry.grade || '',
+              ml50: qcEntry.ml50 || '',
+              conStaple: qcEntry.conStaple || '',
+              sfcStaple: qcEntry.sfcStaple || '',
+              sfcCW: qcEntry.sfcCW || '',
+              tsfW: qcEntry.tsfW || '',
               fqi: qcEntry.fqi || '',
+              twoPointFiveMm: qcEntry.twoPointFiveMm || '',
             }));
             
             setStrMode(qcEntry.strMode || 'HVI');
@@ -218,38 +162,46 @@ const QCEntryManagement = () => {
           console.error("Error fetching QC entry by ID:", error);
         }
       }
-      // For create mode, check if there's an existing entry by lot number
+      // For create mode, check if there's an existing entry by lot ID
       else if (currentView === 'create') {
         try {
-          const qcEntry = await qcEntryService.getByLotId(lotNo);
+          const qcEntry = await qcEntryService.getByLotId(lotDetails.id);
           if (qcEntry) {
             // If entry exists, populate the form
             setFormData(prev => ({
               ...prev,
+              rd: qcEntry.rd || '',
+              staple: qcEntry.staple || '',
               plusB: qcEntry.plusB || '',
               moist: qcEntry.moist || '',
               mr: qcEntry.mr || '',
-              twoPointFiveMm: qcEntry.twoPointFiveMm || '',
-              grade: qcEntry.grade || '',
               ui: qcEntry.ui || '',
               eLog: qcEntry.eLog || '',
               strength: qcEntry.strength || '',
-              sfi: qcEntry.sfcStaple || '',
               mic: qcEntry.mic || '',
-              ml50: qcEntry.ml50 || '',
-              sfcn: qcEntry.sfcN || '',
-              conStaple: qcEntry.conStaple || '',
-              tsfn: qcEntry.tsfN || '',
-              sfcw: qcEntry.sfcCW || '',
+              sfcN: qcEntry.sfcN || '',
+              tsfN: qcEntry.tsfN || '',
               neps: qcEntry.neps || '',
-              tsfw: qcEntry.tsfW || '',
               sci: qcEntry.sci || '',
+              grade: qcEntry.grade || '',
+              ml50: qcEntry.ml50 || '',
+              conStaple: qcEntry.conStaple || '',
+              sfcStaple: qcEntry.sfcStaple || '',
+              sfcCW: qcEntry.sfcCW || '',
+              tsfW: qcEntry.tsfW || '',
               fqi: qcEntry.fqi || '',
+              twoPointFiveMm: qcEntry.twoPointFiveMm || '',
             }));
             setStrMode(qcEntry.strMode || 'HVI');
+            
+            // Show message that QC entry already exists
+            alert('QC entry already exists for this lot. You can edit it.');
+            setCurrentView('edit');
+            setSelectedEntryId(qcEntry.id);
           }
         } catch (error) {
-          // No existing entry, that's fine
+          // No existing entry, that's fine for create mode
+          console.log("No existing QC entry for this lot");
         }
       }
     } catch (error) {
@@ -297,38 +249,46 @@ const QCEntryManagement = () => {
 
   const handleSave = async () => {
     try {
+      // Validate required fields
+      if (!selectedLotId) {
+        alert('Please select a lot');
+        return;
+      }
+
       // Get today's date for testDate
       const today = new Date().toISOString().split('T')[0];
       
+      // Prepare payload matching backend model
       const payload = {
         inwardLotId: selectedLotId,
-        lotNo: selectedLotNo,
         testDate: today,
         strMode: strMode,
         
-        // Map form fields to model fields
-        rd: parseFloat(formData.rd) || null,
-        staple: parseFloat(formData.staple) || null,
-        plusB: parseFloat(formData.plusB) || null,
-        moist: parseFloat(formData.moist) || null,
-        mr: parseFloat(formData.mr) || null,
-        twoPointFiveMm: parseFloat(formData.twoPointFiveMm) || null,
-        grade: formData.grade || null,
-        ui: parseFloat(formData.ui) || null,
-        eLog: parseFloat(formData.eLog) || null,
-        strength: parseFloat(formData.strength) || null,
-        sfcStaple: parseFloat(formData.sfi) || null, // SFI to sfcStaple
-        mic: parseFloat(formData.mic) || null,
-        ml50: parseFloat(formData.ml50) || null,
-        sfcN: parseFloat(formData.sfcn) || null,
-        conStaple: parseFloat(formData.conStaple) || null,
-        tsfN: parseFloat(formData.tsfn) || null,
-        sfcCW: parseFloat(formData.sfcw) || null,
-        neps: parseInt(formData.neps) || null,
-        tsfW: parseFloat(formData.tsfw) || null,
-        sci: parseInt(formData.sci) || null,
-        fqi: parseFloat(formData.fqi) || null,
+        // Map form fields to model fields (only include if they have values)
+        ...(formData.rd && { rd: parseFloat(formData.rd) }),
+        ...(formData.staple && { staple: parseFloat(formData.staple) }),
+        ...(formData.plusB && { plusB: parseFloat(formData.plusB) }),
+        ...(formData.moist && { moist: parseFloat(formData.moist) }),
+        ...(formData.mr && { mr: parseFloat(formData.mr) }),
+        ...(formData.ui && { ui: parseFloat(formData.ui) }),
+        ...(formData.eLog && { eLog: parseFloat(formData.eLog) }),
+        ...(formData.strength && { strength: parseFloat(formData.strength) }),
+        ...(formData.mic && { mic: parseFloat(formData.mic) }),
+        ...(formData.sfcN && { sfcN: parseFloat(formData.sfcN) }),
+        ...(formData.tsfN && { tsfN: parseFloat(formData.tsfN) }),
+        ...(formData.neps && { neps: parseInt(formData.neps) }),
+        ...(formData.sci && { sci: parseInt(formData.sci) }),
+        ...(formData.grade && { grade: formData.grade }),
+        ...(formData.ml50 && { ml50: parseFloat(formData.ml50) }),
+        ...(formData.conStaple && { conStaple: parseFloat(formData.conStaple) }),
+        ...(formData.sfcStaple && { sfcStaple: parseFloat(formData.sfcStaple) }),
+        ...(formData.sfcCW && { sfcCW: parseFloat(formData.sfcCW) }),
+        ...(formData.tsfW && { tsfW: parseFloat(formData.tsfW) }),
+        ...(formData.fqi && { fqi: parseFloat(formData.fqi) }),
+        ...(formData.twoPointFiveMm && { twoPointFiveMm: parseFloat(formData.twoPointFiveMm) }),
       };
+
+      console.log("Saving QC entry with payload:", payload);
 
       if (selectedEntryId) {
         // Update existing
@@ -345,7 +305,11 @@ const QCEntryManagement = () => {
       resetForm();
     } catch (error) {
       console.error('Error saving QC entry:', error);
-      alert('Error saving QC entry');
+      if (error.response?.data?.message) {
+        alert(error.response.data.message);
+      } else {
+        alert('Error saving QC entry. Please check if an entry already exists for this lot.');
+      }
     }
   };
 
@@ -354,11 +318,6 @@ const QCEntryManagement = () => {
     setSelectedLotId(null);
     setSelectedEntryId(null);
     setLotData(null);
-    setInwardData(null);
-    setPoData(null);
-    setSupplierData(null);
-    setVarietyData(null);
-    setStationData(null);
     setStrMode('HVI');
     setFormData({
       candyRate: '',
@@ -369,22 +328,22 @@ const QCEntryManagement = () => {
       plusB: '',
       moist: '',
       mr: '',
-      twoPointFiveMm: '',
-      grade: '',
       ui: '',
       eLog: '',
       strength: '',
-      sfi: '',
       mic: '',
-      ml50: '',
-      sfcn: '',
-      conStaple: '',
-      tsfn: '',
-      sfcw: '',
+      sfcN: '',
+      tsfN: '',
       neps: '',
-      tsfw: '',
       sci: '',
+      grade: '',
+      ml50: '',
+      conStaple: '',
+      sfcStaple: '',
+      sfcCW: '',
+      tsfW: '',
       fqi: '',
+      twoPointFiveMm: '',
     });
   };
 
@@ -393,11 +352,11 @@ const QCEntryManagement = () => {
     resetForm();
   };
 
-  const handleLotSelect = (e) => {
+  const handleLotSelect = async (e) => {
     const lotNo = e.target.value;
     setSelectedLotNo(lotNo);
     if (lotNo) {
-      loadLotDetails(lotNo);
+      await loadLotDetails(lotNo);
     }
   };
 
@@ -420,20 +379,9 @@ const QCEntryManagement = () => {
     }).toUpperCase();
   };
 
-  const formatInwardDate = (dateString) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: '2-digit'
-    }).toUpperCase();
-  };
-
   // Filter entries for list view
   const filteredEntries = qcEntries.filter(entry => {
-    const lotDetail = lotDetails[entry.lotNo] || {};
-    const searchString = `${entry.lotNo} ${lotDetail.supplierName || ''}`.toLowerCase();
+    const searchString = `${entry.lotNo} ${entry.inwardLot?.lotNo || ''}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
   });
 
@@ -448,7 +396,7 @@ const QCEntryManagement = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <input
           type="text"
-          placeholder="Search QC entries by lot number or supplier..."
+          placeholder="Search QC entries by lot number..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -487,11 +435,11 @@ const QCEntryManagement = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">CODE</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">LOT & SUPPLIER</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">LOT NO</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">TEST DATE</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">KEY RESULTS</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">CREATED DATE</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">LAST UPDATED</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">STR MODE</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ACTIONS</th>
               </tr>
             </thead>
@@ -505,11 +453,12 @@ const QCEntryManagement = () => {
                   <tr key={entry.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">#{entry.id}</div>
-                      <div className="text-xs text-gray-500">ID: {entry.id}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">{entry.lotNo}</div>
-                      <div className="text-xs text-gray-500">Supplier Info</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm">{formatDate(entry.testDate)}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="grid grid-cols-2 gap-x-2 text-xs">
@@ -520,10 +469,7 @@ const QCEntryManagement = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm">{formatDate(entry.createdAt)}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">{formatDate(entry.updatedAt)}</div>
+                      <div className="text-sm">{entry.strMode || 'HVI'}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex space-x-3">
@@ -553,19 +499,6 @@ const QCEntryManagement = () => {
             </tbody>
           </table>
         </div>
-
-        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
-          <p className="text-sm text-gray-600">Showing {filteredEntries.length} of {qcEntries.length} QC entries</p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex justify-end">
-        <button className="flex items-center px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Export
-        </button>
       </div>
     </div>
   );
@@ -625,19 +558,19 @@ const QCEntryManagement = () => {
                   </div>
                   <div className="col-span-1">
                     <div className="text-xs text-gray-500">Lot Date</div>
-                    <div className="text-sm font-medium">{lotData?.createdAt ? formatInwardDate(lotData.createdAt) : '-'}</div>
+                    <div className="text-sm font-medium">{lotData?.lotDate ? formatDate(lotData.lotDate) : '-'}</div>
                   </div>
                   <div className="col-span-1">
                     <div className="text-xs text-gray-500">Bill No.</div>
-                    <div className="text-sm font-medium">{inwardData?.billNo || '-'}</div>
+                    <div className="text-sm font-medium">{lotData?.billNo || '-'}</div>
                   </div>
                   <div className="col-span-1">
                     <div className="text-xs text-gray-500">Bill Date</div>
-                    <div className="text-sm font-medium">{inwardData?.billDate ? formatInwardDate(inwardData.billDate) : '-'}</div>
+                    <div className="text-sm font-medium">{lotData?.billDate ? formatDate(lotData.billDate) : '-'}</div>
                   </div>
                   <div className="col-span-2">
                     <div className="text-xs text-gray-500">Supplier</div>
-                    <div className="text-sm font-medium">{supplierData?.accountName || '-'}</div>
+                    <div className="text-sm font-medium">{lotData?.supplier || '-'}</div>
                   </div>
                 </div>
 
@@ -645,11 +578,23 @@ const QCEntryManagement = () => {
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div>
                     <div className="text-xs text-gray-500">Variety</div>
-                    <div className="text-sm font-medium">{varietyData?.variety || '-'}</div>
+                    <div className="text-sm font-medium">{lotData?.variety || '-'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-500">Station</div>
-                    <div className="text-sm font-medium">{stationData?.station || '-'}</div>
+                    <div className="text-sm font-medium">{lotData?.station || '-'}</div>
+                  </div>
+                </div>
+
+                {/* Candy Rate & Weight Info */}
+                <div className="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-4 rounded">
+                  <div>
+                    <div className="text-xs text-gray-500">Candy Rate</div>
+                    <div className="text-sm font-medium">{lotData?.candyRate || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Net Weight</div>
+                    <div className="text-sm font-medium">{lotData?.nettWeight || '-'}</div>
                   </div>
                 </div>
 
@@ -657,61 +602,36 @@ const QCEntryManagement = () => {
                 <div className="grid grid-cols-2 gap-8 mt-6">
                   {/* Left Column */}
                   <div className="space-y-4">
-                    {/* Candy Rate & Weight */}
+                    {/* RD & Staple */}
                     <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Candy Rate</label>
-                        <input 
-                          type="number" 
-                          value={formData.candyRate} 
-                          readOnly 
-                          className="w-full px-2 py-1 border bg-gray-50 rounded text-sm" 
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Weight</label>
-                        <input 
-                          type="number" 
-                          value={formData.weight} 
-                          readOnly 
-                          className="w-full px-2 py-1 border bg-gray-50 rounded text-sm" 
-                        />
-                      </div>
-                    </div>
-
-                    {/* Permit No & RD */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Permit No</label>
-                        <input 
-                          type="text" 
-                          value={formData.permitNo} 
-                          readOnly 
-                          className="w-full px-2 py-1 border bg-gray-50 rounded text-sm" 
-                        />
-                      </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">RD</label>
                         <input 
                           type="number" 
+                          name="rd" 
                           value={formData.rd} 
-                          readOnly 
-                          className="w-full px-2 py-1 border bg-gray-50 rounded text-sm" 
+                          onChange={handleInputChange} 
+                          readOnly={isReadOnly} 
+                          step="0.01"
+                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>
-                    </div>
-
-                    {/* Staple & +B */}
-                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Staple</label>
                         <input 
                           type="number" 
+                          name="staple" 
                           value={formData.staple} 
-                          readOnly 
-                          className="w-full px-2 py-1 border bg-gray-50 rounded text-sm" 
+                          onChange={handleInputChange} 
+                          readOnly={isReadOnly} 
+                          step="0.1"
+                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>
+                    </div>
+
+                    {/* +B & Moist */}
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">+B</label>
                         <input 
@@ -720,13 +640,10 @@ const QCEntryManagement = () => {
                           value={formData.plusB} 
                           onChange={handleInputChange} 
                           readOnly={isReadOnly} 
+                          step="0.1"
                           className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>
-                    </div>
-
-                    {/* Moist & MR */}
-                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Moist</label>
                         <input 
@@ -735,9 +652,14 @@ const QCEntryManagement = () => {
                           value={formData.moist} 
                           onChange={handleInputChange} 
                           readOnly={isReadOnly} 
+                          step="0.1"
                           className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>
+                    </div>
+
+                    {/* MR & UI */}
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">MR</label>
                         <input 
@@ -746,19 +668,118 @@ const QCEntryManagement = () => {
                           value={formData.mr} 
                           onChange={handleInputChange} 
                           readOnly={isReadOnly} 
+                          step="0.01"
+                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">UI</label>
+                        <input 
+                          type="number" 
+                          name="ui" 
+                          value={formData.ui} 
+                          onChange={handleInputChange} 
+                          readOnly={isReadOnly} 
+                          step="0.1"
                           className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>
                     </div>
 
-                    {/* 2.5mm & Grade */}
+                    {/* E Log & Strength */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">2.5mm</label>
+                        <label className="block text-xs text-gray-500 mb-1">E Log</label>
                         <input 
                           type="number" 
-                          name="twoPointFiveMm" 
-                          value={formData.twoPointFiveMm} 
+                          name="eLog" 
+                          value={formData.eLog} 
+                          onChange={handleInputChange} 
+                          readOnly={isReadOnly} 
+                          step="0.1"
+                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Strength</label>
+                        <input 
+                          type="number" 
+                          name="strength" 
+                          value={formData.strength} 
+                          onChange={handleInputChange} 
+                          readOnly={isReadOnly} 
+                          step="0.1"
+                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
+                        />
+                      </div>
+                    </div>
+
+                    {/* Mic & SFCN */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Mic</label>
+                        <input 
+                          type="number" 
+                          name="mic" 
+                          value={formData.mic} 
+                          onChange={handleInputChange} 
+                          readOnly={isReadOnly} 
+                          step="0.01"
+                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">SFCN</label>
+                        <input 
+                          type="number" 
+                          name="sfcN" 
+                          value={formData.sfcN} 
+                          onChange={handleInputChange} 
+                          readOnly={isReadOnly} 
+                          step="0.1"
+                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
+                        />
+                      </div>
+                    </div>
+
+                    {/* TSFN & NEPS */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">TSFN</label>
+                        <input 
+                          type="number" 
+                          name="tsfN" 
+                          value={formData.tsfN} 
+                          onChange={handleInputChange} 
+                          readOnly={isReadOnly} 
+                          step="0.1"
+                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">NEPS</label>
+                        <input 
+                          type="number" 
+                          name="neps" 
+                          value={formData.neps} 
+                          onChange={handleInputChange} 
+                          readOnly={isReadOnly} 
+                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-4">
+                    {/* SCI & Grade */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">SCI</label>
+                        <input 
+                          type="number" 
+                          name="sci" 
+                          value={formData.sci} 
                           onChange={handleInputChange} 
                           readOnly={isReadOnly} 
                           className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
@@ -777,75 +798,8 @@ const QCEntryManagement = () => {
                       </div>
                     </div>
 
-                    {/* UI & E Log */}
+                    {/* ML 50% & Con Staple */}
                     <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">UI</label>
-                        <input 
-                          type="number" 
-                          name="ui" 
-                          value={formData.ui} 
-                          onChange={handleInputChange} 
-                          readOnly={isReadOnly} 
-                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">E Log</label>
-                        <input 
-                          type="number" 
-                          name="eLog" 
-                          value={formData.eLog} 
-                          onChange={handleInputChange} 
-                          readOnly={isReadOnly} 
-                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="space-y-4">
-                    {/* Strength & SFI */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Strength</label>
-                        <input 
-                          type="number" 
-                          name="strength" 
-                          value={formData.strength} 
-                          onChange={handleInputChange} 
-                          readOnly={isReadOnly} 
-                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">SFI</label>
-                        <input 
-                          type="number" 
-                          name="sfi" 
-                          value={formData.sfi} 
-                          onChange={handleInputChange} 
-                          readOnly={isReadOnly} 
-                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
-                        />
-                      </div>
-                    </div>
-
-                    {/* Mic & ML 50% */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Mic</label>
-                        <input 
-                          type="number" 
-                          name="mic" 
-                          value={formData.mic} 
-                          onChange={handleInputChange} 
-                          step="0.01" 
-                          readOnly={isReadOnly} 
-                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
-                        />
-                      </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">ML 50%</label>
                         <input 
@@ -854,99 +808,63 @@ const QCEntryManagement = () => {
                           value={formData.ml50} 
                           onChange={handleInputChange} 
                           readOnly={isReadOnly} 
+                          step="0.01"
                           className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>
-                    </div>
-
-                    {/* SFCN & Con. Staple */}
-                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">SFCN</label>
+                        <label className="block text-xs text-gray-500 mb-1">Con Staple</label>
                         <input 
                           type="number" 
-                          name="sfcn" 
-                          value={formData.sfcn} 
-                          onChange={handleInputChange} 
-                          readOnly={isReadOnly} 
-                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Con. Staple</label>
-                        <input 
-                          type="text" 
                           name="conStaple" 
                           value={formData.conStaple} 
                           onChange={handleInputChange} 
                           readOnly={isReadOnly} 
+                          step="0.1"
                           className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>
                     </div>
 
-                    {/* TSFN & SFCW */}
+                    {/* SFC Staple & SFC CW */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">TSFN</label>
+                        <label className="block text-xs text-gray-500 mb-1">SFC Staple</label>
                         <input 
                           type="number" 
-                          name="tsfn" 
-                          value={formData.tsfn} 
+                          name="sfcStaple" 
+                          value={formData.sfcStaple} 
                           onChange={handleInputChange} 
                           readOnly={isReadOnly} 
+                          step="0.1"
                           className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">SFCW</label>
+                        <label className="block text-xs text-gray-500 mb-1">SFC CW</label>
                         <input 
                           type="number" 
-                          name="sfcw" 
-                          value={formData.sfcw} 
+                          name="sfcCW" 
+                          value={formData.sfcCW} 
                           onChange={handleInputChange} 
                           readOnly={isReadOnly} 
+                          step="0.1"
                           className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>
                     </div>
 
-                    {/* NEPS & TSFW */}
+                    {/* TSF W & FQI */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">NEPS</label>
+                        <label className="block text-xs text-gray-500 mb-1">TSF W</label>
                         <input 
                           type="number" 
-                          name="neps" 
-                          value={formData.neps} 
+                          name="tsfW" 
+                          value={formData.tsfW} 
                           onChange={handleInputChange} 
                           readOnly={isReadOnly} 
-                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">TSFW</label>
-                        <input 
-                          type="number" 
-                          name="tsfw" 
-                          value={formData.tsfw} 
-                          onChange={handleInputChange} 
-                          readOnly={isReadOnly} 
-                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
-                        />
-                      </div>
-                    </div>
-
-                    {/* SCI & FQI */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">SCI</label>
-                        <input 
-                          type="number" 
-                          name="sci" 
-                          value={formData.sci} 
-                          onChange={handleInputChange} 
-                          readOnly={isReadOnly} 
+                          step="0.1"
                           className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>
@@ -958,6 +876,23 @@ const QCEntryManagement = () => {
                           value={formData.fqi} 
                           onChange={handleInputChange} 
                           readOnly={isReadOnly} 
+                          step="0.1"
+                          className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
+                        />
+                      </div>
+                    </div>
+
+                    {/* 2.5mm */}
+                    <div className="grid grid-cols-1 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">2.5 mm</label>
+                        <input 
+                          type="number" 
+                          name="twoPointFiveMm" 
+                          value={formData.twoPointFiveMm} 
+                          onChange={handleInputChange} 
+                          readOnly={isReadOnly} 
+                          step="0.01"
                           className={`w-full px-2 py-1 border rounded text-sm ${isReadOnly ? 'bg-gray-50' : ''}`} 
                         />
                       </div>

@@ -25,6 +25,7 @@ const locationTransferService = {
      CREATE LOCATION TRANSFER
   ============================= */
   createLocationTransfer: async (data) => {
+    console.log(data);
     const res = await locationTransferApi.post("/", data);
     return res.data;
   },

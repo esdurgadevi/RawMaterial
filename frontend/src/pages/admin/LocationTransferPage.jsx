@@ -20,15 +20,15 @@ const LocationTransferPage = () => {
   // Master Data
   const [godowns, setGodowns] = useState([]);
   const [transports, setTransports] = useState([]);
-  const [lots, setLots] = useState([]);
-  const [weightments, setWeightments] = useState([]);
+  const [lots, setLots] = useState([]); // Summary lots from getAll
+  const [selectedLotDetails, setSelectedLotDetails] = useState(null); // Detailed lot with weightments
 
   // Form State - Header
   const [formData, setFormData] = useState({
     transferNo: '',
-    date: new Date().toISOString().split('T')[0],
-    from: '',
-    to: '',
+    transferDate: new Date().toISOString().split('T')[0], // Changed from date to transferDate
+    fromLocationId: '', // Changed from from to fromLocationId
+    toLocationId: '', // Changed from to to toLocationId
     transMode: 'ROAD',
     transportId: '',
     lorryNo: '',
@@ -38,17 +38,20 @@ const LocationTransferPage = () => {
     itemName: 'Cotton Bale',
     qty: 0,
     kgs: 0,
-    value: 0,
-    details: []
+    value: 0
   });
 
   // Selected lot and bales
   const [selectedLot, setSelectedLot] = useState(null);
-  const [selectedBales, setSelectedBales] = useState([]);
+  
+  // Track selected bales with checkbox state
+  const [selectedBaleIds, setSelectedBaleIds] = useState(new Set());
+  const [selectAll, setSelectAll] = useState(false);
 
   // Search states
   const [lotSearch, setLotSearch] = useState('');
   const [showLotDropdown, setShowLotDropdown] = useState(false);
+  const [loadingLotDetails, setLoadingLotDetails] = useState(false);
 
   // Refs
   const lotRef = useRef(null);
@@ -75,6 +78,29 @@ const LocationTransferPage = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Update select all when all bales are selected
+  useEffect(() => {
+    if (selectedLotDetails?.weightments) {
+      const totalBales = selectedLotDetails.weightments.length;
+      const selectedCount = selectedBaleIds.size;
+      setSelectAll(totalBales > 0 && selectedCount === totalBales);
+    }
+  }, [selectedBaleIds, selectedLotDetails]);
+
+  // Recalculate totals whenever selected bales change
+  useEffect(() => {
+    if (selectedLotDetails && selectedBaleIds.size > 0) {
+      updateTotals();
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        qty: 0,
+        kgs: 0,
+        value: 0
+      }));
+    }
+  }, [selectedBaleIds, selectedLotDetails]);
 
   const fetchTransfers = async () => {
     try {
@@ -103,23 +129,30 @@ const LocationTransferPage = () => {
 
   const fetchLots = async () => {
     try {
-      const data = await inwardLotService.getAllLotNumbers();
+      const data = await inwardLotService.getAll();
       setLots(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch lots:', error);
     }
   };
 
-  const fetchWeightments = async (lotNo) => {
+  // Fetch complete lot details with weightments using getById
+  const fetchLotDetails = async (lotId) => {
     try {
-      const data = await inwardLotService.getWeightments(lotNo);
-      setWeightments(Array.isArray(data) ? data : []);
-      // Reset selected bales when new lot is selected
-      setSelectedBales([]);
-      setFormData(prev => ({ ...prev, details: [] }));
+      setLoadingLotDetails(true);
+      const lotDetails = await inwardLotService.getById(lotId);
+      setSelectedLotDetails(lotDetails);
+      
+      // Reset bale selections
+      setSelectedBaleIds(new Set());
+      setSelectAll(false);
+      
     } catch (error) {
-      console.error('Failed to fetch weightments:', error);
-      setWeightments([]);
+      console.error('Failed to fetch lot details:', error);
+      showNotification('Failed to load lot details', 'error');
+      setSelectedLotDetails(null);
+    } finally {
+      setLoadingLotDetails(false);
     }
   };
 
@@ -157,6 +190,13 @@ const LocationTransferPage = () => {
     return godown ? (godown.godownName || godown.name) : '-';
   };
 
+  // Get godown id by name (for display)
+  const getGodownIdByName = (name) => {
+    if (!name) return null;
+    const godown = godowns.find(g => (g.godownName || g.name) === name);
+    return godown?.id || null;
+  };
+
   // Get transport name by id
   const getTransportName = (id) => {
     if (!id) return '-';
@@ -167,11 +207,11 @@ const LocationTransferPage = () => {
   // Handle lot selection
   const handleLotSelect = async (lot) => {
     setSelectedLot(lot);
-    setLotSearch(`${lot.lotNo} - ${lot.InwardEntry?.purchaseOrder?.supplier?.accountName || ''}`);
+    setLotSearch(`${lot.lotNo} - ${lot.supplier || ''}`);
     setShowLotDropdown(false);
     
-    // Fetch weightments for this lot
-    await fetchWeightments(lot.lotNo);
+    // Fetch complete lot details with weightments
+    await fetchLotDetails(lot.id);
   };
 
   // Filter lots based on search
@@ -179,63 +219,63 @@ const LocationTransferPage = () => {
     if (!lotSearch) return lots;
     return lots.filter(lot => {
       const lotNo = lot.lotNo?.toLowerCase() || '';
-      const supplier = lot.InwardEntry?.purchaseOrder?.supplier?.accountName?.toLowerCase() || '';
+      const supplier = lot.supplier?.toLowerCase() || '';
       const searchTerm = lotSearch.toLowerCase();
       return lotNo.includes(searchTerm) || supplier.includes(searchTerm);
     });
   };
 
-  // Handle bale selection
-  const handleBaleSelect = (weightment) => {
-    // Check if already selected
-    const exists = selectedBales.some(b => b.id === weightment.id);
-    if (!exists && selectedLot) {
-      const newBale = {
-        inwardLotId: selectedLot.id || selectedLot._id,
-        weightmentId: weightment.id,
-        stockQty: 1, // Each bale counts as 1
-        transferQty: 1
-      };
-      
-      const updatedBales = [...selectedBales, newBale];
-      setSelectedBales(updatedBales);
-      
-      // Update details array and recalculate totals
-      updateTotals(updatedBales);
+  // Handle individual checkbox change
+  const handleBaleCheckboxChange = (weightmentId, checked) => {
+    const newSelectedIds = new Set(selectedBaleIds);
+    if (checked) {
+      newSelectedIds.add(weightmentId);
+    } else {
+      newSelectedIds.delete(weightmentId);
     }
+    setSelectedBaleIds(newSelectedIds);
   };
 
-  // Remove bale from selection
-  const removeBale = (index) => {
-    const updatedBales = selectedBales.filter((_, i) => i !== index);
-    setSelectedBales(updatedBales);
-    updateTotals(updatedBales);
+  // Handle select all checkbox
+  const handleSelectAllChange = (checked) => {
+    if (checked && selectedLotDetails?.weightments) {
+      const allIds = new Set(selectedLotDetails.weightments.map(w => w.id));
+      setSelectedBaleIds(allIds);
+    } else {
+      setSelectedBaleIds(new Set());
+    }
+    setSelectAll(checked);
   };
 
   // Update totals based on selected bales
-  const updateTotals = (bales) => {
+  const updateTotals = () => {
+    if (!selectedLotDetails || !selectedLotDetails.weightments) return;
+
+    const selectedWeightments = selectedLotDetails.weightments.filter(w => 
+      selectedBaleIds.has(w.id)
+    );
+
     // Calculate total quantity
-    const totalQty = bales.length;
+    const totalQty = selectedWeightments.length;
     
     // Calculate total kgs from weightments
     let totalKgs = 0;
-    bales.forEach(bale => {
-      const weightment = weightments.find(w => w.id === bale.weightmentId);
-      if (weightment) {
-        totalKgs += (parseFloat(weightment.grossWeight) - parseFloat(weightment.tareWeight) || 0);
-      }
+    selectedWeightments.forEach(weightment => {
+      const baleWeight = parseFloat(weightment.baleWeight) || 
+        (parseFloat(weightment.grossWeight) - parseFloat(weightment.tareWeight) || 0);
+      totalKgs += baleWeight;
     });
     
-    // Calculate value based on candy rate (example calculation - adjust as needed)
-    const candyRate = selectedLot?.candyRate || selectedLot?.InwardEntry?.candyRate || 55600;
-    const totalValue = totalKgs * (candyRate / 356); // Conversion factor
+    // Calculate value based on candy rate (1 candy = 356 kg)
+    const candyRate = parseFloat(selectedLotDetails.candyRate) || 
+                     parseFloat(selectedLot?.candyRate) || 55600;
+    const totalValue = (totalKgs / 356) * candyRate;
 
     setFormData(prev => ({
       ...prev,
       qty: totalQty,
       kgs: parseFloat(totalKgs.toFixed(3)),
-      value: parseFloat(totalValue.toFixed(2)),
-      details: bales
+      value: parseFloat(totalValue.toFixed(2))
     }));
   };
 
@@ -251,30 +291,31 @@ const LocationTransferPage = () => {
   // Validate form
   const validateForm = () => {
     if (!formData.transferNo) {
+      console.log("transfer no");
       showNotification('Transfer number is required', 'error');
       return false;
     }
-    if (!formData.date) {
+    if (!formData.transferDate) {
+      console.log("transfer Date");
       showNotification('Date is required', 'error');
       return false;
     }
-    if (!formData.from) {
+    if (!formData.fromLocationId) {
+      console.log("from location");
       showNotification('From location is required', 'error');
       return false;
     }
-    if (!formData.to) {
+    if (!formData.toLocationId) {
+      console.log("to location");
       showNotification('To location is required', 'error');
       return false;
     }
-    if (formData.from === formData.to) {
-      showNotification('From and To locations cannot be same', 'error');
-      return false;
-    }
+
     if (!selectedLot) {
       showNotification('Please select a lot', 'error');
       return false;
     }
-    if (selectedBales.length === 0) {
+    if (selectedBaleIds.size === 0) {
       showNotification('Please select at least one bale', 'error');
       return false;
     }
@@ -285,9 +326,9 @@ const LocationTransferPage = () => {
   const resetForm = () => {
     setFormData({
       transferNo: '',
-      date: new Date().toISOString().split('T')[0],
-      from: '',
-      to: '',
+      transferDate: new Date().toISOString().split('T')[0],
+      fromLocationId: '',
+      toLocationId: '',
       transMode: 'ROAD',
       transportId: '',
       lorryNo: '',
@@ -297,12 +338,12 @@ const LocationTransferPage = () => {
       itemName: 'Cotton Bale',
       qty: 0,
       kgs: 0,
-      value: 0,
-      details: []
+      value: 0
     });
     setSelectedLot(null);
-    setSelectedBales([]);
-    setWeightments([]);
+    setSelectedLotDetails(null);
+    setSelectedBaleIds(new Set());
+    setSelectAll(false);
     setLotSearch('');
     setSelectedTransfer(null);
     setIsEditing(false);
@@ -340,11 +381,12 @@ const LocationTransferPage = () => {
       setModalLoading(true);
       const fullTransfer = await locationTransferService.getLocationTransferById(transfer.id || transfer._id);
       
+      // Map the data to form fields
       setFormData({
         transferNo: fullTransfer.transferNo || '',
-        date: fullTransfer.date ? fullTransfer.date.split('T')[0] : '',
-        from: fullTransfer.from || '',
-        to: fullTransfer.to || '',
+        transferDate: fullTransfer.transferDate ? fullTransfer.transferDate.split('T')[0] : '',
+        fromLocationId: fullTransfer.fromLocationId || getGodownIdByName(fullTransfer.from) || '',
+        toLocationId: fullTransfer.toLocationId || getGodownIdByName(fullTransfer.to) || '',
         transMode: fullTransfer.transMode || 'ROAD',
         transportId: fullTransfer.transportId || '',
         lorryNo: fullTransfer.lorryNo || '',
@@ -354,29 +396,32 @@ const LocationTransferPage = () => {
         itemName: fullTransfer.itemName || 'Cotton Bale',
         qty: fullTransfer.qty || 0,
         kgs: fullTransfer.kgs || 0,
-        value: fullTransfer.value || 0,
-        details: fullTransfer.details || []
+        value: fullTransfer.value || 0
       });
 
       // Set selected lot and bales if available
       if (fullTransfer.details && fullTransfer.details.length > 0) {
         const firstDetail = fullTransfer.details[0];
-        if (firstDetail.inwardLotId) {
+        if (firstDetail.lotId) {
           // Find the lot from lots array
-          const lot = lots.find(l => (l.id || l._id) === firstDetail.inwardLotId);
+          const lot = lots.find(l => l.id === firstDetail.lotId);
           if (lot) {
             setSelectedLot(lot);
-            setLotSearch(lot.lotNo);
-            await fetchWeightments(lot.lotNo);
+            setLotSearch(`${lot.lotNo} - ${lot.supplier || ''}`);
             
-            // Map details to selected bales
-            const bales = fullTransfer.details.map(d => ({
-              inwardLotId: d.inwardLotId,
-              weightmentId: d.weightmentId,
-              stockQty: d.stockQty,
-              transferQty: d.transferQty
-            }));
-            setSelectedBales(bales);
+            // Fetch complete lot details with weightments
+            await fetchLotDetails(lot.id);
+            
+            // Collect all bale IDs from all details
+            const baleIds = new Set();
+            fullTransfer.details.forEach(detail => {
+              if (detail.bales) {
+                detail.bales.forEach(bale => {
+                  baleIds.add(bale.weightmentId);
+                });
+              }
+            });
+            setSelectedBaleIds(baleIds);
           }
         }
       }
@@ -402,19 +447,31 @@ const LocationTransferPage = () => {
     setViewTransfer(null);
   };
 
-  // Submit form
+  // Submit form - UPDATED to match backend structure
   const handleSubmit = async () => {
-    if (!validateForm()) return;
-
+    if (!validateForm()) 
+    {
+        console.log("not validate");
+        return;
+    }
     try {
       setModalLoading(true);
+      
+      // Group selected bales by lot
+      // In this case, we're only selecting from one lot
+      const details = [{
+        lotId: selectedLot.id,
+        stockQty: selectedBaleIds.size, // Total bales selected
+        transferQty: selectedBaleIds.size, // Transfer all selected bales
+        weightmentIds: Array.from(selectedBaleIds) // Array of bale IDs
+      }];
       
       // Prepare submit data in the exact format backend expects
       const submitData = {
         transferNo: formData.transferNo,
-        date: formData.date,
-        from: formData.from,
-        to: formData.to,
+        transferDate: formData.transferDate, // Note: field name is transferDate, not date
+        fromLocationId: parseInt(formData.fromLocationId),
+        toLocationId: parseInt(formData.toLocationId),
         transMode: formData.transMode,
         transportId: formData.transportId ? parseInt(formData.transportId) : null,
         lorryNo: formData.lorryNo || null,
@@ -423,21 +480,18 @@ const LocationTransferPage = () => {
         driverMobile: formData.driverMobile || null,
         itemName: formData.itemName,
         qty: formData.qty,
-        kgs: formData.kgs,
-        value: formData.value,
-        details: selectedBales.map(bale => ({
-          inwardLotId: bale.inwardLotId,
-          weightmentId: bale.weightmentId,
-          stockQty: 1, // Each bale is one stock
-          transferQty: 1 // Each bale is one transfer
-        }))
+        kgs: parseFloat(formData.kgs),
+        value: parseFloat(formData.value),
+        details: details
       };
       
+      console.log('Submitting data:', JSON.stringify(submitData, null, 2));
+      
       if (isEditing && selectedTransfer) {
+        // Note: Your backend update only updates header, not details
         await locationTransferService.updateLocationTransfer(selectedTransfer.id || selectedTransfer._id, submitData);
         showNotification('Location transfer updated successfully');
       } else {
-        console.log('Submitting:', submitData);
         await locationTransferService.createLocationTransfer(submitData);
         showNotification('Location transfer created successfully');
       }
@@ -445,7 +499,8 @@ const LocationTransferPage = () => {
       await fetchTransfers();
       handleCloseModal();
     } catch (error) {
-      showNotification(error.response?.data?.message || 'Operation failed', 'error');
+      console.error('Submit error:', error);
+      showNotification(error.response?.data?.message || error.message || 'Operation failed', 'error');
     } finally {
       setModalLoading(false);
     }
@@ -528,7 +583,7 @@ const LocationTransferPage = () => {
               <p className="text-2xl font-bold text-gray-800">
                 {transfers.filter(t => {
                   const today = new Date().toISOString().split('T')[0];
-                  return t.date === today;
+                  return t.transferDate === today;
                 }).length}
               </p>
             </div>
@@ -608,13 +663,13 @@ const LocationTransferPage = () => {
                       <div className="text-sm font-medium text-gray-900">{transfer.transferNo || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{formatDate(transfer.date)}</div>
+                      <div className="text-sm text-gray-600">{formatDate(transfer.transferDate)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{getGodownName(transfer.from)}</div>
+                      <div className="text-sm text-gray-900">{transfer.from || getGodownName(transfer.fromLocationId)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{getGodownName(transfer.to)}</div>
+                      <div className="text-sm text-gray-900">{transfer.to || getGodownName(transfer.toLocationId)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
@@ -714,8 +769,8 @@ const LocationTransferPage = () => {
                     </label>
                     <input
                       type="date"
-                      name="date"
-                      value={formData.date}
+                      name="transferDate"
+                      value={formData.transferDate}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                       disabled={modalLoading}
@@ -727,15 +782,15 @@ const LocationTransferPage = () => {
                       From <span className="text-red-500">*</span>
                     </label>
                     <select
-                      name="from"
-                      value={formData.from}
+                      name="fromLocationId"
+                      value={formData.fromLocationId}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                       disabled={modalLoading}
                     >
                       <option value="">Select Godown</option>
                       {godowns.map(godown => (
-                        <option key={godown.id || godown._id} value={godown.godownName || godown.name}>
+                        <option key={godown.id} value={godown.id}>
                           {godown.godownName || godown.name}
                         </option>
                       ))}
@@ -747,15 +802,15 @@ const LocationTransferPage = () => {
                       To <span className="text-red-500">*</span>
                     </label>
                     <select
-                      name="to"
-                      value={formData.to}
+                      name="toLocationId"
+                      value={formData.toLocationId}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                       disabled={modalLoading}
                     >
                       <option value="">Select Godown</option>
                       {godowns.map(godown => (
-                        <option key={godown.id || godown._id} value={godown.godownName || godown.name}>
+                        <option key={godown.id} value={godown.id}>
                           {godown.godownName || godown.name}
                         </option>
                       ))}
@@ -828,7 +883,7 @@ const LocationTransferPage = () => {
                     >
                       <option value="">Select Transport</option>
                       {transports.map(transport => (
-                        <option key={transport.id || transport._id} value={transport.id || transport._id}>
+                        <option key={transport.id} value={transport.id}>
                           {transport.transportName || transport.name}
                         </option>
                       ))}
@@ -903,8 +958,8 @@ const LocationTransferPage = () => {
                     }}
                     onFocus={() => setShowLotDropdown(true)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Search by lot number or supplier..."
-                    disabled={modalLoading}
+                    placeholder="Search by lot number..."
+                    disabled={modalLoading || loadingLotDetails}
                   />
                   
                   {showLotDropdown && (
@@ -913,18 +968,17 @@ const LocationTransferPage = () => {
                         <div className="p-3 text-center text-gray-500">No lots found</div>
                       ) : (
                         getFilteredLots().map(lot => {
-                          const supplier = lot.InwardEntry?.purchaseOrder?.supplier?.accountName || '';
-                          const variety = lot.InwardEntry?.purchaseOrder?.variety?.variety || '';
-                          const balesQty = lot.balesQty || 0;
+                          const nettWeight = lot.nettWeight || '';
+                          const balesQty = lot.qty || 0;
                           return (
                             <div
-                              key={lot.id || lot._id}
+                              key={lot.id}
                               onClick={() => handleLotSelect(lot)}
                               className="p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                             >
                               <div className="font-medium text-gray-900">{lot.lotNo}</div>
                               <div className="text-xs text-gray-500">
-                                {supplier} • {variety} • Available: {balesQty} bales
+                                Nett Wt: {nettWeight} • Available: {balesQty} bales
                               </div>
                             </div>
                           );
@@ -934,8 +988,18 @@ const LocationTransferPage = () => {
                   )}
                 </div>
 
+                {/* Loading Indicator for Lot Details */}
+                {loadingLotDetails && (
+                  <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
+                      <span className="text-sm text-gray-600">Loading lot details...</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Selected Lot Info */}
-                {selectedLot && (
+                {selectedLot && selectedLotDetails && (
                   <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
@@ -943,14 +1007,12 @@ const LocationTransferPage = () => {
                         <p className="text-sm font-medium text-gray-900">{selectedLot.lotNo}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500">Total Bales Available</p>
-                        <p className="text-sm font-medium text-gray-900">{selectedLot.balesQty || 0}</p>
+                        <p className="text-xs text-gray-500">Total Bales</p>
+                        <p className="text-sm font-medium text-gray-900">{selectedLotDetails.qty || 0}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500">Supplier</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {selectedLot.InwardEntry?.purchaseOrder?.supplier?.accountName || '-'}
-                        </p>
+                        <p className="text-xs text-gray-500">Nett Weight</p>
+                        <p className="text-sm font-medium text-gray-900">{selectedLotDetails.nettWeight || 0} kg</p>
                       </div>
                     </div>
                   </div>
@@ -958,66 +1020,97 @@ const LocationTransferPage = () => {
               </div>
 
               {/* Bale Selection Section */}
-              {weightments.length > 0 && (
+              {selectedLotDetails && selectedLotDetails.weightments && selectedLotDetails.weightments.length > 0 && (
                 <div className="mb-6 p-5 bg-gray-50 rounded-lg">
-                  <h4 className="text-base font-medium text-gray-700 mb-4">Select Bales to Transfer</h4>
-                  
-                  {/* Available Bales */}
-                  <div className="mb-4">
-                    <h5 className="text-sm font-medium text-gray-600 mb-2">Available Bales</h5>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                      {weightments.map((weightment, index) => {
-                        const isSelected = selectedBales.some(b => b.weightmentId === weightment.id);
-                        const baleWeight = (parseFloat(weightment.grossWeight) - parseFloat(weightment.tareWeight) || 0).toFixed(2);
-                        return (
-                          <button
-                            key={weightment.id}
-                            onClick={() => !isSelected && handleBaleSelect(weightment)}
-                            disabled={isSelected}
-                            className={`p-2 text-sm rounded-lg border transition ${
-                              isSelected 
-                                ? 'bg-green-100 border-green-300 text-green-700 cursor-not-allowed'
-                                : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                            }`}
-                          >
-                            <div className="font-medium">Bale #{index + 1}</div>
-                            <div className="text-xs">{baleWeight} kg</div>
-                          </button>
-                        );
-                      })}
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-base font-medium text-gray-700">Select Bales to Transfer</h4>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-sm text-gray-600">
+                        {selectedBaleIds.size} of {selectedLotDetails.weightments.length} selected
+                      </span>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={selectAll}
+                          onChange={(e) => handleSelectAllChange(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          disabled={modalLoading}
+                        />
+                        <span className="text-sm text-gray-700">Select All</span>
+                      </label>
                     </div>
                   </div>
-
-                  {/* Selected Bales */}
-                  {selectedBales.length > 0 && (
-                    <div>
-                      <h5 className="text-sm font-medium text-gray-600 mb-2">Selected Bales ({selectedBales.length})</h5>
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                        {selectedBales.map((bale, index) => {
-                          const weightment = weightments.find(w => w.id === bale.weightmentId);
-                          const baleWeight = weightment ? 
-                            (parseFloat(weightment.grossWeight) - parseFloat(weightment.tareWeight) || 0).toFixed(2) : '0';
+                  
+                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="w-12 px-4 py-3">
+                            <span className="sr-only">Select</span>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Bale Number
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Gross Weight (kg)
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Tare Weight (kg)
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Net Weight (kg)
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Value (₹)
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {selectedLotDetails.weightments.map((weightment) => {
+                          const grossWeight = parseFloat(weightment.grossWeight) || 0;
+                          const tareWeight = parseFloat(weightment.tareWeight) || 0;
+                          const netWeight = parseFloat(weightment.baleWeight) || (grossWeight - tareWeight);
+                          const candyRate = parseFloat(selectedLotDetails.candyRate) || 
+                                           parseFloat(selectedLot?.candyRate) || 55600;
+                          const baleValue = (netWeight / 356) * candyRate;
+                          
                           return (
-                            <div
-                              key={index}
-                              className="p-2 bg-blue-50 border border-blue-200 rounded-lg flex justify-between items-center"
+                            <tr 
+                              key={weightment.id}
+                              className={`hover:bg-gray-50 ${
+                                selectedBaleIds.has(weightment.id) ? 'bg-blue-50' : ''
+                              }`}
                             >
-                              <div>
-                                <div className="text-sm font-medium text-blue-700">Bale #{index + 1}</div>
-                                <div className="text-xs text-blue-600">{baleWeight} kg</div>
-                              </div>
-                              <button
-                                onClick={() => removeBale(index)}
-                                className="text-blue-500 hover:text-blue-700 text-lg"
-                              >
-                                ×
-                              </button>
-                            </div>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedBaleIds.has(weightment.id)}
+                                  onChange={(e) => handleBaleCheckboxChange(weightment.id, e.target.checked)}
+                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  disabled={modalLoading}
+                                />
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                {weightment.baleNo || `Bale #${weightment.id}`}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                {grossWeight.toFixed(3)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                {tareWeight.toFixed(3)}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                {netWeight.toFixed(3)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                ₹{baleValue.toFixed(2)}
+                              </td>
+                            </tr>
                           );
                         })}
-                      </div>
-                    </div>
-                  )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
@@ -1031,7 +1124,6 @@ const LocationTransferPage = () => {
                     </label>
                     <input
                       type="number"
-                      name="qty"
                       value={formData.qty}
                       readOnly
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none"
@@ -1043,7 +1135,6 @@ const LocationTransferPage = () => {
                     </label>
                     <input
                       type="text"
-                      name="kgs"
                       value={formData.kgs}
                       readOnly
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none"
@@ -1055,7 +1146,6 @@ const LocationTransferPage = () => {
                     </label>
                     <input
                       type="text"
-                      name="value"
                       value={formData.value}
                       readOnly
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none"
@@ -1077,7 +1167,7 @@ const LocationTransferPage = () => {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={modalLoading}
+                  disabled={modalLoading || loadingLotDetails}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center disabled:opacity-50 min-w-[100px] justify-center"
                 >
                   {modalLoading ? (
@@ -1122,15 +1212,15 @@ const LocationTransferPage = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Transfer Date</p>
-                    <p className="text-base text-gray-900">{formatDate(viewTransfer.date)}</p>
+                    <p className="text-base text-gray-900">{formatDate(viewTransfer.transferDate)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">From Location</p>
-                    <p className="text-base text-gray-900">{viewTransfer.from || '-'}</p>
+                    <p className="text-base text-gray-900">{viewTransfer.from || getGodownName(viewTransfer.fromLocationId)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">To Location</p>
-                    <p className="text-base text-gray-900">{viewTransfer.to || '-'}</p>
+                    <p className="text-base text-gray-900">{viewTransfer.to || getGodownName(viewTransfer.toLocationId)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Transport Mode</p>
@@ -1142,7 +1232,7 @@ const LocationTransferPage = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Transport</p>
-                    <p className="text-base text-gray-900">{getTransportName(viewTransfer.transportId)}</p>
+                    <p className="text-base text-gray-900">{viewTransfer.transport?.transportName || getTransportName(viewTransfer.transportId)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Driver Name</p>
@@ -1167,30 +1257,41 @@ const LocationTransferPage = () => {
               {viewTransfer.details && viewTransfer.details.length > 0 && (
                 <div className="mb-6">
                   <h4 className="text-base font-medium text-gray-700 mb-4">Transfer Details</h4>
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">S.No</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lot ID</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Weightment ID</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock Qty</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transfer Qty</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {viewTransfer.details.map((detail, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{detail.inwardLotId || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{detail.weightmentId || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{detail.stockQty || '-'}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-gray-900">{detail.transferQty || '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  {viewTransfer.details.map((detail, idx) => (
+                    <div key={idx} className="mb-4">
+                      <h5 className="text-sm font-medium text-gray-600 mb-2">Lot: {detail.lot?.lotNo || detail.lotId}</h5>
+                      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">S.No</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bale Number</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Weight (kg)</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value (₹)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {detail.bales && detail.bales.map((bale, index) => (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {bale.weightment?.baleNo || `Bale #${bale.weightmentId}`}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {bale.weightment?.baleWeight || 
+                                   (bale.weightment ? 
+                                    (parseFloat(bale.weightment.grossWeight) - parseFloat(bale.weightment.tareWeight)).toFixed(3) : '-')}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  ₹{bale.weightment?.baleValue?.toFixed(2) || '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 

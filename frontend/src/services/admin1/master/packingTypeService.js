@@ -64,7 +64,6 @@ const packingTypeService = {
       tareWeight: data.tareWeight !== undefined ? parseFloat(data.tareWeight) : undefined,
       rate: data.rate !== undefined ? parseFloat(data.rate) : undefined,
     };
-
     const response = await api.put(`/${id}`, payload);
     return response.data.packingType;
   },
