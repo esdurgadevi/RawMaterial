@@ -12,7 +12,6 @@ import MixingModel from "./admin1/master/mixing.js";
 import VarietyModel from "./admin1/master/variety.js";
 import GodownModel from "./admin1/master/godown.js";
 import CompanyBrokerModel from "./admin1/master/companyBroker.js";
-import WasteInvoiceTypeModel from "./admin1/master/wasteInvoiceType.js";
 import SupplierModel from "./admin1/master/supplier.js";
 import CommodityModel from "./admin1/master/commodity.js";
 import TransportModel from "./admin1/master/transport.js";
@@ -30,6 +29,12 @@ import InwardLotModel from "./admin1/transaction-cotton/inward-lot/inwardLot.js"
 import InwardLotWeightmentModel from "./admin1/transaction-cotton/inward-lot/inwardLotWeightment.js";
 import IssueModel from "./admin1/transaction-cotton/issue/Issue.js";
 import IssueItemModel from "./admin1/transaction-cotton/issue/IssueItem.js";
+import FinalInvoiceModel from "./admin1/transaction-cotton/final-invoice/finalInvoice.js";
+import FinalInvoiceDetailModel from "./admin1/transaction-cotton/final-invoice/finalInvoiceDetail.js";
+import LocationTransferBaleModel from "./admin1/transaction-cotton/transfer-location/transferLocationBale.js";
+import LocationTransferDetailModel from "./admin1/transaction-cotton/transfer-location/locationTransferDetail.js";
+import LocationTransferModel from "./admin1/transaction-cotton/transfer-location/transferLocation.js";
+
 
 //transaction-waste
 import WastePackingDetailModel from "./admin1/transaction-waste/waste-packing/wastePackingDetailModel.js";
@@ -67,7 +72,6 @@ db.Station = StationModel(sequelize);
 db.Fibre = FibreModel(sequelize);
 db.Godown = GodownModel(sequelize);
 db.CompanyBroker = CompanyBrokerModel(sequelize);
-db.WasteInvoiceType = WasteInvoiceTypeModel(sequelize);
 db.Transport = TransportModel(sequelize);
 db.Supplier = SupplierModel(sequelize);
 db.MixingGroup = MixingGroupModel(sequelize);
@@ -85,6 +89,8 @@ db.InwardLot = InwardLotModel(sequelize);
 db.InwardLotWeightment = InwardLotWeightmentModel(sequelize);
 db.Issue = IssueModel(sequelize);
 db.IssueItem = IssueItemModel(sequelize);
+db.FinalInvoiceHead = FinalInvoiceModel(sequelize);
+db.FinalInvoiceDetail = FinalInvoiceDetailModel(sequelize);
 db.WastePacking = WastePacking(sequelize);
 db.WastePackingDetail = WastePackingDetailModel(sequelize);
 db.SalesOrder = SalesOrderModel(sequelize);
@@ -108,6 +114,24 @@ db.QcSimplex = QcSimplexInit(sequelize);
 db.QcCarding = QcCardingInit(sequelize);
 db.QcBlowRoom = QcBlowRoomInit(sequelize);
 
+import  WCInvoiceHeadModel from "./admin1/master/WCInvoice/wcInvoiceHeadModel.js";
+import WCInvoiceDetailModel from "./admin1/master/WCInvoice/wcInvoiceDetailModel.js";
+
+db.WCInvoiceHead = WCInvoiceHeadModel(sequelize);
+db.WCInvoiceDetail = WCInvoiceDetailModel(sequelize);
+
+db.WCInvoiceHead.hasMany(db.WCInvoiceDetail, {
+  foreignKey: "wcInvoiceId",
+  as: "details",
+  onDelete: "CASCADE",
+});
+
+db.WCInvoiceDetail.belongsTo(db.WCInvoiceHead, {
+  foreignKey: "wcInvoiceId",
+  as: "invoiceHead",
+});
+
+//admin1 master state
 db.State.hasMany(db.Station, {
   foreignKey: "stateId",
 });
@@ -116,7 +140,6 @@ db.Station.belongsTo(db.State, {
   foreignKey: "stateId",
 });
 
-// Define associations (optional but recommended for scalability)
 db.Fibre.hasMany(db.Mixing, {
   foreignKey: "fibreId",
   as: "mixings",
@@ -198,6 +221,11 @@ db.WasteLot.belongsTo(db.WasteMaster, {
   foreignKey: "wasteMasterId",
   as: "wasteMaster",
 });
+
+
+
+
+//transaction-cotton purchase order
 db.Supplier.hasMany(db.PurchaseOrder, {
   foreignKey: "supplierId",
   as: "purchaseOrders",
@@ -252,11 +280,12 @@ db.PurchaseOrder.belongsTo(db.CompanyBroker, {
   as: "companyBroker",
 });
 
-// Real FK associations
 db.PurchaseOrder.hasMany(db.InwardEntry, {
   foreignKey: "purchaseOrderId",
   as: "inwardEntries",
 });
+
+//transaction-cotton inward
 db.InwardEntry.belongsTo(db.PurchaseOrder, {
   foreignKey: "purchaseOrderId",
   as: "purchaseOrder",
@@ -272,6 +301,7 @@ db.InwardEntry.belongsTo(db.Godown, {
   as: "godown",
 });
 
+//transaction-cotton inwardlot
 db.InwardEntry.hasMany(db.InwardLot, {
   foreignKey: "inwardId",
 });
@@ -281,16 +311,19 @@ db.InwardLot.belongsTo(db.InwardEntry, {
 });
 
 db.InwardLot.hasMany(db.InwardLotWeightment, {
-  foreignKey: "inwardLotId",
+  foreignKey: "lotNo",     
+  sourceKey: "lotNo",     
   as: "weightments",
 });
 
+
 db.InwardLotWeightment.belongsTo(db.InwardLot, {
-  foreignKey: "inwardLotId",
+  foreignKey: "lotNo",
+  targetKey: "lotNo",
   as: "inwardLot",
 });
 
-//issue
+//transaction-cotton issue
 db.Issue.hasMany(db.IssueItem, {
   foreignKey: "issueId",
 });
@@ -313,6 +346,159 @@ db.IssueItem.belongsTo(db.InwardLotWeightment, {
   foreignKey: "weightmentId",
 });
 
+// ================= FINAL INVOICE =================
+// ────────────────────────────────────────────────
+// FinalInvoiceHead ↔ FinalInvoiceDetail
+// ────────────────────────────────────────────────
+
+db.FinalInvoiceHead.hasMany(db.FinalInvoiceDetail, {
+  foreignKey: "finalInvoiceId",      // ← Use the model property name
+  as: "details",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+db.FinalInvoiceDetail.belongsTo(db.FinalInvoiceHead, {
+  foreignKey: "finalInvoiceId",      // ← same property name
+  as: "invoice",
+  onDelete: "CASCADE",
+  onUpdate: "CASCADE",
+});
+
+// ────────────────────────────────────────────────
+// InwardLot ↔ FinalInvoiceDetail
+// ────────────────────────────────────────────────
+
+db.InwardLot.hasMany(db.FinalInvoiceDetail, {
+  foreignKey: "inwardLotId",         // ← Use the model property name
+  as: "finalInvoiceDetails",
+  onDelete: "RESTRICT",              // or CASCADE — choose based on your business logic
+  onUpdate: "CASCADE",
+});
+
+db.FinalInvoiceDetail.belongsTo(db.InwardLot, {
+  foreignKey: "inwardLotId",         // ← same property name
+  as: "lot",
+  onDelete: "RESTRICT",
+  onUpdate: "CASCADE",
+});
+// ===============================================================
+
+//transaction-cotton lot entry
+import LotTestResultModel from "./admin1/transaction-cotton/lotTestResultModel.js";
+db.LotTestResult = LotTestResultModel(sequelize);
+
+
+// One Inward Lot → One Test Result
+db.InwardLot.hasOne(db.LotTestResult, {
+  foreignKey: "lotId",
+  as: "testResult",
+  onDelete: "CASCADE",
+});
+
+db.LotTestResult.belongsTo(db.InwardLot, {
+  foreignKey: "lotId",
+  as: "lot",
+});
+
+
+//transaction-cotton location-transfer
+db.Transport = TransportModel(sequelize);
+db.LocationTransfer = LocationTransferModel(sequelize);
+db.LocationTransferDetail = LocationTransferDetailModel(sequelize);
+db.LocationTransferBale = LocationTransferBaleModel(sequelize);
+
+
+
+db.Transport.hasMany(db.LocationTransfer, {
+  foreignKey: "transportId",
+  as: "locationTransfers",
+});
+
+db.LocationTransfer.belongsTo(db.Transport, {
+  foreignKey: "transportId",
+  as: "transport",
+});
+
+
+db.LocationTransfer.hasMany(db.LocationTransferDetail, {
+  foreignKey: "locationTransferId",
+  as: "details",
+});
+
+db.LocationTransferDetail.belongsTo(db.LocationTransfer, {
+  foreignKey: "locationTransferId",
+  as: "locationTransfer",
+});
+
+
+db.InwardLot.hasMany(db.LocationTransferDetail, {
+  foreignKey: "lotId",
+  as: "transferDetails",
+});
+
+db.LocationTransferDetail.belongsTo(db.InwardLot, {
+  foreignKey: "lotId",
+  as: "lot",
+});
+
+
+db.LocationTransferDetail.hasMany(db.LocationTransferBale, {
+  foreignKey: "locationTransferDetailId",
+  as: "bales",
+});
+
+db.LocationTransferBale.belongsTo(db.LocationTransferDetail, {
+  foreignKey: "locationTransferDetailId",
+  as: "detail",
+});
+
+
+db.InwardLotWeightment.hasMany(db.LocationTransferBale, {
+  foreignKey: "weightmentId",
+  as: "transferBales",
+});
+
+db.LocationTransferBale.belongsTo(db.InwardLotWeightment, {
+  foreignKey: "weightmentId",
+  as: "weightment",
+});
+
+
+//transaction-cotton lot allowance
+
+import LotAllowanceModel from "./admin1/transaction-cotton/lotAllowanceModel.js";
+db.LotAllowance = LotAllowanceModel(sequelize);
+
+db.InwardLot.hasMany(db.LotAllowance, {
+  foreignKey: "inwardLotId",
+  as: "allowances",
+  onDelete: "CASCADE",
+});
+
+db.LotAllowance.belongsTo(db.InwardLot, {
+  foreignKey: "inwardLotId",
+  as: "inwardLot",
+});
+
+//transaction-cotton lot rejection
+
+import LotRejectedModel from "./admin1/transaction-cotton/lotRejectedModel.js";
+
+db.LotRejected = LotRejectedModel(sequelize);
+
+db.InwardLot.hasOne(db.LotRejected, {
+  foreignKey: "inwardLotId",
+  as: "rejection",
+  onDelete: "CASCADE",
+});
+
+db.LotRejected.belongsTo(db.InwardLot, {
+  foreignKey: "inwardLotId",
+  as: "inwardLot",
+});
+
+//wastepacking
 db.WastePacking.hasMany(db.WastePackingDetail, {
   foreignKey: "wastePackingId",
   as: "details",
@@ -492,3 +678,4 @@ db.QcCarding.belongsTo(db.SimplexMachine, {
 });
 
 export default db;
+

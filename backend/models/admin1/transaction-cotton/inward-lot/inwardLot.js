@@ -12,17 +12,16 @@ const InwardLotModel = (sequelize) => {
       },
 
       inwardId: {
-  type: DataTypes.INTEGER,
-  allowNull: false,
-  references: {
-    model: "inward_entries",
-    key: "id",
-  },
-  onUpdate: "CASCADE",
-  onDelete: "RESTRICT",
-  field: "inward_id",
-},
-
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: "inward_entries",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "RESTRICT",
+        field: "inward_id",
+      },
 
       lotNo: {
         type: DataTypes.STRING(50),
@@ -31,22 +30,64 @@ const InwardLotModel = (sequelize) => {
         field: "lot_no",
       },
 
+      lcNo: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        field: "lc_no",
+      },
+
+      paymentDays: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: "payment_days",
+      },
+
+      paymentDate: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+        field: "payment_date",
+      },
+
       setNo: {
         type: DataTypes.STRING(50),
         allowNull: true,
         field: "set_no",
       },
 
-      balesQty: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: "bales_qty",
-      },
-
-      cessPaidAmount: {
+      cess: {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: true,
-        field: "cess_paid_amount",
+        field: "cess",
+      },
+
+      type: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        field: "type",
+      },
+
+      godownId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: "godowns",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "RESTRICT",
+        field: "godown_id",
+      },
+
+      lotDate: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+        field: "lot_date",
+      },
+
+      freight: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true,
+        field: "freight",
       },
 
       grossWeight: {
@@ -55,16 +96,22 @@ const InwardLotModel = (sequelize) => {
         field: "gross_weight",
       },
 
+      nettWeight: {
+        type: DataTypes.DECIMAL(12, 3),
+        allowNull: false,
+        field: "nett_weight",
+      },
+
       tareWeight: {
         type: DataTypes.DECIMAL(12, 3),
         allowNull: false,
         field: "tare_weight",
       },
 
-      nettWeight: {
-        type: DataTypes.DECIMAL(12, 3),
+      qty: {
+        type: DataTypes.INTEGER,
         allowNull: false,
-        field: "nett_weight",
+        field: "qty",
       },
 
       candyRate: {
@@ -85,10 +132,10 @@ const InwardLotModel = (sequelize) => {
         field: "rate_per_kg",
       },
 
-      invoiceValue: {
+      assessValue: {
         type: DataTypes.DECIMAL(14, 2),
         allowNull: false,
-        field: "invoice_value",
+        field: "assess_value",
       },
     },
     {
@@ -97,6 +144,7 @@ const InwardLotModel = (sequelize) => {
       indexes: [
         { unique: true, fields: ["lot_no"] },
         { fields: ["inward_id"] },
+        { fields: ["godown_id"] },
       ],
     }
   );

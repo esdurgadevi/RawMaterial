@@ -1,5 +1,5 @@
 import db from "../../../models/index.js";
-
+import { Op } from "sequelize";
 
 const { WasteRate, WasteMaster } = db;
 
@@ -72,7 +72,6 @@ export const updateWasteRate = async (id, data) => {
     if (!waste) throw new Error("Selected Waste Master not found");
   }
 
-  // Check for duplicate if changing date or waste
   if (data.rateDate || data.wasteMasterId) {
     const newDate = data.rateDate || rateEntry.rateDate;
     const newWasteId = data.wasteMasterId || rateEntry.wasteMasterId;
@@ -81,19 +80,28 @@ export const updateWasteRate = async (id, data) => {
       where: {
         wasteMasterId: newWasteId,
         rateDate: newDate,
-        id: { [db.Sequelize.Op.ne]: id },
+        id: { [Op.ne]: id },
       },
     });
+
     if (duplicate) {
       throw new Error(`Rate already exists for this waste on ${newDate}`);
     }
   }
 
   return await rateEntry.update({
-    wasteMasterId: data.wasteMasterId !== undefined ? data.wasteMasterId : rateEntry.wasteMasterId,
+    wasteMasterId:
+      data.wasteMasterId !== undefined
+        ? data.wasteMasterId
+        : rateEntry.wasteMasterId,
     rateDate: data.rateDate || rateEntry.rateDate,
     rate: data.rate !== undefined ? parseFloat(data.rate) : rateEntry.rate,
-    remarks: data.remarks !== undefined ? (data.remarks ? data.remarks.trim() : null) : rateEntry.remarks,
+    remarks:
+      data.remarks !== undefined
+        ? data.remarks
+          ? data.remarks.trim()
+          : null
+        : rateEntry.remarks,
   });
 };
 

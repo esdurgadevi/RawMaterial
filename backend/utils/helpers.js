@@ -134,6 +134,43 @@ export const getNextIssueNumber = async () => {
   }
 };
 
+const { LocationTransfer } = db;
+export const getNextLocationTransferNo = async () => {
+  const now = new Date();
+  let year = now.getFullYear();
+
+  // Financial year: April 1 – March 31
+  if (now.getMonth() < 3) { 
+    year = year - 1;
+  }
+
+  const nextYear = year + 1;
+  const fyPrefix = `${year.toString().slice(-2)}-${nextYear.toString().slice(-2)}`;
+
+  // Find last transfer in this FY
+  const lastTransfer = await LocationTransfer.findOne({
+    where: {
+      transferNo: {
+        [Op.like]: `LT/${fyPrefix}/%`,
+      },
+    },
+    order: [["createdAt", "DESC"]],
+    limit: 1,
+  });
+
+  let nextSeq = 1;
+
+  if (lastTransfer) {
+    const parts = lastTransfer.transferNo.split("/");
+    const lastNum = parseInt(parts[parts.length - 1], 10);
+    if (!isNaN(lastNum)) nextSeq = lastNum + 1;
+  }
+
+  const padded = String(nextSeq).padStart(4, "0");
+
+  return `LT/${fyPrefix}/${padded}`;
+};
+
 //masters Auto Code generation function
 
 const { Broker } = db;

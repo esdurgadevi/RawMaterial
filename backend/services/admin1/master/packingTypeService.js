@@ -1,6 +1,5 @@
 import db from "../../../models/index.js";
-
-
+import { Op } from "sequelize";
 const { PackingType } = db;
 export const createPackingType = async (data) => {
   const { code, name, tareWeight, rate } = data;
@@ -46,14 +45,19 @@ export const getPackingTypeById = async (id) => {
 
 export const updatePackingType = async (id, data) => {
   const packing = await PackingType.findByPk(id);
+
   if (!packing) {
     throw new Error("Packing type not found");
   }
 
   if (data.code && data.code !== packing.code) {
     const existing = await PackingType.findOne({
-      where: { code: data.code, id: { [db.Sequelize.Op.ne]: id } },
+      where: {
+        code: data.code,
+        id: { [Op.ne]: id },
+      },
     });
+
     if (existing) {
       throw new Error("Packing type code already in use");
     }
@@ -61,8 +65,12 @@ export const updatePackingType = async (id, data) => {
 
   if (data.name && data.name.trim() !== packing.name) {
     const existingName = await PackingType.findOne({
-      where: { name: data.name.trim(), id: { [db.Sequelize.Op.ne]: id } },
+      where: {
+        name: data.name.trim(),
+        id: { [Op.ne]: id },
+      },
     });
+
     if (existingName) {
       throw new Error("Packing type name already in use");
     }
@@ -73,7 +81,6 @@ export const updatePackingType = async (id, data) => {
     name: data.name ? data.name.trim() : packing.name,
   });
 };
-
 export const deletePackingType = async (id) => {
   const packing = await PackingType.findByPk(id);
   if (!packing) {

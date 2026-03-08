@@ -17,7 +17,7 @@ export const getNextLotNo1 = async (req, res) => {
 
 export const createLot = async (req, res) => {
   try {
-    const lot = await service.create(req.body);
+    const lot = await service.createInwardLot(req.body);
     res.status(201).json({ message: "Lot created", lot });
   } catch (e) {
     res.status(400).json({ message: e.message });
@@ -26,7 +26,7 @@ export const createLot = async (req, res) => {
 
 export const getAllLots = async (req, res) => {
   try {
-    const lots = await service.getAll();
+    const lots = await service.getAllInwardLots();
     res.json(lots);
   } catch (e) {
     res.status(400).json({ message: e.message });
@@ -35,7 +35,7 @@ export const getAllLots = async (req, res) => {
 
 export const getLot = async (req, res) => {
   try {
-    const lot = await service.getByLotNo(req.params.lotNo);
+    const lot = await service.getInwardLotById(req.params.lotNo);
     res.json(lot);
   } catch (e) {
     res.status(404).json({ message: e.message });
@@ -44,7 +44,7 @@ export const getLot = async (req, res) => {
 
 export const updateLot = async (req, res) => {
   try {
-    const lot = await service.update(req.params.lotNo, req.body);
+    const lot = await service.updateInwardLot(req.params.lotNo, req.body);
     res.json({ message: "Lot updated", lot });
   } catch (e) {
     res.status(400).json({ message: e.message });
@@ -53,7 +53,7 @@ export const updateLot = async (req, res) => {
 
 export const deleteLot = async (req, res) => {
   try {
-    await service.remove(req.params.lotNo);
+    await service.deleteInwardLot(req.params.lotNo);
     res.json({ message: "Lot deleted" });
   } catch (e) {
     res.status(404).json({ message: e.message });

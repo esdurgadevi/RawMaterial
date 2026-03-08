@@ -1,5 +1,6 @@
 import db from "../../../models/index.js";
 
+import { Op } from "sequelize";
 
 const { CostMaster } = db;
 
@@ -38,15 +39,19 @@ export const getCostMasterById = async (id) => {
 
 export const updateCostMaster = async (id, data) => {
   const cost = await CostMaster.findByPk(id);
+
   if (!cost) {
     throw new Error("Cost master not found");
   }
 
-  // Check for duplicate department only if changed
   if (data.department && data.department.trim() !== cost.department) {
     const existing = await CostMaster.findOne({
-      where: { department: data.department.trim(), id: { [db.Sequelize.Op.ne]: id } },
+      where: {
+        department: data.department.trim(),
+        id: { [Op.ne]: id },
+      },
     });
+
     if (existing) {
       throw new Error("Cost for this department already exists");
     }

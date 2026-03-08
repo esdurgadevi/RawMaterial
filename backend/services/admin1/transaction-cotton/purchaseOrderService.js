@@ -67,16 +67,78 @@ export const getAllPurchaseOrders = async () => {
 export const getPurchaseOrderById = async (id) => {
   const order = await PurchaseOrder.findByPk(id, {
     include: [
-      { model: Supplier, as: "supplier" },
-      { model: Broker, as: "broker" },
-      { model: Variety, as: "variety" },
-      { model: MixingGroup, as: "mixingGroup" },
-      { model: Station, as: "station" },
-      { model: CompanyBroker, as: "companyBroker" },
+      { model: Supplier, as: "supplier", attributes: ["accountName"] },
+      { model: Broker, as: "broker", attributes: ["brokerName"] },
+      { model: Variety, as: "variety", attributes: ["variety"] },
+      { model: MixingGroup, as: "mixingGroup", attributes: ["mixingName"] },
+      { model: Station, as: "station", attributes: ["station"] },
+      { model: CompanyBroker, as: "companyBroker", attributes: ["companyName"] },
+    ],
+    // Optional: limit fields from main PurchaseOrder table if you want even smaller response
+    attributes: [
+      "id",
+      "orderNo",
+      "orderDate",
+      "quantity",
+      "candyRate",
+      "quintalRate",
+      "ratePerKg",
+      "selectedRateType",
+      "approxLotValue",
+      "paymentMode",
+      "currency",
+      "packingType",
+      "orderType",
+      "staple",
+      "moist",
+      "mic",
+      "str",
+      "rd",
+      "remarks",
+      "lotClosed",
+      "createdAt",
+      "updatedAt",
+      // add/remove fields as needed
     ],
   });
-  if (!order) throw new Error("Purchase order not found");
-  return order;
+
+  if (!order) {
+    throw new Error("Purchase order not found");
+  }
+
+  const data = order.toJSON();
+
+  // Return clean, flat object with only names (no full nested objects)
+  return {
+    id: data.id,
+    orderNo: data.orderNo,
+    orderDate: data.orderDate,
+    quantity: data.quantity,
+    candyRate: data.candyRate,
+    quintalRate: data.quintalRate,
+    ratePerKg: data.ratePerKg,
+    selectedRateType: data.selectedRateType,
+    approxLotValue: data.approxLotValue,
+    paymentMode: data.paymentMode,
+    currency: data.currency,
+    packingType: data.packingType,
+    orderType: data.orderType,
+    staple: data.staple,
+    moist: data.moist,
+    mic: data.mic,
+    str: data.str,
+    rd: data.rd,
+    remarks: data.remarks,
+    lotClosed: data.lotClosed,
+
+    // Flattened names – exactly what you want
+    supplier: data.supplier?.accountName || null,
+    broker: data.broker?.brokerName || null,
+    variety: data.variety?.variety || null,
+    mixingGroup: data.mixingGroup?.mixingName || null,
+    station: data.station?.station || null,
+    companyBroker: data.companyBroker?.companyName || null || "NONE",
+  };
 };
 
 export const updatePurchaseOrder = async (id, data) => {

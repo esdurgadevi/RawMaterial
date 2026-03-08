@@ -122,7 +122,7 @@ const InwardEntryModel = (sequelize) => {
         allowNull: true,
         field: "commis_value",
       },
-
+      
       godownId: {
         type: DataTypes.INTEGER,
         allowNull: true,
@@ -135,7 +135,7 @@ const InwardEntryModel = (sequelize) => {
         field: "godown_id",
       },
 
-      balesQty: {
+      Qty: {
         type: DataTypes.INTEGER,
         allowNull: true,
         field: "bales_qty",
@@ -153,6 +153,10 @@ const InwardEntryModel = (sequelize) => {
       },
 
       bale: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+      },
+      gst : {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
       },
@@ -192,12 +196,12 @@ const InwardEntryModel = (sequelize) => {
         field: "igst_amount",
       },
 
-      tax: {
+      Tax: {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: true,
       },
 
-      taxAmount: {
+      TaxRs: {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: true,
         field: "tax_amount",
@@ -231,6 +235,23 @@ const InwardEntryModel = (sequelize) => {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: true,
       },
+      grossPerQty: {
+  type: DataTypes.DECIMAL(12, 3),
+  allowNull: true,
+  field: "gross_per_qty",
+},
+
+tarePerQty: {
+  type: DataTypes.DECIMAL(12, 3),
+  allowNull: true,
+  field: "tare_per_qty",
+},
+
+freightPerQty: {
+  type: DataTypes.DECIMAL(12, 2),
+  allowNull: true,
+  field: "freight_per_qty",
+},
 
       remarks: {
         type: DataTypes.TEXT,

@@ -1,88 +1,99 @@
 import db from "../../../models/index.js";
-
 import { getNextInwardNo } from "../../../utils/helpers.js";
 
+const {
+  InwardEntry,
+  PurchaseOrder,
+  Godown,
+  Supplier,
+  Broker,
+  Variety,
+  MixingGroup,
+  Station,
+  CompanyBroker,
+} = db;
 
-const { InwardEntry, PurchaseOrder, Godown } = db;
 
-/* =========================
-   CREATE INWARD ENTRY
-========================= */
 export const createInwardEntry = async (data) => {
   if (!data.inwardDate) {
     throw new Error("Inward Date is required");
   }
 
-  // Auto-generate inward number
   if (!data.inwardNo) {
     data.inwardNo = await getNextInwardNo();
   }
 
-  // Remove deprecated field if frontend still sends it
-  delete data.coolyBale;
+  const qty = Number(data.Qty || 0);
 
-  // Validate Purchase Order
-  if (data.purchaseOrderId) {
-    const order = await PurchaseOrder.findByPk(data.purchaseOrderId);
-    if (!order) throw new Error("Referenced Purchase Order not found");
-  }
+  data.grossPerQty =
+    qty > 0 ? Number(data.grossWeight || 0) / qty : 0;
 
-  // Validate Godown
-  if (data.godownId) {
-    const godown = await Godown.findByPk(data.godownId);
-    if (!godown) throw new Error("Godown not found");
-  }
+  data.tarePerQty =
+    qty > 0 ? Number(data.tareWeight || 0) / qty : 0;
 
-  /* ===== TAX CALCULATION ===== */
-  const taxableAmount =
-    Number(data.freight || 0) +
-    Number(data.cooly || 0) +
-    Number(data.bale || 0);
-
-  // Validate tax rule
-  if (data.igst && (data.sgst || data.cgst)) {
-    throw new Error("IGST cannot be applied together with SGST/CGST");
-  }
-
-  data.sgstAmount = data.sgst
-    ? (taxableAmount * data.sgst) / 100
-    : 0;
-
-  data.cgstAmount = data.cgst
-    ? (taxableAmount * data.cgst) / 100
-    : 0;
-
-  data.igstAmount = data.igst
-    ? (taxableAmount * data.igst) / 100
-    : 0;
-
-  data.taxAmount =
-    data.sgstAmount + data.cgstAmount + data.igstAmount;
+  data.freightPerQty =
+    qty > 0 ? Number(data.freight || 0) / qty : 0;
 
   return await InwardEntry.create(data);
 };
 
-/* =========================
-   GET ALL INWARD ENTRIES
-========================= */
 export const getAllInwardEntries = async () => {
-  return await InwardEntry.findAll({
+  const entries = await InwardEntry.findAll({
+    attributes: ["id", "inwardNo", "Qty", "nettWeight","inwardDate"],
     include: [
-      { model: PurchaseOrder, as: "purchaseOrder", attributes: ["id", "orderNo"] },
-      { model: Godown, as: "godown", attributes: ["id", "godownName"] },
+      {
+        model: PurchaseOrder,
+        as: "purchaseOrder",
+        attributes: ["candyRate", "orderNo"],
+      },
     ],
     order: [["inwardDate", "DESC"]],
   });
-};
 
-/* =========================
-   GET INWARD ENTRY BY ID
-========================= */
+  return entries.map((entry) => ({
+    id: entry.id,
+    inwardNo: entry.inwardNo,
+    noOfBales: entry.Qty,
+    nettWeight: entry.nettWeight,
+    candyRate: entry.purchaseOrder?.candyRate || null,
+    purchaseOrderNo: entry.purchaseOrder?.orderNo || null,
+    
+    // Added timestamps
+    inwardDate:entry.inwardDate
+  }));
+};
 export const getInwardEntryById = async (id) => {
   const entry = await InwardEntry.findByPk(id, {
     include: [
-      { model: PurchaseOrder, as: "purchaseOrder" },
-      { model: Godown, as: "godown" },
+      {
+        model: Godown,
+        as: "godown",
+        attributes: ["godownName"],
+      },
+      {
+        model: PurchaseOrder,
+        as: "purchaseOrder",
+        include: [
+          { model: Supplier, as: "supplier", attributes: ["accountName"] },
+          { model: Broker, as: "broker", attributes: ["brokerName"] },
+          { model: Variety, as: "variety", attributes: ["variety"] },
+          { model: MixingGroup, as: "mixingGroup", attributes: ["mixingName"] },
+          { model: Station, as: "station", attributes: ["station"] },
+          {
+            model: CompanyBroker,
+            as: "companyBroker",
+            attributes: ["companyName"],
+          },
+        ],
+        attributes: [
+          "orderNo",
+          "orderDate",
+          "quantity",
+          "candyRate",
+          "packingType",
+          "orderType",
+        ],
+      },
     ],
   });
 
@@ -90,57 +101,107 @@ export const getInwardEntryById = async (id) => {
     throw new Error("Inward entry not found");
   }
 
-  return entry;
-};
+  const data = entry.toJSON();
 
+  // Build clean flat object
+  return {
+    // Inward core fields
+    id: data.id,
+    inwardNo: data.inwardNo,
+    inwardDate: data.inwardDate,
+    type: data.type,
+    lcNo: data.lcNo,
+    paymentDays: data.paymentDays,
+    paymentDate: data.paymentDate,
+    govtForm: data.govtForm,
+    remarks: data.remarks,
+
+    // Weight & Qty
+    Qty: data.Qty,
+    grossWeight: data.grossWeight,
+    tareWeight: data.tareWeight,
+    nettWeight: data.nettWeight,
+    grossPerQty: data.grossPerQty,
+    tarePerQty: data.tarePerQty,
+    freightPerQty: data.freightPerQty,
+
+    // Party & Bill details
+    billNo: data.billNo,
+    billDate: data.billDate,
+    lotNo: data.lotNo,
+    lorryNo: data.lorryNo,
+    date: data.date,
+    candyRate: data.candyRate,
+    pMark: data.pMark,
+    pressRunningNo: data.pressRunningNo,
+    commisType: data.commisType,
+    commisValue: data.commisValue,
+    permitNo: data.permitNo,
+    comm: data.comm,
+
+    // Charges & Taxes
+    freight: data.freight,
+    cooly: data.cooly,
+    bale: data.bale,
+    gst: data.gst,
+    sgst: data.sgst,
+    cgst: data.cgst,
+    igst: data.igst,
+    sgstAmount: data.sgstAmount,
+    cgstAmount: data.cgstAmount,
+    igstAmount: data.igstAmount,
+    Tax: data.Tax,
+    TaxRs: data.TaxRs,
+
+    // Resolved names
+    godownName: data.godown?.godownName || null,
+    supplier: data.purchaseOrder?.supplier?.accountName || null,
+    broker: data.purchaseOrder?.broker?.brokerName || null,
+    variety: data.purchaseOrder?.variety?.variety || null,
+    mixingGroup: data.purchaseOrder?.mixingGroup?.mixingName || null,
+    station: data.purchaseOrder?.station?.station || null,
+    companyBroker: data.purchaseOrder?.companyBroker?.companyName || null,
+
+    // Useful fields from purchase order
+    purchaseOrderNo: data.purchaseOrder?.orderNo || null,
+    purchaseOrderDate: data.purchaseOrder?.orderDate || null,
+    purchaseQuantity: data.purchaseOrder?.quantity || null,
+    purchaseCandyRate: data.purchaseOrder?.candyRate || null,
+
+    // Added timestamps
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  };
+};
 /* =========================
-   UPDATE INWARD ENTRY
+   UPDATE
 ========================= */
 export const updateInwardEntry = async (id, data) => {
   const entry = await InwardEntry.findByPk(id);
   if (!entry) throw new Error("Inward entry not found");
 
-  // Remove deprecated field
-  delete data.coolyBale;
+  const qty = Number(data.Qty ?? entry.Qty ?? 0);
 
-  // Validate Purchase Order
-  if (data.purchaseOrderId) {
-    const order = await PurchaseOrder.findByPk(data.purchaseOrderId);
-    if (!order) throw new Error("Referenced Purchase Order not found");
-  }
+  data.grossPerQty =
+    qty > 0
+      ? Number(data.grossWeight ?? entry.grossWeight ?? 0) / qty
+      : 0;
 
-  // Validate Godown
-  if (data.godownId) {
-    const godown = await Godown.findByPk(data.godownId);
-    if (!godown) throw new Error("Godown not found");
-  }
+  data.tarePerQty =
+    qty > 0
+      ? Number(data.tareWeight ?? entry.tareWeight ?? 0) / qty
+      : 0;
 
-  /* ===== TAX RECALCULATION ===== */
-  const taxableAmount =
-    Number(data.freight ?? entry.freight ?? 0) +
-    Number(data.cooly ?? entry.cooly ?? 0) +
-    Number(data.bale ?? entry.bale ?? 0);
-
-  if (data.igst && (data.sgst || data.cgst)) {
-    throw new Error("IGST cannot be applied together with SGST/CGST");
-  }
-
-  const sgst = data.sgst ?? entry.sgst;
-  const cgst = data.cgst ?? entry.cgst;
-  const igst = data.igst ?? entry.igst;
-
-  data.sgstAmount = sgst ? (taxableAmount * sgst) / 100 : 0;
-  data.cgstAmount = cgst ? (taxableAmount * cgst) / 100 : 0;
-  data.igstAmount = igst ? (taxableAmount * igst) / 100 : 0;
-
-  data.taxAmount =
-    data.sgstAmount + data.cgstAmount + data.igstAmount;
+  data.freightPerQty =
+    qty > 0
+      ? Number(data.freight ?? entry.freight ?? 0) / qty
+      : 0;
 
   return await entry.update(data);
 };
 
 /* =========================
-   DELETE INWARD ENTRY
+   DELETE
 ========================= */
 export const deleteInwardEntry = async (id) => {
   const entry = await InwardEntry.findByPk(id);
