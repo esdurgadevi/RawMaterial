@@ -22,17 +22,62 @@ export const createInwardLot = async (data) => {
 
   try {
     const { lotHeader, weightments } = data;
+    const { inwardId, qty } = lotHeader;
 
-    // 1️⃣ Create Lot
+    /* =========================
+       1️⃣ GET INWARD ENTRY
+    ========================= */
+    const inward = await InwardEntry.findByPk(inwardId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!inward) {
+      throw new Error("Inward Entry not found");
+    }
+
+    const inwardQty = inward.Qty;
+
+    /* =========================
+       2️⃣ SUM EXISTING LOT QTY
+    ========================= */
+    const usedQty = await InwardLot.sum("qty", {
+      where: { inwardId },
+      transaction,
+    });
+
+    const totalUsedQty = usedQty || 0;
+
+    /* =========================
+       3️⃣ CALCULATE REMAINING
+    ========================= */
+    const remainingQty = inwardQty - totalUsedQty;
+
+    /* =========================
+       4️⃣ VALIDATION
+    ========================= */
+    if (qty > remainingQty) {
+      throw new Error(
+        `Lot qty exceeds remaining inward qty. Remaining qty: ${remainingQty}`
+      );
+    }
+
+    /* =========================
+       5️⃣ CREATE LOT
+    ========================= */
     const newLot = await InwardLot.create(lotHeader, { transaction });
 
-    // 2️⃣ Prepare weightment rows
+    /* =========================
+       6️⃣ PREPARE WEIGHTMENTS
+    ========================= */
     const weightmentRows = weightments.map((item) => ({
       ...item,
       lotNo: newLot.lotNo,
     }));
 
-    // 3️⃣ Insert weightments
+    /* =========================
+       7️⃣ INSERT WEIGHTMENTS
+    ========================= */
     await InwardLotWeightment.bulkCreate(weightmentRows, {
       transaction,
     });
@@ -60,6 +105,20 @@ export const getAllInwardLots = async () => {
       "freight",
       "nettWeight",
       "candyRate",
+    ],
+    include: [
+      {
+        model: InwardEntry,
+        as: "InwardEntry",
+        attributes: ["inwardNo"],   // get inward number
+        include: [
+          {
+            model: PurchaseOrder,
+            as: "purchaseOrder",
+            attributes: ["orderNo"],  // get purchase order number
+          },
+        ],
+      },
     ],
     order: [["lotDate", "DESC"]],
   });

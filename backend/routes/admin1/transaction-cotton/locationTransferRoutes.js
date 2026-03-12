@@ -12,13 +12,15 @@ import {
   getLocationTransferById,
   updateLocationTransfer,
   deleteLocationTransfer,
-  getNextLocationNo
+  getNextLocationNo,
+  getAvailableBalesByLot
 } from "../../../controllers/admin1/transaction-cotton/locationTransferController.js";
 
 
 
 // CRUD
 router.get("/next-no",getNextLocationNo);
+router.get("/available-bales", getAvailableBalesByLot);
 router.post("/", createLocationTransfer);
 router.get("/", getAllLocationTransfers);
 router.get("/:id", getLocationTransferById);

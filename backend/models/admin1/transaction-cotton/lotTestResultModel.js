@@ -70,6 +70,10 @@ const LotTestResultModel = (sequelize) => {
         type: DataTypes.FLOAT,
         allowNull: true,
       },
+      strength1:{
+        type : DataTypes.FLOAT,
+        allowNull: true
+      },
 
       sfi: {
         type: DataTypes.FLOAT,

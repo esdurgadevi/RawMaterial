@@ -28,7 +28,7 @@ const SupplierModel = (sequelize) => {
       },
       place: {
         type: DataTypes.STRING(100),
-        allowNull: true,
+        allowNull: false,
         trim: true,
       },
       address: {
@@ -47,7 +47,6 @@ const SupplierModel = (sequelize) => {
       },
       stateId: {
         type: DataTypes.INTEGER,
-        allowNull: true,
         references: {
           model: "states",
           key: "id",
@@ -87,6 +86,9 @@ const SupplierModel = (sequelize) => {
         validate: {
           isEmail: true,
         },
+        set(value) {
+          this.setDataValue("email", value === "" ? null : value);
+        }
       },
       website: {
         type: DataTypes.STRING(200),
@@ -107,11 +109,13 @@ const SupplierModel = (sequelize) => {
         field: "account_no",
       },
       openingCredit: {
+        allowNull: true,
         type: DataTypes.DECIMAL(15, 2),
         defaultValue: 0.00,
         field: "opening_credit",
       },
       openingDebit: {
+        allowNull: true,
         type: DataTypes.DECIMAL(15, 2),
         defaultValue: 0.00,
         field: "opening_debit",

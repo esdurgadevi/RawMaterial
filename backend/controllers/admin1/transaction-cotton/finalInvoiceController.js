@@ -1,6 +1,26 @@
 // controllers/finalInvoiceController.js
 import * as finalInvoiceService from "../../../services/admin1/transaction-cotton/finalInvoiceService.js";
 
+import { getNextVoucherNo } from "../../../utils/helpers.js";
+
+export const getNextVoucherNo1 = async (req, res) => {
+  try {
+    const { tcType } = req.query; // U or L
+
+    const nextNo = await getNextVoucherNo(tcType);
+
+    res.status(200).json({
+      message: "Next voucher number generated",
+      nextNo,
+    });
+  } catch (error) {
+    console.error("Error generating next voucher number:", error);
+    res.status(500).json({
+      message: "Failed to generate next voucher number",
+    });
+  }
+};
+
 export const createFinalInvoice = async (req, res) => {
   try {
     const invoice = await finalInvoiceService.createFinalInvoice(req.body);

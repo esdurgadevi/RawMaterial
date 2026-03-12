@@ -15,7 +15,24 @@ export const getNextLocationNo = async (req, res) => {
     res.status(500).json({ message: "Failed to generate next location transfer no" });
   }
 };
+export const getAvailableBalesByLot = async (req, res) => {
+  try {
 
+    // ✅ get from query
+    const { lotNo } = req.query;
+
+    const bales = await locationTransferService.getAvailableBalesByLot(lotNo);
+
+    res.status(200).json(bales);
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: error.message
+    });
+
+  }
+};
 export const createLocationTransfer = async (req, res) => {
   try {
     const data = await locationTransferService.create(req.body);

@@ -10,6 +10,30 @@ const {
   InwardLotWeightment,
 } = db;
 
+export const getAvailableBalesByLot = async (lotNo) => {
+  try {
+
+    const bales = await InwardLotWeightment.findAll({
+      where: {
+        lot_no: lotNo
+      },
+      include: [
+        {
+          model: LocationTransferBale,
+          as: "transferBales",
+          required: false
+        }
+      ]
+    });
+
+    const availableBales = bales.filter(b => b.transferBales.length === 0);
+
+    return availableBales;
+
+  } catch (err) {
+    throw err;
+  }
+};
 
 // CREATE
 export const create = async (data) => {

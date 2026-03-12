@@ -47,7 +47,7 @@ export const getAllInwardEntries = async () => {
         attributes: ["candyRate", "orderNo"],
       },
     ],
-    order: [["inwardDate", "DESC"]],
+    order: [["inwardNo", "DESC"]],
   });
 
   return entries.map((entry) => ({

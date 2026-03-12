@@ -13,7 +13,7 @@ const FinalInvoiceHeadModel = (sequelize) => {
       },
 
       voucherNo: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING,
         allowNull: false,
         unique: true,
       },

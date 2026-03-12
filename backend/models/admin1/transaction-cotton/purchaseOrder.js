@@ -122,7 +122,7 @@ const PurchaseOrderModel = (sequelize) => {
         defaultValue: "RUPEES",
       },
       staple: { 
-        type: DataTypes.DECIMAL(5, 2),
+        type: DataTypes.STRING(20),
         allowNull: true,
       },
       moist: {

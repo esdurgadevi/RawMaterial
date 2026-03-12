@@ -13,90 +13,126 @@ const { InwardLot } = db;
  * - Does NOT save to database — just calculates
  */
 export const getNextPurchaseOrderNo = async () => {
+
   const now = new Date();
   let year = now.getFullYear();
 
-  // Financial year: April 1 to March 31
-  if (now.getMonth() < 3) { // Jan-Mar → still previous FY
+  // Financial year: April – March
+  if (now.getMonth() < 4) { 
     year = year - 1;
   }
-  const nextYear = year + 1;
-  const fyPrefix = `${year.toString().slice(-2)}-${nextYear.toString().slice(-2)}`;
 
-  // Find last order in this FY
+  const nextYear = year + 1;
+
+  const fyPrefix = `${year.toString().slice(-2)}-${nextYear
+    .toString()
+    .slice(-2)}`;
+
+  const prefix = `PO/${fyPrefix}/`;
+
   const lastOrder = await PurchaseOrder.findOne({
     where: {
       orderNo: {
-        [Op.like]: `PO/${fyPrefix}/%`,
+        [Op.like]: `${prefix}%`,
       },
     },
-    order: [["createdAt", "DESC"]], // or use orderNo DESC if you prefer
-    limit: 1,
+    order: [["orderNo", "DESC"]],
   });
 
   let nextSeq = 1;
+
   if (lastOrder) {
     const parts = lastOrder.orderNo.split("/");
     const lastNum = parseInt(parts[parts.length - 1], 10);
-    if (!isNaN(lastNum)) nextSeq = lastNum + 1;
+
+    if (!isNaN(lastNum)) {
+      nextSeq = lastNum + 1;
+    }
   }
 
   const padded = String(nextSeq).padStart(4, "0");
-  return `PO/${fyPrefix}/${padded}`;
+
+  return `${prefix}${padded}`;
 };
 
 export const getNextInwardNo = async () => {
   const now = new Date();
   let year = now.getFullYear();
-  if (now.getMonth() < 3) year -= 1; // Jan-Mar belongs to previous FY
+
+  // Financial year: April to March
+  if (now.getMonth() < 4) {
+    year -= 1; // Jan–Mar belong to previous FY
+  }
+
   const nextYear = year + 1;
   const fyPrefix = `${year.toString().slice(-2)}-${nextYear.toString().slice(-2)}`;
+
+  const prefix = `GI/${fyPrefix}/`;
 
   const lastEntry = await InwardEntry.findOne({
     where: {
       inwardNo: {
-        [Op.like]: `GI/${fyPrefix}/%`,
+        [Op.like]: `${prefix}%`,
       },
     },
     order: [["inwardNo", "DESC"]],
-    limit: 1,
   });
 
   let nextSeq = 1;
+
   if (lastEntry) {
-    const lastPart = lastEntry.inwardNo.split("/").pop();
-    const lastNum = parseInt(lastPart, 10);
-    if (!isNaN(lastNum)) nextSeq = lastNum + 1;
+    const parts = lastEntry.inwardNo.split("/");
+    const lastNum = parseInt(parts[parts.length - 1], 10);
+
+    if (!isNaN(lastNum)) {
+      nextSeq = lastNum + 1;
+    }
   }
 
   const padded = String(nextSeq).padStart(4, "0");
-  return `GI/${fyPrefix}/${padded}`;
+
+  return `${prefix}${padded}`;
 };
 
 export const getNextLotNo = async () => {
   try {
     const now = new Date();
-    const year = now.getFullYear() % 100;
+    let year = now.getFullYear();
+
+    // Financial year logic (Apr–Mar)
+    if (now.getMonth() < 4) {
+      year -= 1; // Jan–Mar belongs to previous FY
+    }
+
     const nextYear = year + 1;
-    const financialYear = `${year}-${nextYear}`;
+
+    const financialYear = `${year.toString().slice(-2)}-${nextYear
+      .toString()
+      .slice(-2)}`;
+
+    const prefix = `LOT/${financialYear}/`;
 
     const lastLot = await InwardLot.findOne({
       where: {
         lotNo: {
-          [Op.like]: `LOT/${financialYear}/%`
-        }
+          [Op.like]: `${prefix}%`,
+        },
       },
-      order: [["lotNo", "DESC"]]
+      order: [["lotNo", "DESC"]],
     });
 
     let nextSeq = 1;
 
     if (lastLot && lastLot.lotNo) {
       const lastNumber = lastLot.lotNo.split("/").pop();
-      nextSeq = parseInt(lastNumber, 10) + 1;
+      const parsed = parseInt(lastNumber, 10);
+
+      if (!isNaN(parsed)) {
+        nextSeq = parsed + 1;
+      }
     }
 
-    return `LOT/${financialYear}/${String(nextSeq).padStart(4, "0")}`;
+    return `${prefix}${String(nextSeq).padStart(4, "0")}`;
   } catch (error) {
     console.error("Error generating next lot no:", error);
     throw error;
@@ -108,26 +144,42 @@ const { Issue } = db;
 export const getNextIssueNumber = async () => {
   try {
     const now = new Date();
-    const year = now.getFullYear() % 100;
+    let year = now.getFullYear();
+
+    // Financial year: April–March
+    if (now.getMonth() < 4) {
+      year -= 1; // Jan–Mar belong to previous FY
+    }
+
     const nextYear = year + 1;
-    const financialYear = `${year}-${nextYear}`;
+
+    const financialYear = `${year.toString().slice(-2)}-${nextYear
+      .toString()
+      .slice(-2)}`;
+
+    const prefix = `ISSUE/${financialYear}/`;
 
     const lastIssue = await Issue.findOne({
       where: {
         issueNumber: {
-          [Op.like]: `ISSUE/${financialYear}/%`,
+          [Op.like]: `${prefix}%`,
         },
       },
       order: [["issueNumber", "DESC"]],
     });
+
     let nextSeq = 1;
 
     if (lastIssue && lastIssue.issueNumber) {
       const lastNumber = lastIssue.issueNumber.split("/").pop();
-      nextSeq = parseInt(lastNumber, 10) + 1;
+      const parsed = parseInt(lastNumber, 10);
+
+      if (!isNaN(parsed)) {
+        nextSeq = parsed + 1;
+      }
     }
 
-    return `ISSUE/${financialYear}/${String(nextSeq).padStart(4, "0")}`;
+    return `${prefix}${String(nextSeq).padStart(4, "0")}`;
   } catch (error) {
     console.error("Error generating next issue number:", error);
     throw error;
@@ -140,35 +192,38 @@ export const getNextLocationTransferNo = async () => {
   let year = now.getFullYear();
 
   // Financial year: April 1 – March 31
-  if (now.getMonth() < 3) { 
+  if (now.getMonth() < 4) {
     year = year - 1;
   }
 
   const nextYear = year + 1;
   const fyPrefix = `${year.toString().slice(-2)}-${nextYear.toString().slice(-2)}`;
 
-  // Find last transfer in this FY
+  const prefix = `LT/${fyPrefix}/`;
+
   const lastTransfer = await LocationTransfer.findOne({
     where: {
       transferNo: {
-        [Op.like]: `LT/${fyPrefix}/%`,
+        [Op.like]: `${prefix}%`,
       },
     },
-    order: [["createdAt", "DESC"]],
-    limit: 1,
+    order: [["transferNo", "DESC"]],
   });
 
   let nextSeq = 1;
 
-  if (lastTransfer) {
+  if (lastTransfer && lastTransfer.transferNo) {
     const parts = lastTransfer.transferNo.split("/");
     const lastNum = parseInt(parts[parts.length - 1], 10);
-    if (!isNaN(lastNum)) nextSeq = lastNum + 1;
+
+    if (!isNaN(lastNum)) {
+      nextSeq = lastNum + 1;
+    }
   }
 
   const padded = String(nextSeq).padStart(4, "0");
 
-  return `LT/${fyPrefix}/${padded}`;
+  return `${prefix}${padded}`;
 };
 
 //masters Auto Code generation function
@@ -487,3 +542,38 @@ export const getNextWasteMasterCode = async () => {
   const maxCode = result?.maxCode || 0;
   return maxCode + 1;
 };
+
+const { FinalInvoiceHead } = db;
+
+export const getNextVoucherNo = async (tcType) => {
+
+  // const prefix = tcType.toUpperCase(); 
+  // Map tcType to prefix
+  tcType = tcType.toUpperCase();
+  const prefix = tcType === "UPCOUNTRY" ? "U" : "L";
+
+  const result = await FinalInvoiceHead.findOne({
+    attributes: [
+      [
+        FinalInvoiceHead.sequelize.fn(
+          "MAX",
+          FinalInvoiceHead.sequelize.literal(
+            `CAST(SUBSTRING(voucherNo, 2) AS UNSIGNED)`
+          )
+        ),
+        "maxVoucher",
+      ],
+    ],
+    where: {
+      voucherNo: {
+        [Op.like]: `${prefix}%`,
+      },
+    },
+    raw: true,
+  });
+
+  const maxVoucher = result?.maxVoucher || 0;
+
+  return `${prefix}${maxVoucher + 1}`;
+};
+
