@@ -34,7 +34,6 @@ import finalInvoiceService from '../../services/admin1/transaction-cotton/finalI
 import inwardLotService from '../../services/admin1/transaction-cotton/inwardLotService';
 
 const { TabPane } = Tabs;
-const { TextArea } = Input;
 const { Option } = Select;
 
 const FinalInvoice = () => {
@@ -138,6 +137,22 @@ const FinalInvoice = () => {
     setTotals(newTotals);
   };
 
+  // Handle TDS percentage change in details
+  const handleTdsPercentChange = (index, value) => {
+    const updatedDetails = [...invoiceDetails];
+    const detail = updatedDetails[index];
+    const tdsPercent = Number(value) || 0;
+    const candyRate = Number(detail.candyRate) || 0;
+    
+    // Calculate TDS amount based on percentage of candyRate
+    const tdsAmount = (candyRate * tdsPercent) / 100;
+    
+    detail.tdsPercent = tdsPercent;
+    detail.tds = tdsAmount;
+    
+    setInvoiceDetails(updatedDetails);
+  };
+
   // Handle lot selection
   const handleAddLot = async (lotId) => {
     try {
@@ -147,6 +162,11 @@ const FinalInvoice = () => {
         message.warning('This lot is already added');
         return;
       }
+
+      // Calculate TDS (0.1% of candyRate by default)
+      const candyRate = Number(lotData.candyRate) || 0;
+      const tdsPercent = 0.1;
+      const tdsAmount = (candyRate * tdsPercent) / 100;
 
       const newDetail = {
         // Foreign Keys
@@ -164,7 +184,7 @@ const FinalInvoice = () => {
         nettWeight: Number(lotData.nettWeight) || 0,
         qty: Number(lotData.qty) || 0,
         freight: Number(lotData.freight) || 0,
-        candyRate: Number(lotData.candyRate) || 0,
+        candyRate: candyRate,
         quintalRate: Number(lotData.quintalRate) || 0,
         ratePerKg: Number(lotData.ratePerKg) || 0,
         assessValue: Number(lotData.assessValue) || 0,
@@ -177,6 +197,10 @@ const FinalInvoice = () => {
         sgstAmount: Number(lotData.sgstAmount) || 0,
         cgstAmount: Number(lotData.cgstAmount) || 0,
         igstAmount: Number(lotData.igstAmount) || 0,
+        
+        // TDS fields
+        tdsPercent: tdsPercent,
+        tds: tdsAmount,
         
         // All other fields from model set to 0 or defaults
         factor: 1.000,
@@ -209,8 +233,6 @@ const FinalInvoice = () => {
         eduCess2: 0.00,
         hsCess2Percent: null,
         hsCess2: 0.00,
-        tdsPercent: null,
-        tds: 0.00,
         companyBrokerId: null,
         tcsPercent: null,
         tcsAmount: 0.00,
@@ -230,6 +252,54 @@ const FinalInvoice = () => {
   const handleRemoveDetail = (index) => {
     const newDetails = invoiceDetails.filter((_, i) => i !== index);
     setInvoiceDetails(newDetails);
+  };
+
+  // Handle TC Type change for auto-generating voucher number
+  const handleTcTypeChange = async (value) => {
+    try {
+      console.log("TC Type changed to:", value);
+      const nextVoucherNo = await finalInvoiceService.getNextVoucherNo(value);
+      console.log("Next voucher no:", nextVoucherNo);
+      
+      // Update the form field
+      form.setFieldsValue({ 
+        voucherNo: nextVoucherNo 
+      });
+      
+      // Force a re-render of the form
+      form.validateFields(['voucherNo']);
+    } catch (error) {
+      message.error('Failed to generate voucher number');
+      console.error(error);
+    }
+  };
+
+  // Generate voucher number when modal opens with default TC Type
+  const handleOpenModal = async () => {
+    resetForm();
+    setModalVisible(true);
+    
+    // Use setTimeout to ensure modal is fully rendered before setting form values
+    setTimeout(async () => {
+      try {
+        // Get default TC Type from form initialValues
+        const defaultTcType = 'UPCOUNTRY';
+        console.log("Opening modal with TC Type:", defaultTcType);
+        const nextVoucherNo = await finalInvoiceService.getNextVoucherNo(defaultTcType);
+        console.log("Next voucher no for modal:", nextVoucherNo);
+        
+        form.setFieldsValue({ 
+          tcType: defaultTcType,
+          voucherNo: nextVoucherNo 
+        });
+        
+        // Force a re-render
+        form.validateFields(['voucherNo', 'tcType']);
+      } catch (error) {
+        message.error('Failed to generate voucher number');
+        console.error(error);
+      }
+    }, 100);
   };
 
   // Handle form submission
@@ -388,6 +458,9 @@ const FinalInvoice = () => {
 
       setInvoiceDetails(invoice.details || []);
       setModalVisible(true);
+      
+      // If editing, we don't generate a new voucher number
+      // The existing one will be shown
     } catch (error) {
       message.error('Failed to fetch invoice details');
       console.error(error);
@@ -486,7 +559,7 @@ const FinalInvoice = () => {
     }
   ];
 
-  // Details table columns with ALL fields from FinalInvoiceDetailModel
+  // Details table columns with editable TDS fields
   const detailColumns = [
     // Basic Info from Lot (fetched)
     {
@@ -617,7 +690,7 @@ const FinalInvoice = () => {
       render: (val) => Number(val || 0).toFixed(2),
     },
 
-    // All other fields from model (will show 0)
+    // All other fields from model
     {
       title: 'Factor',
       dataIndex: 'factor',
@@ -828,19 +901,31 @@ const FinalInvoice = () => {
       width: 100,
       render: (val) => Number(val || 0).toFixed(2),
     },
+    // Updated TDS columns with editable percentage
     {
       title: 'TDS %',
       dataIndex: 'tdsPercent',
       key: 'tdsPercent',
-      width: 80,
-      render: (val) => val ? `${Number(val).toFixed(2)}%` : '0.00%',
+      width: 100,
+      render: (val, record, index) => (
+        <InputNumber
+          value={val}
+          onChange={(value) => handleTdsPercentChange(index, value)}
+          min={0}
+          max={100}
+          step={0.01}
+          style={{ width: '100%' }}
+          formatter={value => `${value}%`}
+          parser={value => value.replace('%', '')}
+        />
+      ),
     },
     {
       title: 'TDS',
       dataIndex: 'tds',
       key: 'tds',
       width: 100,
-      render: (val) => Number(val || 0).toFixed(2),
+      render: (val) => `₹${Number(val || 0).toFixed(2)}`,
     },
     {
       title: 'Company Broker ID',
@@ -903,10 +988,7 @@ const FinalInvoice = () => {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => {
-              resetForm();
-              setModalVisible(true);
-            }}
+            onClick={handleOpenModal}
           >
             Create Final Invoice
           </Button>
@@ -971,7 +1053,16 @@ const FinalInvoice = () => {
                   label="Voucher No."
                   rules={[{ required: true, message: 'Required' }]}
                 >
-                  <InputNumber style={{ width: '100%' }} min={1} />
+                  <Input 
+                    style={{ 
+                      width: '100%', 
+                      fontWeight: 'bold',
+                      color: '#1890ff',
+                      backgroundColor: '#f5f5f5'
+                    }} 
+                    disabled 
+                    placeholder="Auto-generated"
+                  />
                 </Form.Item>
               </Col>
               <Col span={4}>
@@ -985,7 +1076,7 @@ const FinalInvoice = () => {
               </Col>
               <Col span={4}>
                 <Form.Item name="tcType" label="TC Type">
-                  <Select>
+                  <Select onChange={handleTcTypeChange}>
                     <Option value="UPCOUNTRY">UPCOUNTRY</Option>
                     <Option value="LOCAL">LOCAL</Option>
                   </Select>
@@ -1299,7 +1390,7 @@ const FinalInvoice = () => {
                 <Row gutter={16} style={{ marginTop: '10px' }}>
                   <Col span={4}><strong>SGST:</strong> ₹{Number(selectedInvoice.sgst || 0).toFixed(2)}</Col>
                   <Col span={4}><strong>CGST:</strong> ₹{Number(selectedInvoice.cgst || 0).toFixed(2)}</Col>
-                  <Col span={4}><strong>IGST:</strong> ₹{Number(selectedInvoice.igst || 193848.04).toFixed(2)}</Col>
+                  <Col span={4}><strong>IGST:</strong> ₹{Number(selectedInvoice.igst || 0).toFixed(2)}</Col>
                 </Row>
               </Card>
             </TabPane>

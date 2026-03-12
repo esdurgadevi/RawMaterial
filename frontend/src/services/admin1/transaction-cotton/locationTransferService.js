@@ -5,7 +5,6 @@ import axios from "axios";
 const LOCATION_TRANSFER_API_URL =
   "http://localhost:5000/api/location-transfer";
 
-// Axios instance
 const locationTransferApi = axios.create({
   baseURL: LOCATION_TRANSFER_API_URL,
   headers: { "Content-Type": "application/json" },
@@ -21,11 +20,29 @@ const attachToken = (config) => {
 locationTransferApi.interceptors.request.use(attachToken);
 
 const locationTransferService = {
+
+  /* =============================
+     GET NEXT TRANSFER NUMBER
+  ============================= */
+  getNextTransferNo: async () => {
+    const res = await locationTransferApi.get("/next-no");
+    console.log(res);
+    return res.data.nextNo;
+  },
+
+  /* =============================
+     GET WEIGHTMENTS BY LOT
+  ============================= */
+  getWeightmentsByLot: async (lotNo) => {
+    const res = await locationTransferApi.get(`/available-bales?lotNo=${lotNo}`);
+    return res.data;
+  },
+
+
   /* =============================
      CREATE LOCATION TRANSFER
   ============================= */
   createLocationTransfer: async (data) => {
-    console.log(data);
     const res = await locationTransferApi.post("/", data);
     return res.data;
   },

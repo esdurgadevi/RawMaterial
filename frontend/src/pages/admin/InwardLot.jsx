@@ -931,92 +931,6 @@ const handleUpdateSubmit = async (e) => {
     setSubmitting(false);
   }
 };
-  // Handle update submitoo 
-  // Handle update submit
-// const handleUpdateSubmit = async (e) => {
-//   e.preventDefault();
-//   setError('');
-  
-//   console.log('Selected lot in update:', selectedLot);
-  
-//   if (!selectedLot) {
-//     setError('No lot selected for update');
-//     return;
-//   }
-
-//   if (!selectedLot.id) {
-//     setError('Invalid lot data: missing ID');
-//     return;
-//   }
-
-//   if (weightments.length === 0) {
-//     setError('Please add weightments first');
-//     return;
-//   }
-
-//   // Validate weightments
-//   if (!validateWeightments()) {
-//     return;
-//   }
-  
-//   setSubmitting(true);
-//   try {
-//     // Prepare lot header
-//     const lotHeader = {
-//       inwardId: selectedInward?.id || selectedLot.inwardId,
-//       lotNo: formData.lotNo,
-//       lotDate: formData.lotDate,
-//       qty: parseInt(formData.qty) || 0,
-//       freight: parseFloat(formData.freight) || 0,
-//       grossWeight: parseFloat(formData.grossWeight) || 0,
-//       tareWeight: parseFloat(formData.tareWeight) || 0,
-//       nettWeight: parseFloat(formData.nettWeight) || 0,
-//       candyRate: parseFloat(formData.candyRateWithTax) || 0,
-//       quintalRate: parseFloat(formData.quintalRate) || 0,
-//       ratePerKg: parseFloat(formData.ratePerKg) || 0,
-//       assessValue: parseFloat(formData.assessValue) || 0,
-//       godownId: parseInt(formData.godownId),
-//       lcNo: formData.lcNo || null,
-//       paymentDays: formData.paymentDays ? parseInt(formData.paymentDays) : null,
-//       paymentDate: formData.paymentDate || null,
-//       setNo: formData.setNo || null,
-//       cess: parseFloat(formData.cess) || 0,
-//       type: formData.type || null
-//     };
-
-//     // Prepare weightments
-//     const weightmentsData = weightments.map(w => ({
-//       id: w.id, // Include ID if it exists (for updating existing weightments)
-//       baleNo: w.baleNo,
-//       grossWeight: parseFloat(w.grossWeight) || 0,
-//       tareWeight: parseFloat(w.tareWeight) || 0,
-//       baleWeight: parseFloat(w.baleWeight) || 0,
-//       baleValue: parseFloat(w.baleValue) || 0,
-//     }));
-    
-//     console.log('Updating lot with ID:', selectedLot.id);
-//     console.log('Lot header:', lotHeader);
-//     console.log('Weightments:', weightmentsData);
-    
-//     // Update lot with weightments
-//     await inwardLotService.update(selectedLot.id, lotHeader, weightmentsData);
-    
-//     setSuccess('Lot updated successfully!');
-    
-//     // Reset and close
-//     setTimeout(() => {
-//       setShowEditModal(false);
-//       fetchLots();
-//       resetForm();
-//     }, 2000);
-    
-//   } catch (err) {
-//     console.error('Error updating lot:', err);
-//     setError(err.response?.data?.message || 'Failed to update lot');
-//   } finally {
-//     setSubmitting(false);
-//   }
-// };
 
   // Handle delete
   const handleDelete = async (id, lotNo) => {
@@ -1289,120 +1203,120 @@ const handleUpdateSubmit = async (e) => {
       </div>
 
       {/* Lots Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800">Lots ({filteredLots.length})</h2>
-        </div>
+<div className="bg-white rounded-lg shadow-sm overflow-hidden">
+  <div className="px-6 py-4 border-b border-gray-200">
+    <h2 className="text-lg font-semibold text-gray-800">Lots ({filteredLots.length})</h2>
+  </div>
 
-        {loading ? (
-          <div className="p-8 text-center">
-            <span className="text-4xl text-blue-600 animate-spin inline-block mb-4">↻</span>
-            <p className="text-gray-600">Loading lots...</p>
-          </div>
-        ) : filteredLots.length === 0 ? (
-          <div className="p-8 text-center">
-            <span className="text-5xl text-gray-400 mb-4 inline-block">📦</span>
-            <p className="text-gray-600 mb-2">No lots found</p>
-            {searchTerm ? (
-              <p className="text-sm text-gray-500">Try adjusting your search</p>
-            ) : (
-              <button
-                onClick={openCreateModal}
-                className="text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Create your first lot
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    CODE
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    LOT DETAILS
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    CREATED DATE
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    LAST UPDATED
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ACTIONS
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredLots.map((lot, index) => (
-                  <tr key={lot.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        #{String(index + 1).padStart(4, '0')}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {lot.lotNo}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Qty: {lot.qty} bales | Nett: {lot.nettWeight ? parseFloat(lot.nettWeight).toFixed(3) : 'N/A'} kg
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Candy Rate: ₹{lot.candyRate || 'N/A'} | Freight: ₹{lot.freight || '0'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {formatDate(lot.createdAt || lot.lotDate)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {formatDate(lot.updatedAt || lot.lotDate)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleView(lot.id)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="View"
-                        >
-                          👁️
-                        </button>
-                        <button
-                          onClick={() => handleEdit(lot.id)}
-                          className="text-green-600 hover:text-green-900"
-                          title="Edit"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => handleDelete(lot.id, lot.lotNo)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+  {loading ? (
+    <div className="p-8 text-center">
+      <span className="text-4xl text-blue-600 animate-spin inline-block mb-4">↻</span>
+      <p className="text-gray-600">Loading lots...</p>
+    </div>
+  ) : filteredLots.length === 0 ? (
+    <div className="p-8 text-center">
+      <span className="text-5xl text-gray-400 mb-4 inline-block">📦</span>
+      <p className="text-gray-600 mb-2">No lots found</p>
+      {searchTerm ? (
+        <p className="text-sm text-gray-500">Try adjusting your search</p>
+      ) : (
+        <button
+          onClick={openCreateModal}
+          className="text-blue-600 hover:text-blue-800 font-medium"
+        >
+          Create your first lot
+        </button>
+      )}
+    </div>
+  ) : (
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              CODE
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              LOT NO (QTY, FREIGHT)
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              PURCHASE ORDER NO (CANDY RATE)
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              INWARD NO
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              ACTIONS
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {filteredLots.map((lot, index) => (
+            <tr key={lot.id} className="hover:bg-gray-50">
+              <td className="px-6 py-4">
+                <div className="text-sm font-medium text-gray-900">
+                  #{String(index + 1).padStart(4, '0')}
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <div className="text-sm font-medium text-gray-900">
+                  {lot.lotNo || 'N/A'}
+                </div>
+                <div className="text-sm text-gray-500">
+                  Qty: {lot.qty || 0} bales | Freight: ₹{lot.freight || '0'}
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <div className="text-sm font-medium text-gray-900">
+                  {lot.InwardEntry?.purchaseOrder?.orderNo || 'N/A'}
+                </div>
+                <div className="text-sm text-gray-500">
+                  Candy Rate: ₹{lot.candyRate || 'N/A'}
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <div className="text-sm font-medium text-gray-900">
+                  {lot.InwardEntry?.inwardNo || 'N/A'}
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleView(lot.id)}
+                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center"
+                  >
+                    <span className="mr-1">👁️</span>
+                    View
+                  </button>
+                  <button
+                    onClick={() => handleEdit(lot.id)}
+                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center"
+                  >
+                    <span className="mr-1">✏️</span>
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(lot.id, lot.lotNo)}
+                    className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center"
+                  >
+                    <span className="mr-1">🗑️</span>
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
 
-        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
-          <div className="text-sm text-gray-600">
-            Showing {filteredLots.length} of {lots.length} lots
-          </div>
-        </div>
-      </div>
+  <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
+    <div className="text-sm text-gray-600">
+      Showing {filteredLots.length} of {lots.length} lots
+    </div>
+  </div>
+</div>
 
       {/* Create Modal */}
       {showCreateModal && (

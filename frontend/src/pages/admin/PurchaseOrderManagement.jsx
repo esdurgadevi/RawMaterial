@@ -436,22 +436,22 @@ useEffect(() => {
   })();
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    
-    // Prevent orderNo changes when creating new order (editingOrder is null)
-    if (name === 'orderNo' && !editingOrder) {
-      return; // Don't allow changes when creating
-    }
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'quantity' || name === 'candyRate' || name === 'quintalRate' || 
-              name === 'ratePerKg' || name === 'approxLotValue' || name === 'staple' ||
-              name === 'moist' || name === 'mic' || name === 'str' || name === 'rd'
-        ? (value === '' ? '' : parseFloat(value) || '')
-        : value
-    }));
-  };
+  const { name, value } = e.target;
+  
+  // Prevent orderNo changes when creating new order (editingOrder is null)
+  if (name === 'orderNo' && !editingOrder) {
+    return; // Don't allow changes when creating
+  }
+  
+  setFormData(prev => ({
+    ...prev,
+    [name]: name === 'quantity' || name === 'candyRate' || name === 'quintalRate' || 
+            name === 'ratePerKg' || name === 'approxLotValue' ||  // <-- staple removed
+            name === 'moist' || name === 'mic' || name === 'str' || name === 'rd'
+      ? (value === '' ? '' : parseFloat(value) || '')
+      : value
+  }));
+};
 
   // Handle selection functions
   const handleSupplierSelect = (supplier) => {
@@ -670,7 +670,7 @@ switch(formData.selectedRateType) {
   paymentMode: formData.paymentMode || null,
   currency: formData.currency || "RUPEES",
 
-  staple: formData.staple !== undefined ? Number(formData.staple) : null,
+  staple: formData.staple || null, 
   moist: formData.moist !== undefined ? Number(formData.moist) : null,
   mic: formData.mic !== undefined ? Number(formData.mic) : null,
   str: formData.str !== undefined ? Number(formData.str) : null,
@@ -1558,7 +1558,7 @@ switch(formData.selectedRateType) {
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">⚖️</span>
                             <input
-                              type="number"
+                              type="text"
                               name="staple"
                               value={formData.staple}
                               onChange={handleInputChange}

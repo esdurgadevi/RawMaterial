@@ -47,6 +47,7 @@ const WasteCottonInvoicePage = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showJsonModal, setShowJsonModal] = useState(false); // New state for JSON modal
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -555,6 +556,26 @@ const WasteCottonInvoicePage = () => {
     setShowEditModal(true);
   };
 
+  const handleJsonView = (invoice) => {
+    setSelectedInvoice(invoice);
+    setShowJsonModal(true);
+  };
+
+  const downloadJson = () => {
+    if (!selectedInvoice) return;
+    
+    const jsonString = JSON.stringify(selectedInvoice, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `invoice-${selectedInvoice.invoiceNo || 'details'}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const confirmDelete = (invoice) => {
     setInvoiceToDelete(invoice);
     setShowDeleteModal(true);
@@ -732,6 +753,13 @@ const WasteCottonInvoicePage = () => {
                           title="Edit"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() => handleJsonView(invoice)}
+                          className="text-purple-600 hover:text-purple-900"
+                          title="View JSON"
+                        >
+                          JSON
                         </button>
                         <button
                           onClick={() => confirmDelete(invoice)}
@@ -1371,11 +1399,77 @@ const WasteCottonInvoicePage = () => {
               <button
                 onClick={() => {
                   setShowViewModal(false);
+                  handleJsonView(selectedInvoice);
+                }}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+              >
+                View JSON
+              </button>
+              <button
+                onClick={() => {
+                  setShowViewModal(false);
                   handleEdit(selectedInvoice);
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Edit Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* JSON View Modal */}
+      {showJsonModal && selectedInvoice && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-800">Invoice JSON Format</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={downloadJson}
+                  className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </button>
+                <button
+                  onClick={() => setShowJsonModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Invoice No: {selectedInvoice.invoiceNo} - {selectedInvoice.partyName}
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Reference JSON format from example: 
+                <code className="ml-2 px-2 py-1 bg-gray-100 rounded text-xs">
+                  {"Version, TranDtls, DocDtls, SellerDtls, BuyerDtls, ValDtls, Itemlist"}
+                </code>
+              </p>
+            </div>
+
+            <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto max-h-96">
+              <pre className="text-sm text-green-400 font-mono whitespace-pre-wrap">
+                {JSON.stringify(selectedInvoice, null, 2)}
+              </pre>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setShowJsonModal(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                Close
               </button>
             </div>
           </div>
@@ -1402,30 +1496,145 @@ const WasteCottonInvoicePage = () => {
             </div>
 
             <form onSubmit={handleUpdateSubmit}>
-              {/* Similar form structure as create modal but with edit functionality */}
-              {/* You can reuse the same form structure as create modal here */}
-              {/* For brevity, I'm showing the key parts that should be included */}
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Left Column - Order Info (Read-only in edit mode) */}
                 <div>
                   <h4 className="text-lg font-semibold text-gray-700 mb-4">Sales Order Information</h4>
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 mb-2">
                       <span className="font-medium">Order ID:</span> {selectedInvoice.salesOrderId || "N/A"}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Party Name:</span> {selectedInvoice.partyName}
                     </p>
                   </div>
                 </div>
 
                 {/* Right Column - Invoice Form */}
                 <div>
-                  {/* Same invoice form fields as create modal */}
-                  {/* Include all the input fields with formData binding */}
+                  <h4 className="text-lg font-semibold text-gray-700 mb-4">Invoice Information</h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Invoice No. *
+                      </label>
+                      <input
+                        type="text"
+                        name="invoiceNo"
+                        value={formData.invoiceNo}
+                        onChange={handleFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date *
+                      </label>
+                      <input
+                        type="date"
+                        name="date"
+                        value={formData.date}
+                        onChange={handleFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Invoice Type *
+                      </label>
+                      <select
+                        name="invoiceType"
+                        value={formData.invoiceType}
+                        onChange={handleFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      >
+                        <option value="GST WASTE SALE WITHOUT TCS">GST WASTE SALE WITHOUT TCS</option>
+                        <option value="GST WASTE SALE WITH TCS">GST WASTE SALE WITH TCS</option>
+                        <option value="EXPORT INVOICE">EXPORT INVOICE</option>
+                        <option value="LOCAL SALE">LOCAL SALE</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Party Name *
+                      </label>
+                      <input
+                        type="text"
+                        name="partyName"
+                        value={formData.partyName}
+                        onChange={handleFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Address
+                      </label>
+                      <textarea
+                        name="address"
+                        value={formData.address}
+                        onChange={handleFormChange}
+                        rows="2"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transport Details */}
+              <div className="mt-6">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4">Transport Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Transport</label>
+                    <input
+                      type="text"
+                      name="transport"
+                      value={formData.transport}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">LR No.</label>
+                    <input
+                      type="text"
+                      name="lrNo"
+                      value={formData.lrNo}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">LR Date</label>
+                    <input
+                      type="date"
+                      name="lrDate"
+                      value={formData.lrDate}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle No.</label>
+                    <input
+                      type="text"
+                      name="vehicleNo"
+                      value={formData.vehicleNo}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Rate Per Kg Input */}
-              <div className="mb-6">
+              <div className="mt-6">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Rate Per Kg (₹)
@@ -1441,14 +1650,151 @@ const WasteCottonInvoicePage = () => {
                 </div>
               </div>
 
-              {/* Selected Bales Table */}
-              {/* Include the bales table with edit functionality */}
+              {/* Selected Bales for Invoice */}
+              {formData.details.length > 0 && (
+                <div className="mt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-semibold text-gray-700">Selected Bales for Invoice ({formData.details.length})</h4>
+                    <div className="text-sm font-medium text-gray-700">
+                      Total Net Weight: {formatNumber(totalNet, 3)} kg
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Waste Name</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">LOT No.</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Bale No.</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Gross Wt.</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tare Wt.</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Net Wt.</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {formData.details.map((bale, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-sm text-gray-500">{bale.wasteName}</td>
+                            <td className="px-3 py-2 text-sm text-gray-500">{bale.lotNo}</td>
+                            <td className="px-3 py-2 text-sm text-gray-500">{bale.baleNo}</td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                value={bale.grossWt}
+                                onChange={(e) => handleDetailChange(index, "grossWt", e.target.value)}
+                                step="0.001"
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                value={bale.tareWt}
+                                onChange={(e) => handleDetailChange(index, "tareWt", e.target.value)}
+                                step="0.001"
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-sm font-medium text-gray-900">{formatNumber(bale.netWt, 3)}</td>
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() => removeBaleFromInvoice(index)}
+                                className="text-red-600 hover:text-red-900 text-sm font-medium"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-100 font-semibold">
+                        <tr>
+                          <td colSpan="3" className="px-3 py-2 text-sm text-gray-900 text-right">Totals:</td>
+                          <td className="px-3 py-2 text-sm text-gray-900">{formatNumber(totalGross, 3)}</td>
+                          <td className="px-3 py-2 text-sm text-gray-900">{formatNumber(totalTare, 3)}</td>
+                          <td className="px-3 py-2 text-sm text-gray-900">{formatNumber(totalNet, 3)}</td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
 
-              {/* Invoice Value Display */}
-              {/* Include auto-calculated values */}
+              {/* Invoice Value - Auto-calculated based on total net weight and rate */}
+              <div className="mt-6">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4">Invoice Value (Auto-calculated)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Total Net Weight (kg)</label>
+                    <input
+                      type="number"
+                      value={totalNet.toFixed(3)}
+                      readOnly
+                      className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rate per kg (₹)</label>
+                    <input
+                      type="number"
+                      value={ratePerKg}
+                      readOnly
+                      className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Assessable Value (₹)</label>
+                    <input
+                      type="number"
+                      name="assessableValue"
+                      value={formData.assessableValue}
+                      readOnly
+                      className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md font-semibold text-blue-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">GST (5%)</label>
+                    <input
+                      type="number"
+                      name="gst"
+                      value={formData.gst}
+                      readOnly
+                      className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Value (₹)</label>
+                    <input
+                      type="number"
+                      name="invoiceValue"
+                      value={formData.invoiceValue}
+                      readOnly
+                      className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md font-bold text-blue-600"
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="approve"
+                        checked={formData.approve}
+                        onChange={handleFormChange}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label className="ml-2 block text-sm text-gray-700">Approval</label>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  * Values are automatically calculated based on total net weight and rate per kg
+                </p>
+              </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
                 <button
                   type="button"
                   onClick={() => {

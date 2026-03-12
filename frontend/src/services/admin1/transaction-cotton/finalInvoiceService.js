@@ -29,9 +29,16 @@ const finalInvoiceService = {
   ============================= */
   createFinalInvoice: async (data) => {
     const res = await finalInvoiceApi.post("/", data);
+    console.log(data);
+    console.log(res);
     return res.data.finalInvoice; 
     // backend should return { finalInvoice }
   },
+  getNextVoucherNo: async (tcType) => {
+  const response = await finalInvoiceApi.get(`/next-voucher?tcType=${tcType}`);
+  console.log(response);
+  return response.data.nextNo;
+},
 
   /* =============================
      GET ALL FINAL INVOICES

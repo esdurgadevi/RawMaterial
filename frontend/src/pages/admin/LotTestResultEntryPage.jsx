@@ -31,13 +31,14 @@ const LotTestResultEntryPage = () => {
     grade: '',
     ui: '',
     eLog: '',
-    strength: '',
+    strength: '', // This is the primary strength field
     sfi: '',
     mic: '',
     ml50: '',
     strMode: 'HVI',
     conStaple: '',
-    sci: ''
+    sci: '',
+    strength1: '' // New field for auto-calculated/second strength
   });
 
   // Display fields for lot information (not part of form submission)
@@ -69,6 +70,34 @@ const LotTestResultEntryPage = () => {
     fetchEntries();
     fetchLots();
   }, []);
+
+  // Calculate second strength based on strMode
+  useEffect(() => {
+    if (formData.strength) {
+      const strengthValue = parseFloat(formData.strength);
+      if (!isNaN(strengthValue)) {
+        if (formData.strMode === 'HVI') {
+          // For HVI mode: second strength = strength / 1.28
+          const calculatedStrength = (strengthValue / 1.28).toFixed(2);
+          setFormData(prev => ({
+            ...prev,
+            strength1: calculatedStrength
+          }));
+        } else if (formData.strMode === 'ICC') {
+          // For ICC mode: second strength = same as strength
+          setFormData(prev => ({
+            ...prev,
+            strength1: strengthValue
+          }));
+        }
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        strength1: ''
+      }));
+    }
+  }, [formData.strength, formData.strMode]);
 
   // Click outside handler for dropdowns
   useEffect(() => {
@@ -186,7 +215,8 @@ const LotTestResultEntryPage = () => {
         ml50: '',
         strMode: 'HVI',
         conStaple: '',
-        sci: ''
+        sci: '',
+        strength1: '' // Reset strength1 when lot changes
       }));
 
       setLotSearch(`${completeLot.lotNo || completeLot.lot_number} - ${supplier.accountName || supplier.name || purchaseOrder.supplierName || ''}`);
@@ -234,7 +264,8 @@ const LotTestResultEntryPage = () => {
       ml50: '',
       strMode: 'HVI',
       conStaple: '',
-      sci: ''
+      sci: '',
+      strength1: ''
     });
     setLotDisplay({
       lotNo: '',
@@ -299,7 +330,8 @@ const LotTestResultEntryPage = () => {
         ml50: fullEntry.ml50 || '',
         strMode: fullEntry.strMode || 'HVI',
         conStaple: fullEntry.conStaple || '',
-        sci: fullEntry.sci || ''
+        sci: fullEntry.sci || '',
+        strength1: fullEntry.strength1 || '' // Include strength1 if it exists
       });
 
       // Set lot display information if available in the response
@@ -383,7 +415,8 @@ const LotTestResultEntryPage = () => {
         ml50: formData.ml50 ? parseFloat(formData.ml50) : null,
         strMode: formData.strMode || null,
         conStaple: formData.conStaple || null,
-        sci: formData.sci ? parseFloat(formData.sci) : null
+        sci: formData.sci ? parseFloat(formData.sci) : null,
+        strength1: formData.strength1 ? parseFloat(formData.strength1) : null // Add strength1 to submission
       };
       
       if (isEditing && selectedEntry) {
@@ -672,7 +705,7 @@ const LotTestResultEntryPage = () => {
                       }}
                       onFocus={() => setShowLotDropdown(true)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      placeholder="Search by lot no or supplier..."
+                      placeholder=""
                       disabled={modalLoading || isEditing}
                     />
                     
@@ -757,7 +790,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.permitNo}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Permit No"
+                    placeholder=""
                     disabled={modalLoading}
                   />
                 </div>
@@ -770,7 +803,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.rd}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="78.7"
+                    placeholder=""
                     step="0.1"
                     disabled={modalLoading}
                   />
@@ -784,7 +817,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.staple}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="30"
+                    placeholder=""
                     step="0.1"
                     disabled={modalLoading}
                   />
@@ -799,7 +832,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.plusB}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="8.2"
+                    placeholder=""
                     step="0.1"
                     disabled={modalLoading}
                   />
@@ -813,7 +846,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.moist}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Moist"
+                    placeholder=""
                     step="0.1"
                     disabled={modalLoading}
                   />
@@ -827,7 +860,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.mr}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="0.86"
+                    placeholder=""
                     step="0.01"
                     disabled={modalLoading}
                   />
@@ -842,7 +875,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.twoPointFive}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="31.93"
+                    placeholder=""
                     step="0.01"
                     disabled={modalLoading}
                   />
@@ -856,7 +889,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.grade}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="B+"
+                    placeholder=""
                     disabled={modalLoading}
                   />
                 </div>
@@ -869,7 +902,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.ui}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="46.5"
+                    placeholder=""
                     step="0.1"
                     disabled={modalLoading}
                   />
@@ -884,7 +917,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.eLog}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="5.2"
+                    placeholder=""
                     step="0.1"
                     disabled={modalLoading}
                   />
@@ -898,12 +931,27 @@ const LotTestResultEntryPage = () => {
                     value={formData.strength}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Strength"
+                    placeholder=""
                     step="0.1"
                     disabled={modalLoading}
                   />
                 </div>
 
+                <div className="bg-white p-4 border border-gray-200 rounded-lg">
+                  <label className="block text-xs text-gray-500 mb-1">Strength 1</label>
+                  <input
+                    type="number"
+                    name="strength1"
+                    value={formData.strength1}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none"
+                    placeholder=""
+                    step="0.1"
+                    disabled={true}
+                    readOnly
+                  />
+                </div>
+
+                {/* Row 5 - More Test Results */}
                 <div className="bg-white p-4 border border-gray-200 rounded-lg">
                   <label className="block text-xs text-gray-500 mb-1">SFI</label>
                   <input
@@ -912,13 +960,12 @@ const LotTestResultEntryPage = () => {
                     value={formData.sfi}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="5.4"
+                    placeholder=""
                     step="0.1"
                     disabled={modalLoading}
                   />
                 </div>
 
-                {/* Row 5 - More Test Results */}
                 <div className="bg-white p-4 border border-gray-200 rounded-lg">
                   <label className="block text-xs text-gray-500 mb-1">Mic</label>
                   <input
@@ -927,7 +974,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.mic}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Mic"
+                    placeholder=""
                     step="0.1"
                     disabled={modalLoading}
                   />
@@ -941,12 +988,13 @@ const LotTestResultEntryPage = () => {
                     value={formData.ml50}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="25"
+                    placeholder=""
                     step="0.1"
                     disabled={modalLoading}
                   />
                 </div>
 
+                {/* Row 6 - Final Test Results */}
                 <div className="bg-white p-4 border border-gray-200 rounded-lg">
                   <label className="block text-xs text-gray-500 mb-1">Str. Mode</label>
                   <select
@@ -962,7 +1010,6 @@ const LotTestResultEntryPage = () => {
                   </select>
                 </div>
 
-                {/* Row 6 - Final Test Results */}
                 <div className="bg-white p-4 border border-gray-200 rounded-lg">
                   <label className="block text-xs text-gray-500 mb-1">Con. Staple</label>
                   <input
@@ -971,7 +1018,7 @@ const LotTestResultEntryPage = () => {
                     value={formData.conStaple}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="30+"
+                    placeholder=""
                     disabled={modalLoading}
                   />
                 </div>
@@ -984,14 +1031,10 @@ const LotTestResultEntryPage = () => {
                     value={formData.sci}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="122"
+                    placeholder=""
                     step="1"
                     disabled={modalLoading}
                   />
-                </div>
-
-                <div className="bg-white p-4 border border-gray-200 rounded-lg">
-                  {/* Empty cell for alignment */}
                 </div>
               </div>
             </div>
@@ -1141,6 +1184,10 @@ const LotTestResultEntryPage = () => {
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <p className="text-xs text-gray-500">Strength</p>
                     <p className="text-base font-semibold">{viewEntry.strength || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Strength 1</p>
+                    <p className="text-base font-semibold">{viewEntry.strength1 || '-'}</p>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <p className="text-xs text-gray-500">SFI</p>

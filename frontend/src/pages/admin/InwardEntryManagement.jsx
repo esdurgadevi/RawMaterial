@@ -1229,8 +1229,8 @@ const handlePurchaseOrderSelect = async (orderId) => {
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
                             <option value="Upcountry">Upcountry</option>
-                            <option value="Fought">Fought</option>
-                            <option value="Port">Port</option>
+                            <option value="Fought">Local</option>
+                            <option value="Port">Import</option>
                             <option value="Polyster">Polyster</option>
                           </select>
                         </div>
