@@ -77,6 +77,13 @@ const wasteLotService = {
     const response = await api.delete(`/${id}`);
     return response.data; // { message }
   },
+  // 🔹 Get lots by waste name
+  getByWasteName: async (wasteName) => {
+    const response = await api.get(`/by-waste`, {
+      params: { waste: wasteName },
+    });
+    return response.data.lots; // returns array of lots
+  },
 };
 
 export default wasteLotService;

@@ -3,6 +3,21 @@ import db from "../../../models/index.js";
 
 const { WasteLot, WasteMaster } = db;
 
+export const getLotByWasteName = async (wasteName) => {
+  const waste = await WasteMaster.findOne({
+    where: { waste: wasteName },
+    include: [
+      {
+        model: WasteLot,
+        as: "wasteLots",
+        attributes: ["id", "lotNo"],
+      },
+    ],
+  });
+
+  return waste;
+};
+
 export const createWasteLot = async (data) => {
   const { lotNo, wasteMasterId, active } = data;
 

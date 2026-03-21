@@ -472,7 +472,16 @@ export const getNextSupplierCode = async () => {
   try {
     const result = await Supplier.findOne({
       attributes: [
-        [Supplier.sequelize.fn("MAX", Supplier.sequelize.col("code")), "maxCode"],
+        [
+          Supplier.sequelize.fn(
+            "MAX",
+            Supplier.sequelize.cast(
+              Supplier.sequelize.col("code"),
+              "INTEGER"
+            )
+          ),
+          "maxCode",
+        ],
       ],
       raw: true,
     });
@@ -481,9 +490,9 @@ export const getNextSupplierCode = async () => {
 
     if (!maxCode) return "1";
 
-    // if numeric string
     const nextCode = (parseInt(maxCode, 10) + 1).toString();
     return nextCode;
+
   } catch (error) {
     console.error("Error generating supplier code:", error);
     throw error;

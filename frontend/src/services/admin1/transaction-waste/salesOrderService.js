@@ -25,26 +25,30 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Service methods (MATCHES YOUR SALES ORDER BACKEND)
+// ✅ Service methods
 const salesOrderService = {
   // 🔹 Get all sales orders
   getAll: async () => {
     const response = await api.get("/");
-    return response.data.orders; // { orders }
+    return response.data.orders;
   },
 
   // 🔹 Get sales order by ID
   getById: async (id) => {
     const response = await api.get(`/${id}`);
-    return response.data.order; // { order }
+    return response.data.order;
   },
 
   // 🔹 Create sales order
   create: async (data) => {
+    console.log(data);
     const payload = {
       orderNo: data.orderNo?.trim(),
       date: data.date,
-      party: data.party?.trim(),
+
+      // ✅ changed from party → supplierId
+      supplierId: Number(data.supplierId),
+
       broker: data.broker?.trim() || null,
       broker1: data.broker1?.trim() || null,
       payTerms: data.payTerms?.trim() || null,
@@ -63,7 +67,7 @@ const salesOrderService = {
         value: Number(item.value),
       })),
     };
-
+    console.log(payload);
     const response = await api.post("/", payload);
     return response.data.order;
   },
@@ -77,8 +81,11 @@ const salesOrderService = {
       date:
         data.date !== undefined ? data.date : undefined,
 
-      party:
-        data.party !== undefined ? data.party?.trim() : undefined,
+      // ✅ changed from party → supplierId
+      supplierId:
+        data.supplierId !== undefined
+          ? Number(data.supplierId)
+          : undefined,
 
       broker:
         data.broker !== undefined ? data.broker?.trim() : undefined,
@@ -126,7 +133,7 @@ const salesOrderService = {
   // 🔹 Delete sales order
   delete: async (id) => {
     const response = await api.delete(`/${id}`);
-    return response.data; // { message }
+    return response.data;
   },
 };
 

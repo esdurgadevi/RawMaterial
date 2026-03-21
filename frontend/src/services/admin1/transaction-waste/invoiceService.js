@@ -17,26 +17,34 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ✅ Service methods (MATCHES YOUR INVOICE BACKEND)
+// Helper to remove undefined fields
+const cleanPayload = (obj) => {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, v]) => v !== undefined)
+  );
+};
+
 const invoiceService = {
   // 🔹 Get all invoices
   getAll: async () => {
     const response = await api.get("/");
-    return response.data.invoices; // { invoices }
+    return response.data.invoices;
   },
 
   // 🔹 Get invoice by ID
   getById: async (id) => {
     const response = await api.get(`/${id}`);
-    return response.data.invoice; // { invoice }
+    return response.data.invoice;
   },
 
   // 🔹 Create invoice
@@ -45,8 +53,9 @@ const invoiceService = {
       invoiceNo: data.invoiceNo?.trim(),
       date: data.date,
       invoiceType: data.invoiceType?.trim(),
-      partyName: data.partyName?.trim(),
+      supplierId: data.supplierId ? Number(data.supplierId) : null,
       address: data.address?.trim(),
+
       assessableValue: Number(data.assessableValue) || 0,
       charity: Number(data.charity) || 0,
       vatTax: Number(data.vatTax) || 0,
@@ -61,8 +70,10 @@ const invoiceService = {
       invoiceValue: Number(data.invoiceValue) || 0,
       gst: Number(data.gst) || 0,
       igst: Number(data.igst) || 0,
+
       creditDays: Number(data.creditDays) || 0,
       interestPercent: Number(data.interestPercent) || 0,
+
       transport: data.transport?.trim() || null,
       lrNo: data.lrNo?.trim() || null,
       lrDate: data.lrDate || null,
@@ -70,8 +81,12 @@ const invoiceService = {
       removalTime: data.removalTime || null,
       eBill: data.eBill?.trim() || null,
       exportTo: data.exportTo?.trim() || null,
-      approve: data.approve === true, // boolean
-      salesOrderId: data.salesOrderId ? Number(data.salesOrderId) : null,
+
+      approve: data.approve === true,
+
+      salesOrderId: data.salesOrderId
+        ? Number(data.salesOrderId)
+        : null,
 
       details: (data.details || []).map((item) => ({
         wasteName: item.wasteName?.trim(),
@@ -84,70 +99,112 @@ const invoiceService = {
     };
 
     const response = await api.post("/", payload);
+
     return response.data.invoice;
   },
 
   // 🔹 Update invoice
   update: async (id, data) => {
-    const payload = {
-      invoiceNo:
-        data.invoiceNo !== undefined ? data.invoiceNo?.trim() : undefined,
-      date:
-        data.date !== undefined ? data.date : undefined,
-      invoiceType:
-        data.invoiceType !== undefined ? data.invoiceType?.trim() : undefined,
-      partyName:
-        data.partyName !== undefined ? data.partyName?.trim() : undefined,
-      address:
-        data.address !== undefined ? data.address?.trim() : undefined,
+    const payload = cleanPayload({
+      invoiceNo: data.invoiceNo?.trim(),
+      date: data.date,
+      invoiceType: data.invoiceType?.trim(),
+      supplierId: data.supplierId !== undefined ? (data.supplierId ? Number(data.supplierId) : null) : undefined,
+      address: data.address?.trim(),
+
       assessableValue:
-        data.assessableValue !== undefined ? Number(data.assessableValue) : undefined,
+        data.assessableValue !== undefined
+          ? Number(data.assessableValue)
+          : undefined,
+
       charity:
-        data.charity !== undefined ? Number(data.charity) : undefined,
+        data.charity !== undefined
+          ? Number(data.charity)
+          : undefined,
+
       vatTax:
-        data.vatTax !== undefined ? Number(data.vatTax) : undefined,
+        data.vatTax !== undefined
+          ? Number(data.vatTax)
+          : undefined,
+
       cenvat:
-        data.cenvat !== undefined ? Number(data.cenvat) : undefined,
+        data.cenvat !== undefined
+          ? Number(data.cenvat)
+          : undefined,
+
       duty:
-        data.duty !== undefined ? Number(data.duty) : undefined,
+        data.duty !== undefined
+          ? Number(data.duty)
+          : undefined,
+
       cess:
-        data.cess !== undefined ? Number(data.cess) : undefined,
+        data.cess !== undefined
+          ? Number(data.cess)
+          : undefined,
+
       hsCess:
-        data.hsCess !== undefined ? Number(data.hsCess) : undefined,
+        data.hsCess !== undefined
+          ? Number(data.hsCess)
+          : undefined,
+
       tcs:
-        data.tcs !== undefined ? Number(data.tcs) : undefined,
+        data.tcs !== undefined
+          ? Number(data.tcs)
+          : undefined,
+
       pfCharges:
-        data.pfCharges !== undefined ? Number(data.pfCharges) : undefined,
+        data.pfCharges !== undefined
+          ? Number(data.pfCharges)
+          : undefined,
+
       subTotal:
-        data.subTotal !== undefined ? Number(data.subTotal) : undefined,
+        data.subTotal !== undefined
+          ? Number(data.subTotal)
+          : undefined,
+
       roundOff:
-        data.roundOff !== undefined ? Number(data.roundOff) : undefined,
+        data.roundOff !== undefined
+          ? Number(data.roundOff)
+          : undefined,
+
       invoiceValue:
-        data.invoiceValue !== undefined ? Number(data.invoiceValue) : undefined,
+        data.invoiceValue !== undefined
+          ? Number(data.invoiceValue)
+          : undefined,
+
       gst:
-        data.gst !== undefined ? Number(data.gst) : undefined,
+        data.gst !== undefined
+          ? Number(data.gst)
+          : undefined,
+
       igst:
-        data.igst !== undefined ? Number(data.igst) : undefined,
+        data.igst !== undefined
+          ? Number(data.igst)
+          : undefined,
+
       creditDays:
-        data.creditDays !== undefined ? Number(data.creditDays) : undefined,
+        data.creditDays !== undefined
+          ? Number(data.creditDays)
+          : undefined,
+
       interestPercent:
-        data.interestPercent !== undefined ? Number(data.interestPercent) : undefined,
-      transport:
-        data.transport !== undefined ? data.transport?.trim() : undefined,
-      lrNo:
-        data.lrNo !== undefined ? data.lrNo?.trim() : undefined,
-      lrDate:
-        data.lrDate !== undefined ? data.lrDate : undefined,
-      vehicleNo:
-        data.vehicleNo !== undefined ? data.vehicleNo?.trim() : undefined,
-      removalTime:
-        data.removalTime !== undefined ? data.removalTime : undefined,
-      eBill:
-        data.eBill !== undefined ? data.eBill?.trim() : undefined,
-      exportTo:
-        data.exportTo !== undefined ? data.exportTo?.trim() : undefined,
+        data.interestPercent !== undefined
+          ? Number(data.interestPercent)
+          : undefined,
+
+      transport: data.transport?.trim(),
+      lrNo: data.lrNo?.trim(),
+      lrDate: data.lrDate,
+      vehicleNo: data.vehicleNo?.trim(),
+      removalTime: data.removalTime,
+      eBill: data.eBill?.trim(),
+      exportTo: data.exportTo?.trim(),
+
       approve:
-        data.approve !== undefined ? (data.approve === true) : undefined,
+        data.approve !== undefined
+          ? data.approve === true
+          : undefined,
+
       salesOrderId:
         data.salesOrderId !== undefined
           ? data.salesOrderId
@@ -157,7 +214,7 @@ const invoiceService = {
 
       details:
         data.details !== undefined
-          ? (data.details || []).map((item) => ({
+          ? data.details.map((item) => ({
               wasteName: item.wasteName?.trim(),
               lotNo: item.lotNo?.trim(),
               baleNo: item.baleNo?.trim(),
@@ -166,16 +223,17 @@ const invoiceService = {
               netWt: Number(item.netWt) || 0,
             }))
           : undefined,
-    };
+    });
 
     const response = await api.put(`/${id}`, payload);
+
     return response.data.invoice;
   },
 
   // 🔹 Delete invoice
   delete: async (id) => {
     const response = await api.delete(`/${id}`);
-    return response.data; // { message }
+    return response.data;
   },
 };
 

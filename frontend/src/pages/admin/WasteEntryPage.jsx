@@ -527,6 +527,18 @@ const WasteEntryPage = () => {
     }).replace(/ /g, '-');
   };
 
+  // Calculate total weight from entries - FIXED VERSION
+  const calculateTotalWeightFromEntries = () => {
+    return entries.reduce((sum, entry) => {
+      const entryTotal = entry.details?.reduce((s, d) => {
+        // Convert to number, handle string values
+        const weight = typeof d.netWeight === 'string' ? parseFloat(d.netWeight) : Number(d.netWeight);
+        return s + (isNaN(weight) ? 0 : weight);
+      }, 0) || 0;
+      return sum + entryTotal;
+    }, 0);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {/* Notification */}
@@ -563,7 +575,7 @@ const WasteEntryPage = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - FIXED TOTAL WEIGHT CALCULATION */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow-sm p-5">
           <div className="flex items-center">
@@ -599,15 +611,14 @@ const WasteEntryPage = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Weight</p>
               <p className="text-2xl font-bold text-gray-800">
-                {entries.reduce((sum, entry) => 
-                  sum + (entry.details?.reduce((s, d) => s + (d.netWeight || 0), 0) || 0), 0
-                ).toLocaleString()} kg
+                {calculateTotalWeightFromEntries().toLocaleString()} kg
               </p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Rest of the component remains exactly the same */}
       {/* Entries Table */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
@@ -673,7 +684,9 @@ const WasteEntryPage = () => {
                           <div className="text-sm text-gray-900">{getPackingTypeName(detail.packingType || detail.packingTypeId)}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-gray-900">{detail.netWeight?.toLocaleString()}</div>
+                          <div className="text-sm font-semibold text-gray-900">
+                            {typeof detail.netWeight === 'number' ? detail.netWeight.toLocaleString() : detail.netWeight}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{getGodownName(detail.godown || detail.godownId)}</div>
@@ -1115,13 +1128,18 @@ const WasteEntryPage = () => {
                           <td className="px-4 py-3 text-sm text-gray-900">{getWasteMasterName(detail.wasteMaster || detail.wasteMasterId)}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{getPackingTypeName(detail.packingType || detail.packingTypeId)}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{getGodownName(detail.godown || detail.godownId)}</td>
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-900">{detail.netWeight?.toLocaleString()}</td>
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                            {typeof detail.netWeight === 'number' ? detail.netWeight.toLocaleString() : detail.netWeight}
+                          </td>
                         </tr>
                       ))}
                       <tr className="bg-gray-50 font-medium">
                         <td colSpan="5" className="px-4 py-3 text-sm text-gray-700 text-right">Total Weight:</td>
                         <td className="px-4 py-3 text-sm font-bold text-gray-900">
-                          {viewEntry.details?.reduce((sum, d) => sum + (d.netWeight || 0), 0).toLocaleString()} kg
+                          {viewEntry.details?.reduce((sum, d) => {
+                            const weight = typeof d.netWeight === 'string' ? parseFloat(d.netWeight) : Number(d.netWeight);
+                            return sum + (isNaN(weight) ? 0 : weight);
+                          }, 0).toLocaleString()} kg
                         </td>
                       </tr>
                     </tbody>

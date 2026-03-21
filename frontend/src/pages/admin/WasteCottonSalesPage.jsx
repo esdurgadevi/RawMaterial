@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import salesOrderService from "../../services/admin1/transaction-waste/salesOrderService";
 import packingTypeService from "../../services/admin1/master/packingTypeService";
 import wasteMasterService from "../../services/admin1/master/wasteMasterService";
+import supplierService from "../../services/admin1/master/supplierService";
 
 // Helper function to format numbers
 const formatNumber = (value, decimals = 2) => {
@@ -35,13 +36,14 @@ const WasteCottonSalesPage = () => {
   // Master data states
   const [packingTypes, setPackingTypes] = useState([]);
   const [wasteProducts, setWasteProducts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loadingMasters, setLoadingMasters] = useState(false);
 
   // Form state for create/edit
   const [formData, setFormData] = useState({
     orderNo: "",
     date: new Date().toISOString().split("T")[0],
-    party: "",
+    supplierId: "",
     broker: "",
     broker1: "",
     payTerms: "",
@@ -75,8 +77,13 @@ const WasteCottonSalesPage = () => {
       
       // Fetch waste products from waste master service
       const wasteData = await wasteMasterService.getAll();
-      console.log(wasteData);
+      console.log("Waste Products:", wasteData);
       setWasteProducts(Array.isArray(wasteData) ? wasteData : []);
+      
+      // Fetch suppliers
+      const suppliersData = await supplierService.getAll();
+      console.log("Suppliers:", suppliersData);
+      setSuppliers(Array.isArray(suppliersData) ? suppliersData : []);
       
     } catch (error) {
       console.error("Error fetching master data:", error);
@@ -90,6 +97,7 @@ const WasteCottonSalesPage = () => {
     try {
       setLoading(true);
       const data = await salesOrderService.getAll();
+      console.log("Sales Orders:", data);
       const processedData = Array.isArray(data) ? data.map(order => ({
         ...order,
         creditDays: order.creditDays !== undefined && order.creditDays !== null 
@@ -113,12 +121,10 @@ const WasteCottonSalesPage = () => {
   };
 
   const handleFormChange = (e) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
     
     // Handle creditDays as number but allow empty string temporarily
     if (name === "creditDays") {
-      // If value is empty string, keep it as empty string for input field
-      // When submitting, it will be converted to 0
       setFormData(prev => ({
         ...prev,
         [name]: value === "" ? "" : parseInt(value) || 0
@@ -193,8 +199,8 @@ const WasteCottonSalesPage = () => {
       toast.error("Date is required");
       return false;
     }
-    if (!formData.party?.trim()) {
-      toast.error("Party is required");
+    if (!formData.supplierId) {
+      toast.error("Supplier is required");
       return false;
     }
     
@@ -229,16 +235,28 @@ const WasteCottonSalesPage = () => {
     
     // Prepare data for submission
     const submitData = {
-      ...formData,
+      orderNo: formData.orderNo,
+      date: formData.date,
+      supplierId: formData.supplierId, // This will be the ID string
+      broker: formData.broker,
+      broker1: formData.broker1,
+      payTerms: formData.payTerms,
+      payMode: formData.payMode,
       creditDays: formData.creditDays === "" ? 0 : parseInt(formData.creditDays) || 0,
+      bank: formData.bank,
+      despatchTo: formData.despatchTo,
       details: formData.details.map(detail => ({
-        ...detail,
+        product: detail.product,
+        packingType: detail.packingType,
         qty: parseInt(detail.qty) || 0,
         totalWt: parseFloat(detail.totalWt) || 0,
         rate: parseFloat(detail.rate) || 0,
+        ratePer: detail.ratePer,
         value: parseFloat(detail.value) || 0
       }))
     };
+
+    console.log("Submitting create data:", submitData);
 
     if (!validateForm()) return;
 
@@ -249,6 +267,7 @@ const WasteCottonSalesPage = () => {
       resetForm();
       fetchSalesOrders();
     } catch (error) {
+      console.error("Create error:", error);
       toast.error(error.response?.data?.message || "Failed to create sales order");
     }
   };
@@ -258,26 +277,39 @@ const WasteCottonSalesPage = () => {
     
     // Prepare data for submission
     const submitData = {
-      ...formData,
+      orderNo: formData.orderNo,
+      date: formData.date,
+      supplierId: formData.supplierId, // This will be the ID string
+      broker: formData.broker,
+      broker1: formData.broker1,
+      payTerms: formData.payTerms,
+      payMode: formData.payMode,
       creditDays: formData.creditDays === "" ? 0 : parseInt(formData.creditDays) || 0,
+      bank: formData.bank,
+      despatchTo: formData.despatchTo,
       details: formData.details.map(detail => ({
-        ...detail,
+        product: detail.product,
+        packingType: detail.packingType,
         qty: parseInt(detail.qty) || 0,
         totalWt: parseFloat(detail.totalWt) || 0,
         rate: parseFloat(detail.rate) || 0,
+        ratePer: detail.ratePer,
         value: parseFloat(detail.value) || 0
       }))
     };
 
+    console.log("Submitting update data:", submitData);
+
     if (!validateForm() || !selectedOrder) return;
 
     try {
-      await salesOrderService.update(selectedOrder.id, submitData);
+      await salesOrderService.update(selectedOrder._id || selectedOrder.id, submitData);
       toast.success("Sales order updated successfully!");
       setShowEditModal(false);
       resetForm();
       fetchSalesOrders();
     } catch (error) {
+      console.error("Update error:", error);
       toast.error(error.response?.data?.message || "Failed to update sales order");
     }
   };
@@ -290,6 +322,7 @@ const WasteCottonSalesPage = () => {
       setOrderToDelete(null);
       fetchSalesOrders();
     } catch (error) {
+      console.error("Delete error:", error);
       toast.error("Failed to delete sales order");
     }
   };
@@ -298,7 +331,7 @@ const WasteCottonSalesPage = () => {
     setFormData({
       orderNo: "",
       date: new Date().toISOString().split("T")[0],
-      party: "",
+      supplierId: "",
       broker: "",
       broker1: "",
       payTerms: "",
@@ -325,11 +358,12 @@ const WasteCottonSalesPage = () => {
   };
 
   const handleEdit = (order) => {
+    console.log("Editing order:", order);
     setSelectedOrder(order);
     setFormData({
       orderNo: order.orderNo || "",
       date: order.date ? order.date.split('T')[0] : new Date().toISOString().split("T")[0],
-      party: order.party || "",
+      supplierId: order.supplierId || "", // This should be the ID
       broker: order.broker || "",
       broker1: order.broker1 || "",
       payTerms: order.payTerms || "",
@@ -365,9 +399,13 @@ const WasteCottonSalesPage = () => {
 
   const filteredOrders = salesOrders.filter(order => {
     const searchLower = searchTerm.toLowerCase();
+    // Get supplier name for search
+    const supplier = suppliers.find(s => s._id === order.supplierId || s.id === order.supplierId);
+    const supplierName = supplier ? supplier.accountName.toLowerCase() : '';
+    
     return (
       (order.orderNo && order.orderNo.toLowerCase().includes(searchLower)) ||
-      (order.party && order.party.toLowerCase().includes(searchLower)) ||
+      supplierName.includes(searchLower) ||
       (order._id && order._id.includes(searchTerm))
     );
   });
@@ -386,10 +424,16 @@ const WasteCottonSalesPage = () => {
 
   // Get product name by ID
   const getProductName = (productId) => {
-    console.log(productId);
     if (!productId) return '';
     const product = wasteProducts.find(p => p._id === productId || p.code === productId);
     return product ? product.waste : productId;
+  };
+
+  // Get supplier name by ID
+  const getSupplierName = (supplierId) => {
+    if (!supplierId) return 'N/A';
+    const supplier = suppliers.find(s => s._id === supplierId || s.id === supplierId);
+    return supplier ? supplier.accountName : supplierId;
   };
 
   if (loading) {
@@ -507,7 +551,7 @@ const WasteCottonSalesPage = () => {
                       {order.date ? new Date(order.date).toLocaleDateString('en-IN') : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{order.party || 'N/A'}</div>
+                      <div className="text-sm text-gray-900">{getSupplierName(order.supplierId)}</div>
                       <div className="text-xs text-gray-500">{order.despatchTo || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -606,17 +650,22 @@ const WasteCottonSalesPage = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Party *
+                      Supplier *
                     </label>
-                    <input
-                      type="text"
-                      name="party"
-                      value={formData.party}
+                    <select
+                      name="supplierId"
+                      value={formData.supplierId}
                       onChange={handleFormChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
-                      placeholder="SUBBURAAJ COTTON MILL PVT. LTD."
-                    />
+                    >
+                      <option value="">Select Supplier</option>
+                      {suppliers.map((supplier) => (
+                        <option key={supplier._id || supplier.id} value={supplier._id || supplier.id}>
+                          {supplier.accountName} - {supplier.place}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -901,8 +950,8 @@ const WasteCottonSalesPage = () => {
                   <p className="text-lg">{selectedOrder.date ? new Date(selectedOrder.date).toLocaleDateString('en-IN') : 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Party</label>
-                  <p className="text-lg">{selectedOrder.party}</p>
+                  <label className="text-sm font-medium text-gray-500">Supplier</label>
+                  <p className="text-lg">{getSupplierName(selectedOrder.supplierId)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Agent / Broker</label>
@@ -1042,16 +1091,22 @@ const WasteCottonSalesPage = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Party *
+                      Supplier *
                     </label>
-                    <input
-                      type="text"
-                      name="party"
-                      value={formData.party}
+                    <select
+                      name="supplierId"
+                      value={formData.supplierId}
                       onChange={handleFormChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
-                    />
+                    >
+                      <option value="">Select Supplier</option>
+                      {suppliers.map((supplier) => (
+                        <option key={supplier._id || supplier.id} value={supplier._id || supplier.id}>
+                          {supplier.accountName} - {supplier.place}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1317,7 +1372,7 @@ const WasteCottonSalesPage = () => {
                 </p>
                 <div className="mt-4 p-3 bg-red-50 rounded-md">
                   <p className="text-sm font-medium text-gray-900">
-                    Order No: {orderToDelete.orderNo} - {orderToDelete.party}
+                    Order No: {orderToDelete.orderNo} - {getSupplierName(orderToDelete.supplierId)}
                   </p>
                   <p className="text-xs text-red-600 mt-1">
                     This action cannot be undone.
@@ -1335,7 +1390,7 @@ const WasteCottonSalesPage = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={() => handleDelete(orderToDelete.id)}
+                  onClick={() => handleDelete(orderToDelete.id || orderToDelete.id)}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                 >
                   Delete

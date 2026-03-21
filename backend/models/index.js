@@ -517,8 +517,27 @@ db.SalesOrderDetail.belongsTo(db.SalesOrder, {
   foreignKey: "salesOrderId",
   as: "order",
 });
+// Supplier → SalesOrder
+db.Supplier.hasMany(db.SalesOrder, {
+  foreignKey: "supplierId",
+  as: "salesOrders",
+});
 
+db.SalesOrder.belongsTo(db.Supplier, {
+  foreignKey: "supplierId",
+  as: "supplier",
+});
 //waste invoice
+// Supplier → Invoice
+db.Supplier.hasMany(db.Invoice, {
+  foreignKey: "supplierId",
+  as: "invoices",
+});
+
+db.Invoice.belongsTo(db.Supplier, {
+  foreignKey: "supplierId",
+  as: "supplier",
+});
 // Associations
 db.Invoice.hasMany(db.InvoiceDetail, {
   foreignKey: "invoiceId",
