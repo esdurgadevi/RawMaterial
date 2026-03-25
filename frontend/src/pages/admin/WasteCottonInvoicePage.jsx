@@ -68,9 +68,10 @@ const generateEInvoiceJSON = (invoice, supplier) => {
   );
 
   const assVal   = parseFloat(invoice.assessableValue) || 0;
-  const cgstVal  = parseFloat(invoice.gst) / 2 || 0;   // total GST split 50/50 → CGST & SGST
-  const sgstVal  = cgstVal;
-  const igstVal  = parseFloat(invoice.igst) || 0;
+  const cgstVal  = parseFloat((assVal * 0.025).toFixed(2));   // CGST: 2.5% of Assessable Value
+  const sgstVal  = parseFloat((assVal * 0.025).toFixed(2));   // SGST: 2.5% of Assessable Value
+  const igstVal  = parseFloat(invoice.igst) || 0;     // Default IGST: 0
+  const gstVal   = cgstVal + sgstVal;                 // GST = CGST + SGST
   // OthChrg = 1% of Assessable Value (auto-calculated, not stored in form)
   const othChrg  = parseFloat((assVal * 0.01).toFixed(2));
   const totInvVal = parseFloat(invoice.invoiceValue) || 0;
@@ -206,6 +207,7 @@ const WasteCottonInvoicePage = () => {
   const [jsonPreviewData, setJsonPreviewData] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [availableBales, setAvailableBales] = useState([]);
+  const [checkedBales, setCheckedBales] = useState(new Set());
   const [selectedInvoiceType, setSelectedInvoiceType] = useState(null);
   const [ratePerKg, setRatePerKg] = useState(119.6);
 
@@ -237,6 +239,8 @@ const WasteCottonInvoicePage = () => {
     roundOff: 0,
     invoiceValue: 0,
     gst: 0,
+    cgst: 2.5,
+    sgst: 2.5,
     igst: 0,
     approve: false,
     salesOrderId: "",
@@ -390,6 +394,7 @@ const WasteCottonInvoicePage = () => {
     if (!orderId) {
       setSelectedOrder(null);
       setAvailableBales([]);
+      setCheckedBales(new Set());
       setFormData((prev) => ({ ...prev, details: [], salesOrderId: "" }));
       return;
     }
@@ -434,6 +439,7 @@ const WasteCottonInvoicePage = () => {
           }
         }
         setAvailableBales(generatedBales);
+        setCheckedBales(new Set()); // Clear checkboxes when new order is selected
       }
     } catch {
       toast.error("Failed to load order details");
@@ -448,6 +454,54 @@ const WasteCottonInvoicePage = () => {
     setFormData((prev) => ({ ...prev, details: [...prev.details, { ...bale }] }));
     setAvailableBales((prev) => prev.filter((b) => b.baleNo !== bale.baleNo));
     toast.success("Bale added to invoice");
+  };
+
+  // Handle checkbox change for bale selection
+  const handleBaleCheckbox = (baleId) => {
+    const newChecked = new Set(checkedBales);
+    if (newChecked.has(baleId)) {
+      newChecked.delete(baleId);
+    } else {
+      newChecked.add(baleId);
+    }
+    setCheckedBales(newChecked);
+  };
+
+  // Add all selected bales at once
+  const handleAddSelectedBales = () => {
+    if (checkedBales.size === 0) {
+      toast.warning("Please select at least one bale");
+      return;
+    }
+
+    const selectedBalesArray = availableBales.filter((bale) =>
+      checkedBales.has(bale.id)
+    );
+
+    const updatedDetails = [...formData.details];
+    const failedBales = [];
+
+    for (const bale of selectedBalesArray) {
+      if (formData.details.some((b) => b.baleNo === bale.baleNo)) {
+        failedBales.push(bale.baleNo);
+      } else {
+        updatedDetails.push({ ...bale });
+      }
+    }
+
+    setFormData((prev) => ({ ...prev, details: updatedDetails }));
+    setAvailableBales((prev) =>
+      prev.filter((bale) => !checkedBales.has(bale.id))
+    );
+    setCheckedBales(new Set()); // Clear checkboxes after adding
+
+    if (failedBales.length > 0) {
+      toast.warning(
+        `${failedBales.length} bale(s) already added: ${failedBales.join(", ")}`
+      );
+    } else {
+      toast.success(`${selectedBalesArray.length} bale(s) added successfully`);
+    }
   };
 
   const removeBaleFromInvoice = (index) => {
@@ -473,7 +527,18 @@ const WasteCottonInvoicePage = () => {
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
     const newValue = type === "checkbox" ? checked : value;
-    setFormData((prev) => ({ ...prev, [name]: newValue }));
+    
+    // Update formData
+    let updatedFormData = { ...formData, [name]: newValue };
+    
+    // If CGST or SGST changes, recalculate GST = CGST + SGST
+    if (name === "cgst" || name === "sgst") {
+      const cgst = parseFloat(name === "cgst" ? newValue : formData.cgst) || 0;
+      const sgst = parseFloat(name === "sgst" ? newValue : formData.sgst) || 0;
+      updatedFormData.gst = cgst + sgst;
+    }
+    
+    setFormData(updatedFormData);
 
     if (name === "ratePerKg") setRatePerKg(parseFloat(value) || 0);
 
@@ -571,6 +636,8 @@ const WasteCottonInvoicePage = () => {
       roundOff: invoice.roundOff || 0,
       invoiceValue: invoice.invoiceValue || 0,
       gst: invoice.gst || 0,
+      cgst: invoice.cgst || 2.5,
+      sgst: invoice.sgst || 2.5,
       igst: invoice.igst || 0,
       approve: invoice.approve || false,
       salesOrderId: invoice.salesOrderId || "",
@@ -589,6 +656,7 @@ const WasteCottonInvoicePage = () => {
     setFormData(emptyForm());
     setSelectedOrder(null);
     setAvailableBales([]);
+    setCheckedBales(new Set());
     setRatePerKg(119.6);
     const def = invoiceTypes.find((t) => t.name === "GST WASTE SALE INVOICE");
     setSelectedInvoiceType(def || null);
@@ -701,6 +769,25 @@ const WasteCottonInvoicePage = () => {
         </div>
       </div>
 
+      {/* Row 5: Tax Values (CGST / SGST / IGST) */}
+      <div className="grid grid-cols-3 gap-4 mb-6 bg-yellow-50 border border-yellow-100 p-4 rounded-lg">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">CGST (%)</label>
+          <input type="number" step="0.01" name="cgst" value={formData.cgst} onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">SGST (%)</label>
+          <input type="number" step="0.01" name="sgst" value={formData.sgst} onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">IGST (%)</label>
+          <input type="number" step="0.01" name="igst" value={formData.igst} onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
+        </div>
+      </div>
+
       {/* Calculated Invoice Values */}
       <div className="grid grid-cols-4 gap-3 mb-6 bg-blue-50 border border-blue-100 p-4 rounded-lg">
         {[
@@ -716,7 +803,7 @@ const WasteCottonInvoicePage = () => {
           { label: "Sub Total", key: "subTotal", highlight: "font-semibold" },
           { label: "Round Off", key: "roundOff" },
           { label: "Invoice Value", key: "invoiceValue", highlight: "text-green-700 font-bold text-lg" },
-          { label: "GST", key: "gst" },
+          { label: "GST (CGST + SGST)", key: "gst", highlight: "text-purple-700 font-semibold" },
           { label: "IGST", key: "igst" },
         ].map(({ label, key, highlight }) => (
           <div key={key}>
@@ -778,26 +865,55 @@ const WasteCottonInvoicePage = () => {
           <div className="overflow-x-auto border border-gray-200 rounded-lg">
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50">
-                <tr>{["Bale No.", "Waste Name", "Lot No", "Gross Wt.", "Action"].map((h) => (
-                  <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500">{h}</th>
-                ))}</tr>
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                    <input
+                      type="checkbox"
+                      checked={checkedBales.size === availableBales.length && availableBales.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setCheckedBales(new Set(availableBales.map((b) => b.id)));
+                        } else {
+                          setCheckedBales(new Set());
+                        }
+                      }}
+                    />
+                  </th>
+                  {["Bale No.", "Waste Name", "Lot No", "Gross Wt."].map((h) => (
+                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500">{h}</th>
+                  ))}
+                </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {availableBales.map((bale, i) => (
                   <tr key={i}>
+                    <td className="px-4 py-2">
+                      <input
+                        type="checkbox"
+                        checked={checkedBales.has(bale.id)}
+                        onChange={() => handleBaleCheckbox(bale.id)}
+                      />
+                    </td>
                     <td className="px-4 py-2">{bale.baleNo}</td>
                     <td className="px-4 py-2">{bale.wasteName}</td>
                     <td className="px-4 py-2">{bale.lotNo}</td>
                     <td className="px-4 py-2">{formatNumber(bale.grossWt, 3)}</td>
-                    <td className="px-4 py-2">
-                      <button type="button" onClick={() => addBaleToInvoice(bale)}
-                        className="text-green-600 hover:text-green-800 font-medium text-xs">Add</button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {checkedBales.size > 0 && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={handleAddSelectedBales}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium text-sm"
+              >
+                Add Selected {checkedBales.size > 0 && `(${checkedBales.size})`}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

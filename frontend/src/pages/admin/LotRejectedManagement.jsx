@@ -384,17 +384,17 @@ const LotRejectedManagement = () => {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleView(rej)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition-colors"
                           title="View Details"
                         >
-                          👁️
+                          View
                         </button>
                         <button
                           onClick={() => handleUnReject(rej.id, rej.lotNo)}
-                          className="text-green-600 hover:text-green-900"
+                          className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-medium transition-colors"
                           title="Un-Reject"
                         >
-                          ↺
+                          Un-Reject
                         </button>
                       </div>
                     </td>

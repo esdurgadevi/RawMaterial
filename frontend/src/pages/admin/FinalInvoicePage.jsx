@@ -538,22 +538,22 @@ const FinalInvoice = () => {
       key: 'actions',
       render: (_, record) => (
         <Space>
-          <Tooltip title="View">
-            <Button icon={<EyeOutlined />} size="small" onClick={() => handleView(record.id)} />
-          </Tooltip>
-          <Tooltip title="Edit">
-            <Button icon={<EditOutlined />} size="small" onClick={() => handleEdit(record.id)} />
-          </Tooltip>
-          <Tooltip title="Delete">
-            <Popconfirm
-              title="Delete this invoice?"
-              onConfirm={() => handleDelete(record.id)}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Button icon={<DeleteOutlined />} size="small" danger />
-            </Popconfirm>
-          </Tooltip>
+          <Button type="primary" size="small" onClick={() => handleView(record.id)}>
+            View
+          </Button>
+          <Button type="default" size="small" onClick={() => handleEdit(record.id)}>
+            Edit
+          </Button>
+          <Popconfirm
+            title="Delete this invoice?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button danger size="small">
+              Delete
+            </Button>
+          </Popconfirm>
         </Space>
       )
     }

@@ -679,24 +679,24 @@ const LotAllowancePage = () => {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleView(allowance.id)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition-colors"
                           title="View"
                         >
-                          👁️
+                          View
                         </button>
                         <button
                           onClick={() => handleEdit(allowance.id)}
-                          className="text-green-600 hover:text-green-900"
+                          className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-medium transition-colors"
                           title="Edit"
                         >
-                          ✏️
+                          Edit
                         </button>
                         <button
                           onClick={() => handleDelete(allowance.id, allowance.allowanceNo)}
-                          className="text-red-600 hover:text-red-900"
+                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-medium transition-colors"
                           title="Delete"
                         >
-                          🗑️
+                          Delete
                         </button>
                       </div>
                     </td>

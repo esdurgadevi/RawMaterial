@@ -144,7 +144,7 @@ const WastePackingPage = () => {
         packingTypeId: packingType.id,
         packingCode: packingType.code,
         tareWeight: packingType.tareWeight || "0",
-        rate: packingType.rate || "",
+        rate: "", // Rate will be entered by user
         stock: wasteMaster.wasteKg || "",
       }));
       
@@ -868,16 +868,21 @@ const WastePackingPage = () => {
                 <p className="text-xs text-gray-500 mt-1">This will apply to all bales</p>
               </div>
 
-              {/* Rate - Auto-populated */}
+              {/* Rate - User Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Rate (₹)
+                  Rate (₹) <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
+                  type="number"
+                  name="rate"
                   value={formData.rate}
-                  readOnly
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-600"
+                  onChange={handleFormChange}
+                  step="0.01"
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter rate"
+                  required
                 />
               </div>
 

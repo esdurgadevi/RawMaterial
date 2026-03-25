@@ -31,7 +31,7 @@ const InwardEntryManagement = () => {
   const [formData, setFormData] = useState({
     inwardNo: '',
     inwardDate: new Date().toISOString().split('T')[0],
-    type: 'Upcountry', // Upcountry, Fought, Port, Polyster
+    type: '', // Changed from 'Upcountry' to ''
     
     // Purchase Order details (from selection)
     purchaseOrderId: '',
@@ -159,7 +159,7 @@ const InwardEntryManagement = () => {
           Tax: '',
           TaxRs: ''
         }));
-      } else {
+      } else if (formData.type === 'Upcountry' || formData.type === 'Fought') {
         // For Upcountry and Fought, set fixed rates
         setFormData(prev => ({
           ...prev,
@@ -170,9 +170,9 @@ const InwardEntryManagement = () => {
         }));
         
         // Calculate tax amounts if candyRate exists
-        // if (prev.candyRate) {
-        //   calculateTaxAmounts(prev.candyRate, rates.sgst, rates.cgst, rates.igst, rates.gst);
-        // }
+        if (formData.candyRate) {
+          calculateTaxAmounts(formData.candyRate, rates.sgst, rates.cgst, rates.igst, rates.gst);
+        }
       }
     }
   }, [formData.type]);
@@ -350,45 +350,44 @@ const InwardEntryManagement = () => {
     }
   };
 
-  // Handle purchase order selection
   // Handle purchase order selection - using getById to fetch complete details
-const handlePurchaseOrderSelect = async (orderId) => {
-  try {
-    setFetchingOrderDetails(true);
-    
-    // Fetch complete purchase order details by ID
-    const response = await purchaseOrderService.getById(orderId);
-    const order = response.purchaseOrder || response; // Handle different response structures
-    
-    setFormData(prev => ({
-      ...prev,
-      purchaseOrderId: order.id,
-      purchaseOrderNo: order.orderNo || '',
-      supplier: order.supplier || '',
-      broker: order.broker || '',
-      variety: order.variety || '',
-      mixingGroup: order.mixing || '',
-      station: order.station || '',
-      purchaseCandyRate: order.candyRate || '',
-      purchaseQuantity: order.quantity || '',
-      candyRate: order.candyRate || '' // Auto-populate candy rate
-    }));
-    
-    setPurchaseOrderSearch(order.orderNo || '');
-    setShowPurchaseOrderDropdown(false);
-    
-    // Calculate tax amounts if type is set and candyRate exists
-    if (formData.type && order.candyRate) {
-      const rates = taxRates[formData.type] || {};
-      calculateTaxAmounts(order.candyRate, rates.sgst, rates.cgst, rates.igst, rates.gst);
+  const handlePurchaseOrderSelect = async (orderId) => {
+    try {
+      setFetchingOrderDetails(true);
+      
+      // Fetch complete purchase order details by ID
+      const response = await purchaseOrderService.getById(orderId);
+      const order = response.purchaseOrder || response; // Handle different response structures
+      
+      setFormData(prev => ({
+        ...prev,
+        purchaseOrderId: order.id,
+        purchaseOrderNo: order.orderNo || '',
+        supplier: order.supplier || '',
+        broker: order.broker || '',
+        variety: order.variety || '',
+        mixingGroup: order.mixing || '',
+        station: order.station || '',
+        purchaseCandyRate: order.candyRate || '',
+        purchaseQuantity: order.quantity || '',
+        candyRate: order.candyRate || '' // Auto-populate candy rate
+      }));
+      
+      setPurchaseOrderSearch(order.orderNo || '');
+      setShowPurchaseOrderDropdown(false);
+      
+      // Calculate tax amounts if type is set and candyRate exists
+      if (formData.type && order.candyRate) {
+        const rates = taxRates[formData.type] || {};
+        calculateTaxAmounts(order.candyRate, rates.sgst, rates.cgst, rates.igst, rates.gst);
+      }
+    } catch (error) {
+      console.error('Error fetching purchase order details:', error);
+      setError('Failed to load purchase order details');
+    } finally {
+      setFetchingOrderDetails(false);
     }
-  } catch (error) {
-    console.error('Error fetching purchase order details:', error);
-    setError('Failed to load purchase order details');
-  } finally {
-    setFetchingOrderDetails(false);
-  }
-};
+  };
 
   // Filter purchase orders based on search
   const filteredPurchaseOrders = purchaseOrders.filter(order => {
@@ -497,6 +496,11 @@ const handlePurchaseOrderSelect = async (orderId) => {
     setSuccess('');
 
     // Validation
+    if (!formData.type) {
+      setError('Please select a type');
+      return;
+    }
+
     if (!formData.inwardDate) {
       setError('Inward date is required');
       return;
@@ -628,7 +632,7 @@ const handlePurchaseOrderSelect = async (orderId) => {
       setFormData({
         inwardNo: entry.inwardNo || '',
         inwardDate: entry.inwardDate || new Date().toISOString().split('T')[0],
-        type: entry.type || 'Upcountry',
+        type: entry.type || '',
         
         purchaseOrderId: entry.purchaseOrderId || '',
         purchaseOrderNo: entry.purchaseOrderNo || '',
@@ -726,7 +730,7 @@ const handlePurchaseOrderSelect = async (orderId) => {
     setFormData({
       inwardNo: '',
       inwardDate: new Date().toISOString().split('T')[0],
-      type: 'Upcountry',
+      type: '', // Changed from 'Upcountry' to ''
       
       purchaseOrderId: '',
       purchaseOrderNo: '',
@@ -860,7 +864,7 @@ const handlePurchaseOrderSelect = async (orderId) => {
       case 'Polyster':
         return "Enter tax percentages manually";
       default:
-        return "";
+        return "Select a type to see tax details";
     }
   };
 
@@ -1127,6 +1131,26 @@ const handlePurchaseOrderSelect = async (orderId) => {
                           </div>
                         </div>
 
+                        {/* Type - Updated with placeholder option */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Type *
+                          </label>
+                          <select
+                            name="type"
+                            value={formData.type}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required
+                          >
+                            <option value="">Select Type</option>
+                            <option value="Upcountry">Upcountry</option>
+                            <option value="Fought">Local</option>
+                            <option value="Port">Import</option>
+                            <option value="Polyster">Polyster</option>
+                          </select>
+                        </div>
+
                         {/* Purchase Order Selection */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1215,24 +1239,6 @@ const handlePurchaseOrderSelect = async (orderId) => {
                               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                           </div>
-                        </div>
-
-                        {/* Type */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Type *
-                          </label>
-                          <select
-                            name="type"
-                            value={formData.type}
-                            onChange={handleInputChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            <option value="Upcountry">Upcountry</option>
-                            <option value="Fought">Local</option>
-                            <option value="Port">Import</option>
-                            <option value="Polyster">Polyster</option>
-                          </select>
                         </div>
 
                         {/* LC No */}
@@ -1743,7 +1749,13 @@ const handlePurchaseOrderSelect = async (orderId) => {
                         </div>
                       </div>
                       
-                      {(formData.type === 'Port' || formData.type === 'Polyster') ? (
+                      {formData.type === '' && (
+                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center text-yellow-700">
+                          Please select a type to configure tax details
+                        </div>
+                      )}
+                      
+                      {(formData.type === 'Port' || formData.type === 'Polyster') && formData.type !== '' && (
                         // Editable tax fields for Port/Polyster
                         <div className="space-y-4">
                           <div className="grid grid-cols-3 gap-4">
@@ -1829,7 +1841,9 @@ const handlePurchaseOrderSelect = async (orderId) => {
                             </div>
                           </div>
                         </div>
-                      ) : (
+                      )}
+                      
+                      {(formData.type === 'Upcountry' || formData.type === 'Fought') && formData.type !== '' && (
                         // Read-only tax fields for Upcountry/Fought
                         <div className="space-y-4">
                           {formData.type === 'Fought' && (
@@ -1986,7 +2000,7 @@ const handlePurchaseOrderSelect = async (orderId) => {
                   <button
                     type="submit"
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50"
-                    disabled={!formData.inwardNo || !formData.inwardDate || !formData.purchaseOrderId || 
+                    disabled={!formData.type || !formData.inwardNo || !formData.inwardDate || !formData.purchaseOrderId || 
                              !formData.godownId || !formData.Qty}
                   >
                     {editingEntry ? 'Update Inward' : 'Create Inward'}
@@ -2039,7 +2053,8 @@ const handlePurchaseOrderSelect = async (orderId) => {
                       viewingEntry.type === 'Upcountry' ? 'bg-green-100 text-green-800' : 
                       viewingEntry.type === 'Fought' ? 'bg-blue-100 text-blue-800' :
                       viewingEntry.type === 'Port' ? 'bg-purple-100 text-purple-800' :
-                      'bg-orange-100 text-orange-800'
+                      viewingEntry.type === 'Polyster' ? 'bg-orange-100 text-orange-800' :
+                      'bg-gray-100 text-gray-800'
                     }`}>
                       {viewingEntry.type || 'N/A'}
                     </span>
