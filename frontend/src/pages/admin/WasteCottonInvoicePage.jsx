@@ -800,19 +800,28 @@ const WasteCottonInvoicePage = () => {
           { label: "H.S. Cess", key: "hsCess" },
           { label: "TCS", key: "tcs" },
           { label: "PF / Other Charges", key: "pfCharges" },
+          { label: "CGST Amt (2.5%)", key: "cgstAmt", isCalculated: true },
+          { label: "SGST Amt (2.5%)", key: "sgstAmt", isCalculated: true },
           { label: "Sub Total", key: "subTotal", highlight: "font-semibold" },
           { label: "Round Off", key: "roundOff" },
           { label: "Invoice Value", key: "invoiceValue", highlight: "text-green-700 font-bold text-lg" },
           { label: "GST (CGST + SGST)", key: "gst", highlight: "text-purple-700 font-semibold" },
           { label: "IGST", key: "igst" },
-        ].map(({ label, key, highlight }) => (
-          <div key={key}>
-            <label className="block text-xs font-medium text-gray-500">{label}</label>
-            <div className={`text-base ${highlight || "text-gray-800"}`}>
-              ₹{formatNumber(formData[key])}
+        ].map(({ label, key, highlight, isCalculated }) => {
+          let displayValue = formData[key];
+          if (isCalculated) {
+            const assVal = parseFloat(formData.assessableValue) || 0;
+            displayValue = (assVal * 0.025);
+          }
+          return (
+            <div key={key}>
+              <label className="block text-xs font-medium text-gray-500">{label}</label>
+              <div className={`text-base ${highlight || "text-gray-800"}`}>
+                ₹{formatNumber(displayValue)}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Order Selection */}
@@ -1168,17 +1177,26 @@ const WasteCottonInvoicePage = () => {
                   { label: "H.S. Cess", key: "hsCess" },
                   { label: "TCS", key: "tcs" },
                   { label: "PF / Other Charges", key: "pfCharges" },
+                  { label: "CGST Amt (2.5%)", key: "cgstAmt", cls: "", isCalculated: true },
+                  { label: "SGST Amt (2.5%)", key: "sgstAmt", cls: "", isCalculated: true },
                   { label: "Sub Total", key: "subTotal", cls: "font-semibold" },
                   { label: "Round Off", key: "roundOff" },
                   { label: "Invoice Value", key: "invoiceValue", cls: "text-green-700 font-bold text-base" },
                   { label: "GST", key: "gst" },
                   { label: "IGST", key: "igst" },
-                ].map(({ label, key, cls }) => (
-                  <div key={key}>
-                    <label className="text-xs font-medium text-gray-500">{label}</label>
-                    <p className={`text-sm ${cls || "text-gray-800"}`}>₹{formatNumber(selectedInvoice[key])}</p>
-                  </div>
-                ))}
+                ].map(({ label, key, cls, isCalculated }) => {
+                  let displayValue = selectedInvoice[key];
+                  if (isCalculated) {
+                    const assVal = parseFloat(selectedInvoice.assessableValue) || 0;
+                    displayValue = (assVal * 0.025);
+                  }
+                  return (
+                    <div key={key}>
+                      <label className="text-xs font-medium text-gray-500">{label}</label>
+                      <p className={`text-sm ${cls || "text-gray-800"}`}>₹{formatNumber(displayValue)}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

@@ -18,16 +18,16 @@ const AdminSidebar1 = () => {
   ];
 
   const transactionQCItems = [
-    { to: "/admin1/qc-entry", icon: "🧪", label: "QC Entry" },
-    { to: "/admin1/spinning-lf", icon:"🧪", label:"Spinning Long Frame"},
-    { to:"/admin1/breaker-drwaing", icon:"🧪", label:"BreakerDrawing"},
-    { to: "/admin1/finisher-drawing", icon:"🧪", label: "Finisher Drawing"},
-    { to: "/admin1/comber-entry", icon: "🧪", label: "Comber Entry"},
-    { to: "/admin1/lap-former", icon: "🧪", label: "Lap Former"},
-    { to: "/admin1/auto-coner", icon: "🧪", label: "Auto Coner"},
-    { to: "/admin1/qc-simplex", icon: "🧪", label: "Qc Simplex"},
-    { to: "/admin1/qc-carding", icon: "🧪", label: "QC Carding"},
-    { to: "/admin1/qc-blowroom" , icon:"🧪",label: "QC Blow Room"},
+    { to: "/admin1/qc-entry", icon: "📋", label: "QC Entry" },
+{ to: "/admin1/spinning-lf", icon: "🧵", label: "Spinning Long Frame"},
+{ to:"/admin1/breaker-drwaing", icon:"⚙️", label:"Breaker Drawing"},
+{ to: "/admin1/finisher-drawing", icon:"🔧", label: "Finisher Drawing"},
+{ to: "/admin1/comber-entry", icon: "🪶", label: "Comber Entry"},
+{ to: "/admin1/lap-former", icon: "📦", label: "Lap Former"},
+{ to: "/admin1/auto-coner", icon: "🔄", label: "Auto Coner"},
+{ to: "/admin1/qc-simplex", icon: "📊", label: "QC Simplex"},
+{ to: "/admin1/qc-carding", icon: "🧰", label: "QC Carding"},
+{ to: "/admin1/qc-blowroom" , icon:"💨",label: "QC Blow Room"},
   ];
 
   // ================= Logout =================
@@ -57,7 +57,7 @@ const AdminSidebar1 = () => {
         <div className="flex items-center justify-between h-20 px-6 border-b border-[#1d1b31]">
           <div className="flex items-center gap-3">
             <span className="text-2xl text-indigo-500">🛡️</span>
-            <span className="text-xl font-bold">KR Exports RawMaterial</span>
+            <span className="text-xl font-bold">Mill Exports Quality Check</span>
           </div>
           <button className="lg:hidden" onClick={() => setIsOpen(false)}>
             <span className="text-xl">✕</span>

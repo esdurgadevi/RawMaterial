@@ -36,24 +36,22 @@ const AdminSidebar = () => {
   ];
 
   const cottonTransactionItems = [
-    { to: "/admin/purchase-order", icon: "📦", label: "Purchase Order" },
-    { to: "/admin/inward-entries", icon: "📦", label: "Inward Entries" },
-    { to: "/admin/inward-lot", icon: "📦", label: "Inward Lot" },
-    { to: "/admin/issue", icon: "📦", label: "Issue" },
-     { to: "/admin/final-invoice",icon:"📦",label: "Final Invoice"},
-    { to: "/admin/lot-entry",icon:"📦",label: "Lot Test Result Entry"},
-    { to: "/admin/location-transfer",icon:"📦",label: "Location Transfer"},
-    { to: "/admin/lot-allowance",icon:"📦",label:"LotAllowance"},
-    { to: "/admin/lot-reject",icon : "📦",label:"Lot Rejection"}
-  ];
-
+  { to: "/admin/purchase-order", icon: "🛒", label: "Purchase Order" },
+  { to: "/admin/inward-entries", icon: "📥", label: "Inward Entries" },
+  { to: "/admin/inward-lot", icon: "🧾", label: "Inward Lot" },
+  { to: "/admin/issue", icon: "📤", label: "Issue" },
+  { to: "/admin/final-invoice", icon: "🧾", label: "Final Invoice" },
+  { to: "/admin/lot-entry", icon: "🔬", label: "Lot Test Result Entry" },
+  { to: "/admin/location-transfer", icon: "🔄", label: "Location Transfer" },
+  { to: "/admin/lot-allowance", icon: "✅", label: "Lot Allowance" },
+  { to: "/admin/lot-reject", icon: "❌", label: "Lot Rejection" }
+];
   const wasteTransactionItems = [
-    { to: "/admin/waste1", icon: "📦", label: "Waste Packing" },
-    { to: "/admin/sales-order", icon: "📦", label: "Waste Sales Order" },
-    { to: "/admin/waste-order", icon: "📦", label: "Waste Cotton Invoice" },
-    { to: "/admin/waste-entry", icon: "📦", label: "Waste Entry" },
-  ];
-
+  { to: "/admin/waste1", icon: "🧺", label: "Waste Packing" },
+  { to: "/admin/sales-order", icon: "📝", label: "Waste Sales Order" },
+  { to: "/admin/waste-order", icon: "🧾", label: "Waste Cotton Invoice" },
+  { to: "/admin/waste-entry", icon: "📥", label: "Waste Entry" },
+];
   /* ---------------- LOGOUT ---------------- */
 
   const handleLogout = async () => {
@@ -82,7 +80,7 @@ const AdminSidebar = () => {
         <div className="flex items-center justify-between h-20 px-6 border-b border-[#1d1b31]">
           <div className="flex items-center gap-3">
             <span className="text-2xl text-indigo-500">🛡️</span>
-            <span className="text-xl font-bold">KR Exports RawMaterial</span>
+            <span className="text-xl font-bold">Mill RawMaterial</span>
           </div>
           <button className="lg:hidden" onClick={() => setIsOpen(false)}>
             <span className="text-xl">✕</span>

@@ -63,6 +63,7 @@ import AutoConer from "./pages/admin2/AutoConer.jsx";
 import QCSimplex from "./pages/admin2/QCSimplex.jsx";
 import QCCarding from "./pages/admin2/QCCarding.jsx";
 import QCBlowRoom from "./pages/admin2/QCBlowRoom.jsx";
+import NotFound from "./pages/NotFound.jsx";
 
 const ProtectedRoute = ({ children, role }) => {
   const userStr = localStorage.getItem("user");
@@ -133,6 +134,7 @@ const routes = [
       {path:"sales-order",element:<WasteCottonSalesPage/> },
       {path:"waste-order",element:<WasteCottonInvoicePage />},
       {path:"waste-entry",element:<WasteEntryPage />},
+      { path: "*", element: <NotFound /> }
     ],
   },
   {
@@ -157,6 +159,7 @@ const routes = [
       { path: "qc-simplex", element:<QCSimplex />},
       { path: "qc-carding", element:<QCCarding />},
       { path: "qc-blowroom",element:<QCBlowRoom />},
+      { path: "*", element: <NotFound /> }
     ],
   },
 ];
