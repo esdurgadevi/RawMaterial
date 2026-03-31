@@ -25,14 +25,16 @@ export const createInwardEntry = async (data) => {
 
   const qty = Number(data.Qty || 0);
 
+  const roundUp2 = (value) => Math.ceil(value * 100) / 100;
+
   data.grossPerQty =
-    qty > 0 ? Number(data.grossWeight || 0) / qty : 0;
+    qty > 0 ? roundUp2(Number(data.grossWeight || 0) / qty) : 0;
 
   data.tarePerQty =
-    qty > 0 ? Number(data.tareWeight || 0) / qty : 0;
+    qty > 0 ? roundUp2(Number(data.tareWeight || 0) / qty) : 0;
 
   data.freightPerQty =
-    qty > 0 ? Number(data.freight || 0) / qty : 0;
+    qty > 0 ? roundUp2(Number(data.freight || 0) / qty) : 0;
 
   return await InwardEntry.create(data);
 };
