@@ -1,5 +1,5 @@
 // frontend/src/pages/admin/WasteCottonInvoicePage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import invoiceService from "../../services/admin1/transaction-waste/invoiceService";
@@ -55,33 +55,25 @@ const generateEInvoiceJSON = (invoice, supplier) => {
     ? stateCodeFromGstin(supplier.gstNo)
     : "33";
 
-  // Build buyer address
   const buyerAddr1 = supplier?.address || supplier?.deliveryAddress || "";
   const buyerAddr2 = supplier?.place || "";
-
   const buyerPin = parseInt(supplier?.pincode) || 0;
 
-  // Sum all bale net weights → total KGS
   const totalKgs = (invoice.details || []).reduce(
     (sum, b) => sum + (parseFloat(b.netWt) || 0),
     0
   );
 
   const assVal   = parseFloat(invoice.assessableValue) || 0;
-  const cgstVal  = parseFloat((assVal * 0.025).toFixed(2));   // CGST: 2.5% of Assessable Value
-  const sgstVal  = parseFloat((assVal * 0.025).toFixed(2));   // SGST: 2.5% of Assessable Value
-  const igstVal  = parseFloat(invoice.igst) || 0;     // Default IGST: 0
-  const gstVal   = cgstVal + sgstVal;                 // GST = CGST + SGST
-  // OthChrg = 1% of Assessable Value (auto-calculated, not stored in form)
+  const cgstVal  = parseFloat((assVal * 0.025).toFixed(2));
+  const sgstVal  = parseFloat((assVal * 0.025).toFixed(2));
+  const igstVal  = parseFloat(invoice.igst) || 0;
   const othChrg  = parseFloat((assVal * 0.01).toFixed(2));
   const totInvVal = parseFloat(invoice.invoiceValue) || 0;
 
-  // GST rate — derive from cgst/assessable or default 5
   const gstRt =
     assVal > 0 ? parseFloat(((cgstVal / assVal) * 100 * 2).toFixed(2)) : 5;
 
-  // Determine supply type — if buyer state == seller state → B2B intra, else inter
-  const isInter = buyerStcd !== SELLER_DETAILS.Stcd;
   const supTyp = "B2B";
 
   const json = [
@@ -162,8 +154,7 @@ const generateEInvoiceJSON = (invoice, supplier) => {
           StateCesAmt: parseFloat(invoice.hsCess) || 0,
           StateCesNonAdvlAmt: 0.0,
           OthChrg: 0.0,
-          TotItemVal:
-            assVal + cgstVal + sgstVal + igstVal,
+          TotItemVal: assVal + cgstVal + sgstVal + igstVal,
           BchDtls: null,
         },
       ],
@@ -187,6 +178,451 @@ const downloadJSON = (invoice, supplier) => {
   URL.revokeObjectURL(url);
 };
 
+// ─── InvoiceForm — DEFINED OUTSIDE WasteCottonInvoicePage to prevent remount on every render ───
+const InvoiceForm = React.memo(({
+  formData,
+  handleFormChange,
+  onSubmit,
+  submitLabel,
+  suppliers,
+  invoiceTypes,
+  handleSupplierChange,
+  selectedOrder,
+  availableBales,
+  checkedBales,
+  setCheckedBales,
+  handleBaleCheckbox,
+  handleAddSelectedBales,
+  handleDetailChange,
+  removeBaleFromInvoice,
+  ratePerKg,
+  loadingOrders,
+  salesOrders,
+  handleOrderSelect,
+  totalGross,
+  totalTare,
+  totalNet,
+  setShowCreateModal,
+  setShowEditModal,
+  resetForm,
+  setSelectedInvoice,
+}) => {
+  return (
+    <form onSubmit={onSubmit}>
+      {/* Row 1: Invoice No / Date / Invoice Type */}
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Invoice No. *</label>
+          <input
+            type="text"
+            name="invoiceNo"
+            value={formData.invoiceNo}
+            onChange={handleFormChange}
+            required
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Date *</label>
+          <input
+            type="date"
+            name="date"
+            value={formData.date}
+            onChange={handleFormChange}
+            required
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Invoice Type</label>
+          <select
+            name="invoiceType"
+            value={formData.invoiceType}
+            onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          >
+            {invoiceTypes.map((t) => (
+              <option key={t.id} value={t.name}>{t.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Row 2: Supplier / Address */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Supplier *</label>
+          <select
+            value={formData.supplierId}
+            onChange={(e) => handleSupplierChange(e.target.value)}
+            required
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          >
+            <option value="">Select Supplier</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>{s.accountName} — {s.place}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Address</label>
+          <input
+            type="text"
+            name="address"
+            value={formData.address}
+            onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Row 3: Transport fields */}
+      <div className="grid grid-cols-4 gap-4 mb-4">
+        {[
+          { label: "Credit Days", name: "creditDays", type: "number" },
+          { label: "Transport", name: "transport", type: "text" },
+          { label: "LR No.", name: "lrNo", type: "text" },
+          { label: "LR Date", name: "lrDate", type: "date" },
+        ].map(({ label, name, type }) => (
+          <div key={name}>
+            <label className="block text-sm font-medium text-gray-700">{label}</label>
+            <input
+              type={type}
+              name={name}
+              value={formData[name]}
+              onChange={handleFormChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Row 4: Vehicle / Removal Time / E-Bill */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Vehicle No.</label>
+          <input
+            type="text"
+            name="vehicleNo"
+            value={formData.vehicleNo}
+            onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Removal Time</label>
+          <input
+            type="text"
+            name="removalTime"
+            value={formData.removalTime}
+            onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">E-Bill No.</label>
+          <input
+            type="text"
+            name="eBill"
+            value={formData.eBill}
+            onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Row 5: Tax Values (CGST / SGST / IGST) */}
+      <div className="grid grid-cols-3 gap-4 mb-6 bg-yellow-50 border border-yellow-100 p-4 rounded-lg">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">CGST (%)</label>
+          <input
+            type="number"
+            step="0.01"
+            name="cgst"
+            value={formData.cgst}
+            onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">SGST (%)</label>
+          <input
+            type="number"
+            step="0.01"
+            name="sgst"
+            value={formData.sgst}
+            onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">IGST (%)</label>
+          <input
+            type="number"
+            step="0.01"
+            name="igst"
+            value={formData.igst}
+            onChange={handleFormChange}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Calculated Invoice Values */}
+      <div className="grid grid-cols-4 gap-3 mb-6 bg-blue-50 border border-blue-100 p-4 rounded-lg">
+        {[
+          { label: "Assessable Value", key: "assessableValue", highlight: "text-blue-700 font-semibold" },
+          { label: "Charity", key: "charity" },
+          { label: "VAT Tax", key: "vatTax" },
+          { label: "Cenvat", key: "cenvat" },
+          { label: "Duty", key: "duty" },
+          { label: "Cess", key: "cess" },
+          { label: "H.S. Cess", key: "hsCess" },
+          { label: "TCS", key: "tcs" },
+          { label: "PF / Other Charges", key: "pfCharges" },
+          { label: "CGST Amt (2.5%)", key: "cgstAmt", isCalculated: true },
+          { label: "SGST Amt (2.5%)", key: "sgstAmt", isCalculated: true },
+          { label: "Sub Total", key: "subTotal", highlight: "font-semibold" },
+          { label: "Round Off", key: "roundOff" },
+          { label: "Invoice Value", key: "invoiceValue", highlight: "text-green-700 font-bold text-lg" },
+          { label: "GST (CGST + SGST)", key: "gst", highlight: "text-purple-700 font-semibold" },
+          { label: "IGST", key: "igst" },
+        ].map(({ label, key, highlight, isCalculated }) => {
+          let displayValue = formData[key];
+          if (isCalculated) {
+            const assVal = parseFloat(formData.assessableValue) || 0;
+            displayValue = assVal * 0.025;
+          }
+          return (
+            <div key={key}>
+              <label className="block text-xs font-medium text-gray-500">{label}</label>
+              <div className={`text-base ${highlight || "text-gray-800"}`}>
+                ₹{formatNumber(displayValue)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Order Selection */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Select Sales Order</label>
+        <select
+          value={formData.salesOrderId}
+          onChange={(e) => handleOrderSelect(e.target.value)}
+          className="w-full md:w-96 border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          disabled={loadingOrders}
+        >
+          <option value="">Select an order…</option>
+          {salesOrders.map((o) => (
+            <option key={o.id} value={o.id}>{o.orderNo} — {o.party}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Order Detail Table */}
+      {selectedOrder && (
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold mb-2">Order Details</h3>
+          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {["Order No", "Product", "Pack", "Ord Qty", "Ord Kgs", "Stock Qty", "Stock Kgs", "Despatch Qty"].map((h) => (
+                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {selectedOrder.details?.map((d, i) => (
+                  <tr key={i}>
+                    <td className="px-4 py-2">{selectedOrder.orderNo}</td>
+                    <td className="px-4 py-2">{d.product}</td>
+                    <td className="px-4 py-2">BALE</td>
+                    <td className="px-4 py-2">{d.qty}</td>
+                    <td className="px-4 py-2">{d.totalWt}</td>
+                    <td className="px-4 py-2">{d.qty}</td>
+                    <td className="px-4 py-2">{d.totalWt}</td>
+                    <td className="px-4 py-2">{d.qty}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Available Bales */}
+      {availableBales.length > 0 && (
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold mb-2">Available Bales</h3>
+          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                    <input
+                      type="checkbox"
+                      checked={checkedBales.size === availableBales.length && availableBales.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setCheckedBales(new Set(availableBales.map((b) => b.id)));
+                        } else {
+                          setCheckedBales(new Set());
+                        }
+                      }}
+                    />
+                  </th>
+                  {["Bale No.", "Waste Name", "Lot No", "Gross Wt."].map((h) => (
+                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {availableBales.map((bale, i) => (
+                  <tr key={i}>
+                    <td className="px-4 py-2">
+                      <input
+                        type="checkbox"
+                        checked={checkedBales.has(bale.id)}
+                        onChange={() => handleBaleCheckbox(bale.id)}
+                      />
+                    </td>
+                    <td className="px-4 py-2">{bale.baleNo}</td>
+                    <td className="px-4 py-2">{bale.wasteName}</td>
+                    <td className="px-4 py-2">{bale.lotNo}</td>
+                    <td className="px-4 py-2">{formatNumber(bale.grossWt, 3)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {checkedBales.size > 0 && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={handleAddSelectedBales}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium text-sm"
+              >
+                Add Selected ({checkedBales.size})
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bale Details */}
+      {formData.details.length > 0 && (
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold mb-2">Bale Details</h3>
+          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {["Waste Name", "LOT No", "Bale No", "Gross Wt", "Tare Wt", "Net Wt", "Action"].map((h) => (
+                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {formData.details.map((bale, index) => (
+                  <tr key={index}>
+                    <td className="px-4 py-2">{bale.wasteName}</td>
+                    <td className="px-4 py-2">{bale.lotNo}</td>
+                    <td className="px-4 py-2">{bale.baleNo}</td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="number"
+                        value={bale.grossWt}
+                        step="0.001"
+                        onChange={(e) => handleDetailChange(index, "grossWt", e.target.value)}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        type="number"
+                        value={bale.tareWt}
+                        step="0.001"
+                        onChange={(e) => handleDetailChange(index, "tareWt", e.target.value)}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-2 font-medium">{formatNumber(bale.netWt, 3)}</td>
+                    <td className="px-4 py-2">
+                      <button
+                        type="button"
+                        onClick={() => removeBaleFromInvoice(index)}
+                        className="text-red-600 hover:text-red-800 text-xs font-medium"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-gray-50 font-semibold text-sm">
+                <tr>
+                  <td colSpan="3" className="px-4 py-2 text-right">Totals:</td>
+                  <td className="px-4 py-2">{formatNumber(totalGross, 3)}</td>
+                  <td className="px-4 py-2">{formatNumber(totalTare, 3)}</td>
+                  <td className="px-4 py-2">{formatNumber(totalNet, 3)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Rate Per Kg */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Rate Per Kg (₹)</label>
+        <input
+          type="number"
+          name="ratePerKg"
+          value={ratePerKg}
+          step="0.01"
+          onChange={handleFormChange}
+          className="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm"
+        />
+      </div>
+
+      {/* Footer actions */}
+      <div className="flex items-center space-x-4 mt-6 pt-4 border-t border-gray-200">
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            name="approve"
+            checked={formData.approve}
+            onChange={handleFormChange}
+            className="h-4 w-4 text-blue-600 rounded"
+          />
+          <span className="ml-2 text-sm text-gray-700">Approval</span>
+        </label>
+        <button
+          type="submit"
+          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+        >
+          {submitLabel}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setShowCreateModal(false);
+            setShowEditModal(false);
+            resetForm();
+            setSelectedInvoice(null);
+          }}
+          className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+});
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 const WasteCottonInvoicePage = () => {
   const [invoices, setInvoices] = useState([]);
@@ -209,7 +645,7 @@ const WasteCottonInvoicePage = () => {
   const [availableBales, setAvailableBales] = useState([]);
   const [checkedBales, setCheckedBales] = useState(new Set());
   const [selectedInvoiceType, setSelectedInvoiceType] = useState(null);
-  const [ratePerKg, setRatePerKg] = useState(119.6);
+  const [ratePerKg, setRatePerKg] = useState(null);
 
   const emptyForm = () => ({
     invoiceNo: "",
@@ -220,9 +656,9 @@ const WasteCottonInvoicePage = () => {
     address: "",
     creditDays: 0,
     transport: "OWN VEHICLE",
-    lrNo: "-",
+    lrNo: "",
     lrDate: new Date().toISOString().split("T")[0],
-    vehicleNo: "-",
+    vehicleNo: "",
     removalTime: "",
     eBill: "",
     exportTo: "",
@@ -377,8 +813,8 @@ const WasteCottonInvoicePage = () => {
     return s ? s.accountName : String(supplierId);
   };
 
-  const handleSupplierChange = (supplierId) => {
-    const s = getSupplierById(supplierId);
+  const handleSupplierChange = useCallback((supplierId) => {
+    const s = suppliers.find((sup) => String(sup.id) === String(supplierId));
     if (s) {
       setFormData((prev) => ({
         ...prev,
@@ -387,10 +823,10 @@ const WasteCottonInvoicePage = () => {
         address: s.address || s.place || "",
       }));
     }
-  };
+  }, [suppliers]);
 
   // ── Order / Bale helpers ──────────────────────────────────────────────────────
-  const handleOrderSelect = async (orderId) => {
+  const handleOrderSelect = useCallback(async (orderId) => {
     if (!orderId) {
       setSelectedOrder(null);
       setAvailableBales([]);
@@ -403,7 +839,17 @@ const WasteCottonInvoicePage = () => {
       const order = await salesOrderService.getById(orderId);
       setSelectedOrder(order);
 
-      if (order.supplierId) handleSupplierChange(order.supplierId);
+      if (order.supplierId) {
+        const s = suppliers.find((sup) => String(sup.id) === String(order.supplierId));
+        if (s) {
+          setFormData((prev) => ({
+            ...prev,
+            supplierId: order.supplierId,
+            partyName: s.accountName,
+            address: s.address || s.place || "",
+          }));
+        }
+      }
 
       setFormData((prev) => ({ ...prev, salesOrderId: orderId }));
 
@@ -439,106 +885,103 @@ const WasteCottonInvoicePage = () => {
           }
         }
         setAvailableBales(generatedBales);
-        setCheckedBales(new Set()); // Clear checkboxes when new order is selected
+
+        if (order.details[0]?.rate) {
+          setRatePerKg(parseFloat(order.details[0].rate));
+        }
+
+        setCheckedBales(new Set());
       }
     } catch {
       toast.error("Failed to load order details");
     }
-  };
+  }, [suppliers]);
 
-  const addBaleToInvoice = (bale) => {
-    if (formData.details.some((b) => b.baleNo === bale.baleNo)) {
-      toast.warning("This bale is already added");
-      return;
-    }
-    setFormData((prev) => ({ ...prev, details: [...prev.details, { ...bale }] }));
-    setAvailableBales((prev) => prev.filter((b) => b.baleNo !== bale.baleNo));
-    toast.success("Bale added to invoice");
-  };
+  const handleBaleCheckbox = useCallback((baleId) => {
+    setCheckedBales((prev) => {
+      const next = new Set(prev);
+      if (next.has(baleId)) {
+        next.delete(baleId);
+      } else {
+        next.add(baleId);
+      }
+      return next;
+    });
+  }, []);
 
-  // Handle checkbox change for bale selection
-  const handleBaleCheckbox = (baleId) => {
-    const newChecked = new Set(checkedBales);
-    if (newChecked.has(baleId)) {
-      newChecked.delete(baleId);
-    } else {
-      newChecked.add(baleId);
-    }
-    setCheckedBales(newChecked);
-  };
-
-  // Add all selected bales at once
-  const handleAddSelectedBales = () => {
+  const handleAddSelectedBales = useCallback(() => {
     if (checkedBales.size === 0) {
       toast.warning("Please select at least one bale");
       return;
     }
 
-    const selectedBalesArray = availableBales.filter((bale) =>
-      checkedBales.has(bale.id)
-    );
+    setFormData((prev) => {
+      const selectedBalesArray = availableBales.filter((bale) =>
+        checkedBales.has(bale.id)
+      );
+      const failedBales = [];
+      const updatedDetails = [...prev.details];
 
-    const updatedDetails = [...formData.details];
-    const failedBales = [];
-
-    for (const bale of selectedBalesArray) {
-      if (formData.details.some((b) => b.baleNo === bale.baleNo)) {
-        failedBales.push(bale.baleNo);
-      } else {
-        updatedDetails.push({ ...bale });
+      for (const bale of selectedBalesArray) {
+        if (prev.details.some((b) => b.baleNo === bale.baleNo)) {
+          failedBales.push(bale.baleNo);
+        } else {
+          updatedDetails.push({ ...bale });
+        }
       }
-    }
 
-    setFormData((prev) => ({ ...prev, details: updatedDetails }));
-    setAvailableBales((prev) =>
-      prev.filter((bale) => !checkedBales.has(bale.id))
-    );
-    setCheckedBales(new Set()); // Clear checkboxes after adding
+      if (failedBales.length > 0) {
+        toast.warning(`${failedBales.length} bale(s) already added: ${failedBales.join(", ")}`);
+      } else {
+        toast.success(`${selectedBalesArray.length} bale(s) added successfully`);
+      }
 
-    if (failedBales.length > 0) {
-      toast.warning(
-        `${failedBales.length} bale(s) already added: ${failedBales.join(", ")}`
-      );
-    } else {
-      toast.success(`${selectedBalesArray.length} bale(s) added successfully`);
-    }
-  };
+      return { ...prev, details: updatedDetails };
+    });
 
-  const removeBaleFromInvoice = (index) => {
-    const removed = formData.details[index];
-    const updated = formData.details.filter((_, i) => i !== index);
-    setFormData((prev) => ({ ...prev, details: updated }));
-    setAvailableBales((prev) => [...prev, removed]);
-    toast.info("Bale removed from invoice");
-  };
+    setAvailableBales((prev) => prev.filter((bale) => !checkedBales.has(bale.id)));
+    setCheckedBales(new Set());
+  }, [checkedBales, availableBales]);
 
-  const handleDetailChange = (index, field, value) => {
-    const updated = [...formData.details];
-    updated[index][field] = parseFloat(value) || 0;
-    if (field === "grossWt" || field === "tareWt") {
-      updated[index].netWt = parseFloat(
-        ((updated[index].grossWt || 0) - (updated[index].tareWt || 0)).toFixed(3)
-      );
-    }
-    setFormData((prev) => ({ ...prev, details: updated }));
-  };
+  const removeBaleFromInvoice = useCallback((index) => {
+    setFormData((prev) => {
+      const removed = prev.details[index];
+      const updated = prev.details.filter((_, i) => i !== index);
+      setAvailableBales((bales) => [...bales, removed]);
+      toast.info("Bale removed from invoice");
+      return { ...prev, details: updated };
+    });
+  }, []);
+
+  const handleDetailChange = useCallback((index, field, value) => {
+    setFormData((prev) => {
+      const updated = [...prev.details];
+      updated[index] = { ...updated[index], [field]: parseFloat(value) || 0 };
+      if (field === "grossWt" || field === "tareWt") {
+        updated[index].netWt = parseFloat(
+          ((updated[index].grossWt || 0) - (updated[index].tareWt || 0)).toFixed(3)
+        );
+      }
+      return { ...prev, details: updated };
+    });
+  }, []);
 
   // ── Form handlers ─────────────────────────────────────────────────────────────
-  const handleFormChange = (e) => {
+  const handleFormChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
     const newValue = type === "checkbox" ? checked : value;
-    
-    // Update formData
-    let updatedFormData = { ...formData, [name]: newValue };
-    
-    // If CGST or SGST changes, recalculate GST = CGST + SGST
-    if (name === "cgst" || name === "sgst") {
-      const cgst = parseFloat(name === "cgst" ? newValue : formData.cgst) || 0;
-      const sgst = parseFloat(name === "sgst" ? newValue : formData.sgst) || 0;
-      updatedFormData.gst = cgst + sgst;
-    }
-    
-    setFormData(updatedFormData);
+
+    setFormData((prev) => {
+      let updated = { ...prev, [name]: newValue };
+
+      if (name === "cgst" || name === "sgst") {
+        const cgst = parseFloat(name === "cgst" ? newValue : prev.cgst) || 0;
+        const sgst = parseFloat(name === "sgst" ? newValue : prev.sgst) || 0;
+        updated.gst = cgst + sgst;
+      }
+
+      return updated;
+    });
 
     if (name === "ratePerKg") setRatePerKg(parseFloat(value) || 0);
 
@@ -546,7 +989,7 @@ const WasteCottonInvoicePage = () => {
       const sel = invoiceTypes.find((t) => t.name === value);
       setSelectedInvoiceType(sel || null);
     }
-  };
+  }, [invoiceTypes]);
 
   const validateForm = () => {
     if (!formData.invoiceNo.trim()) { toast.error("Invoice No. is required"); return false; }
@@ -617,9 +1060,9 @@ const WasteCottonInvoicePage = () => {
       address: invoice.address || "",
       creditDays: invoice.creditDays || 0,
       transport: invoice.transport || "OWN VEHICLE",
-      lrNo: invoice.lrNo || "-",
+      lrNo: invoice.lrNo || "",
       lrDate: invoice.lrDate ? invoice.lrDate.split("T")[0] : new Date().toISOString().split("T")[0],
-      vehicleNo: invoice.vehicleNo || "-",
+      vehicleNo: invoice.vehicleNo || "",
       removalTime: invoice.removalTime || "",
       eBill: invoice.eBill || "",
       exportTo: invoice.exportTo || "",
@@ -652,15 +1095,15 @@ const WasteCottonInvoicePage = () => {
     setShowDeleteModal(true);
   };
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData(emptyForm());
     setSelectedOrder(null);
     setAvailableBales([]);
     setCheckedBales(new Set());
-    setRatePerKg(119.6);
+    setRatePerKg(null);
     const def = invoiceTypes.find((t) => t.name === "GST WASTE SALE INVOICE");
     setSelectedInvoiceType(def || null);
-  };
+  }, [invoiceTypes]);
 
   // ── JSON preview / download ───────────────────────────────────────────────────
   const handleShowJson = (invoice) => {
@@ -679,6 +1122,34 @@ const WasteCottonInvoicePage = () => {
   // ── Render helpers ────────────────────────────────────────────────────────────
   const { totalGross, totalTare, totalNet } = calculateTotals();
 
+  // Shared props for InvoiceForm
+  const sharedFormProps = {
+    formData,
+    handleFormChange,
+    suppliers,
+    invoiceTypes,
+    handleSupplierChange,
+    selectedOrder,
+    availableBales,
+    checkedBales,
+    setCheckedBales,
+    handleBaleCheckbox,
+    handleAddSelectedBales,
+    handleDetailChange,
+    removeBaleFromInvoice,
+    ratePerKg,
+    loadingOrders,
+    salesOrders,
+    handleOrderSelect,
+    totalGross,
+    totalTare,
+    totalNet,
+    setShowCreateModal,
+    setShowEditModal,
+    resetForm,
+    setSelectedInvoice,
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -686,327 +1157,6 @@ const WasteCottonInvoicePage = () => {
       </div>
     );
   }
-
-  // ─── Shared invoice form fields ──────────────────────────────────────────────
-  const InvoiceForm = ({ onSubmit, submitLabel }) => (
-    <form onSubmit={onSubmit}>
-      {/* Row 1: Invoice No / Date / Invoice Type */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Invoice No. *</label>
-          <input type="text" name="invoiceNo" value={formData.invoiceNo}
-            onChange={handleFormChange} required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Date *</label>
-          <input type="date" name="date" value={formData.date}
-            onChange={handleFormChange} required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Invoice Type</label>
-          <select name="invoiceType" value={formData.invoiceType} onChange={handleFormChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
-            {invoiceTypes.map((t) => (
-              <option key={t.id} value={t.name}>{t.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Row 2: Supplier / Address */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Supplier *</label>
-          <select value={formData.supplierId} onChange={(e) => handleSupplierChange(e.target.value)}
-            required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
-            <option value="">Select Supplier</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>{s.accountName} — {s.place}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Address</label>
-          <input type="text" name="address" value={formData.address} onChange={handleFormChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
-        </div>
-      </div>
-
-      {/* Row 3: Transport fields */}
-      <div className="grid grid-cols-4 gap-4 mb-4">
-        {[
-          { label: "Credit Days", name: "creditDays", type: "number" },
-          { label: "Transport", name: "transport", type: "text" },
-          { label: "LR No.", name: "lrNo", type: "text" },
-          { label: "LR Date", name: "lrDate", type: "date" },
-        ].map(({ label, name, type }) => (
-          <div key={name}>
-            <label className="block text-sm font-medium text-gray-700">{label}</label>
-            <input type={type} name={name} value={formData[name]} onChange={handleFormChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
-          </div>
-        ))}
-      </div>
-
-      {/* Row 4: Vehicle / Removal Time / E-Bill */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Vehicle No.</label>
-          <input type="text" name="vehicleNo" value={formData.vehicleNo} onChange={handleFormChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Removal Time</label>
-          <input type="text" name="removalTime" value={formData.removalTime} onChange={handleFormChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">E-Bill No.</label>
-          <input type="text" name="eBill" value={formData.eBill} onChange={handleFormChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
-        </div>
-      </div>
-
-      {/* Row 5: Tax Values (CGST / SGST / IGST) */}
-      <div className="grid grid-cols-3 gap-4 mb-6 bg-yellow-50 border border-yellow-100 p-4 rounded-lg">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">CGST (%)</label>
-          <input type="number" step="0.01" name="cgst" value={formData.cgst} onChange={handleFormChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">SGST (%)</label>
-          <input type="number" step="0.01" name="sgst" value={formData.sgst} onChange={handleFormChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">IGST (%)</label>
-          <input type="number" step="0.01" name="igst" value={formData.igst} onChange={handleFormChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" />
-        </div>
-      </div>
-
-      {/* Calculated Invoice Values */}
-      <div className="grid grid-cols-4 gap-3 mb-6 bg-blue-50 border border-blue-100 p-4 rounded-lg">
-        {[
-          { label: "Assessable Value", key: "assessableValue", highlight: "text-blue-700 font-semibold" },
-          { label: "Charity", key: "charity" },
-          { label: "VAT Tax", key: "vatTax" },
-          { label: "Cenvat", key: "cenvat" },
-          { label: "Duty", key: "duty" },
-          { label: "Cess", key: "cess" },
-          { label: "H.S. Cess", key: "hsCess" },
-          { label: "TCS", key: "tcs" },
-          { label: "PF / Other Charges", key: "pfCharges" },
-          { label: "CGST Amt (2.5%)", key: "cgstAmt", isCalculated: true },
-          { label: "SGST Amt (2.5%)", key: "sgstAmt", isCalculated: true },
-          { label: "Sub Total", key: "subTotal", highlight: "font-semibold" },
-          { label: "Round Off", key: "roundOff" },
-          { label: "Invoice Value", key: "invoiceValue", highlight: "text-green-700 font-bold text-lg" },
-          { label: "GST (CGST + SGST)", key: "gst", highlight: "text-purple-700 font-semibold" },
-          { label: "IGST", key: "igst" },
-        ].map(({ label, key, highlight, isCalculated }) => {
-          let displayValue = formData[key];
-          if (isCalculated) {
-            const assVal = parseFloat(formData.assessableValue) || 0;
-            displayValue = (assVal * 0.025);
-          }
-          return (
-            <div key={key}>
-              <label className="block text-xs font-medium text-gray-500">{label}</label>
-              <div className={`text-base ${highlight || "text-gray-800"}`}>
-                ₹{formatNumber(displayValue)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Order Selection */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Select Sales Order</label>
-        <select value={formData.salesOrderId} onChange={(e) => handleOrderSelect(e.target.value)}
-          className="w-full md:w-96 border border-gray-300 rounded-md shadow-sm p-2 text-sm"
-          disabled={loadingOrders}>
-          <option value="">Select an order…</option>
-          {salesOrders.map((o) => (
-            <option key={o.id} value={o.id}>{o.orderNo} — {o.party}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Order Detail Table */}
-      {selectedOrder && (
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold mb-2">Order Details</h3>
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>{["Order No", "Product", "Pack", "Ord Qty", "Ord Kgs", "Stock Qty", "Stock Kgs", "Despatch Qty"].map((h) => (
-                  <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500">{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {selectedOrder.details?.map((d, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-2">{selectedOrder.orderNo}</td>
-                    <td className="px-4 py-2">{d.product}</td>
-                    <td className="px-4 py-2">BALE</td>
-                    <td className="px-4 py-2">{d.qty}</td>
-                    <td className="px-4 py-2">{d.totalWt}</td>
-                    <td className="px-4 py-2">{d.qty}</td>
-                    <td className="px-4 py-2">{d.totalWt}</td>
-                    <td className="px-4 py-2">{d.qty}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Available Bales */}
-      {availableBales.length > 0 && (
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold mb-2">Available Bales</h3>
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                    <input
-                      type="checkbox"
-                      checked={checkedBales.size === availableBales.length && availableBales.length > 0}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setCheckedBales(new Set(availableBales.map((b) => b.id)));
-                        } else {
-                          setCheckedBales(new Set());
-                        }
-                      }}
-                    />
-                  </th>
-                  {["Bale No.", "Waste Name", "Lot No", "Gross Wt."].map((h) => (
-                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {availableBales.map((bale, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-2">
-                      <input
-                        type="checkbox"
-                        checked={checkedBales.has(bale.id)}
-                        onChange={() => handleBaleCheckbox(bale.id)}
-                      />
-                    </td>
-                    <td className="px-4 py-2">{bale.baleNo}</td>
-                    <td className="px-4 py-2">{bale.wasteName}</td>
-                    <td className="px-4 py-2">{bale.lotNo}</td>
-                    <td className="px-4 py-2">{formatNumber(bale.grossWt, 3)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {checkedBales.size > 0 && (
-            <div className="mt-3">
-              <button
-                type="button"
-                onClick={handleAddSelectedBales}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium text-sm"
-              >
-                Add Selected {checkedBales.size > 0 && `(${checkedBales.size})`}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Bale Details */}
-      {formData.details.length > 0 && (
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold mb-2">Bale Details</h3>
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>{["Waste Name", "LOT No", "Bale No", "Gross Wt", "Tare Wt", "Net Wt", "Action"].map((h) => (
-                  <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500">{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {formData.details.map((bale, index) => (
-                  <tr key={index}>
-                    <td className="px-4 py-2">{bale.wasteName}</td>
-                    <td className="px-4 py-2">{bale.lotNo}</td>
-                    <td className="px-4 py-2">{bale.baleNo}</td>
-                    <td className="px-4 py-2">
-                      <input type="number" value={bale.grossWt} step="0.001"
-                        onChange={(e) => handleDetailChange(index, "grossWt", e.target.value)}
-                        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm" />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input type="number" value={bale.tareWt} step="0.001"
-                        onChange={(e) => handleDetailChange(index, "tareWt", e.target.value)}
-                        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm" />
-                    </td>
-                    <td className="px-4 py-2 font-medium">{formatNumber(bale.netWt, 3)}</td>
-                    <td className="px-4 py-2">
-                      <button type="button" onClick={() => removeBaleFromInvoice(index)}
-                        className="text-red-600 hover:text-red-800 text-xs font-medium">Remove</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-gray-50 font-semibold text-sm">
-                <tr>
-                  <td colSpan="3" className="px-4 py-2 text-right">Totals:</td>
-                  <td className="px-4 py-2">{formatNumber(totalGross, 3)}</td>
-                  <td className="px-4 py-2">{formatNumber(totalTare, 3)}</td>
-                  <td className="px-4 py-2">{formatNumber(totalNet, 3)}</td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Rate Per Kg */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Rate Per Kg (₹)</label>
-        <input type="number" name="ratePerKg" value={ratePerKg} step="0.01"
-          onChange={handleFormChange}
-          className="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm" />
-      </div>
-
-      {/* Footer actions */}
-      <div className="flex items-center space-x-4 mt-6 pt-4 border-t border-gray-200">
-        <label className="flex items-center">
-          <input type="checkbox" name="approve" checked={formData.approve}
-            onChange={handleFormChange} className="h-4 w-4 text-blue-600 rounded" />
-          <span className="ml-2 text-sm text-gray-700">Approval</span>
-        </label>
-        <button type="submit"
-          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
-          {submitLabel}
-        </button>
-        <button type="button"
-          onClick={() => {
-            setShowCreateModal(false);
-            setShowEditModal(false);
-            resetForm();
-            setSelectedInvoice(null);
-          }}
-          className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm">
-          Cancel
-        </button>
-      </div>
-    </form>
-  );
 
   // ─── JSX ─────────────────────────────────────────────────────────────────────
   return (
@@ -1019,8 +1169,10 @@ const WasteCottonInvoicePage = () => {
           <h1 className="text-2xl font-bold text-gray-800">Waste Cotton Sales Invoice</h1>
           <p className="text-gray-500 text-sm">Add, modify or export cotton invoice details.</p>
         </div>
-        <button onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+        >
           + Create New Invoice
         </button>
       </div>
@@ -1067,7 +1219,6 @@ const WasteCottonInvoicePage = () => {
                           className="text-green-600 hover:text-green-800 text-xs font-medium">Edit</button>
                         <button onClick={() => confirmDelete(inv)}
                           className="text-red-600 hover:text-red-800 text-xs font-medium">Delete</button>
-                        {/* Single JSON download button per row */}
                         <button
                           onClick={() => handleDownloadJson(inv)}
                           className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded text-xs font-medium"
@@ -1090,14 +1241,20 @@ const WasteCottonInvoicePage = () => {
           <div className="relative top-10 mx-auto p-6 border w-full max-w-6xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-800">Create Waste Cotton Sales Invoice</h2>
-              <button onClick={() => { setShowCreateModal(false); resetForm(); }}
-                className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => { setShowCreateModal(false); resetForm(); }}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <InvoiceForm onSubmit={handleCreateInvoice} submitLabel="Create Invoice" />
+            <InvoiceForm
+              {...sharedFormProps}
+              onSubmit={handleCreateInvoice}
+              submitLabel="Create Invoice"
+            />
           </div>
         </div>
       )}
@@ -1108,14 +1265,20 @@ const WasteCottonInvoicePage = () => {
           <div className="relative top-10 mx-auto p-6 border w-full max-w-6xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-800">Edit Waste Cotton Sales Invoice</h2>
-              <button onClick={() => { setShowEditModal(false); resetForm(); setSelectedInvoice(null); }}
-                className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => { setShowEditModal(false); resetForm(); setSelectedInvoice(null); }}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <InvoiceForm onSubmit={handleUpdateInvoice} submitLabel="Update Invoice" />
+            <InvoiceForm
+              {...sharedFormProps}
+              onSubmit={handleUpdateInvoice}
+              submitLabel="Update Invoice"
+            />
           </div>
         </div>
       )}
@@ -1127,12 +1290,16 @@ const WasteCottonInvoicePage = () => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">Invoice — {selectedInvoice.invoiceNo}</h2>
               <div className="flex gap-2">
-                <button onClick={() => handleDownloadJson(selectedInvoice)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-medium">
+                <button
+                  onClick={() => handleDownloadJson(selectedInvoice)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-medium"
+                >
                   ↓ Download JSON
                 </button>
-                <button onClick={() => { setShowViewModal(false); setSelectedInvoice(null); }}
-                  className="text-gray-400 hover:text-gray-600 ml-2">
+                <button
+                  onClick={() => { setShowViewModal(false); setSelectedInvoice(null); }}
+                  className="text-gray-400 hover:text-gray-600 ml-2"
+                >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -1177,8 +1344,8 @@ const WasteCottonInvoicePage = () => {
                   { label: "H.S. Cess", key: "hsCess" },
                   { label: "TCS", key: "tcs" },
                   { label: "PF / Other Charges", key: "pfCharges" },
-                  { label: "CGST Amt (2.5%)", key: "cgstAmt", cls: "", isCalculated: true },
-                  { label: "SGST Amt (2.5%)", key: "sgstAmt", cls: "", isCalculated: true },
+                  { label: "CGST Amt (2.5%)", key: "cgstAmt", isCalculated: true },
+                  { label: "SGST Amt (2.5%)", key: "sgstAmt", isCalculated: true },
                   { label: "Sub Total", key: "subTotal", cls: "font-semibold" },
                   { label: "Round Off", key: "roundOff" },
                   { label: "Invoice Value", key: "invoiceValue", cls: "text-green-700 font-bold text-base" },
@@ -1188,7 +1355,7 @@ const WasteCottonInvoicePage = () => {
                   let displayValue = selectedInvoice[key];
                   if (isCalculated) {
                     const assVal = parseFloat(selectedInvoice.assessableValue) || 0;
-                    displayValue = (assVal * 0.025);
+                    displayValue = assVal * 0.025;
                   }
                   return (
                     <div key={key}>
@@ -1208,9 +1375,11 @@ const WasteCottonInvoicePage = () => {
               <div className="overflow-x-auto border border-gray-200 rounded-lg">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
-                    <tr>{["Waste Name", "Lot No", "Bale No", "Gross Wt", "Tare Wt", "Net Wt"].map((h) => (
-                      <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500">{h}</th>
-                    ))}</tr>
+                    <tr>
+                      {["Waste Name", "Lot No", "Bale No", "Gross Wt", "Tare Wt", "Net Wt"].map((h) => (
+                        <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500">{h}</th>
+                      ))}
+                    </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {selectedInvoice.details?.map((bale, i) => (
@@ -1229,8 +1398,10 @@ const WasteCottonInvoicePage = () => {
             </div>
 
             <div className="flex justify-end mt-4">
-              <button onClick={() => { setShowViewModal(false); setSelectedInvoice(null); }}
-                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm">
+              <button
+                onClick={() => { setShowViewModal(false); setSelectedInvoice(null); }}
+                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+              >
                 Close
               </button>
             </div>
@@ -1255,18 +1426,20 @@ const WasteCottonInvoicePage = () => {
                     navigator.clipboard.writeText(JSON.stringify(jsonPreviewData.json, null, 2));
                     toast.success("JSON copied to clipboard!");
                   }}
-                  className="px-3 py-1.5 bg-gray-100 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-200 text-xs font-medium">
+                  className="px-3 py-1.5 bg-gray-100 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-200 text-xs font-medium"
+                >
                   Copy
                 </button>
                 <button
-                  onClick={() => {
-                    handleDownloadJson(jsonPreviewData.invoice);
-                  }}
-                  className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-medium">
+                  onClick={() => handleDownloadJson(jsonPreviewData.invoice)}
+                  className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-medium"
+                >
                   ↓ Download
                 </button>
-                <button onClick={() => { setShowJsonPreviewModal(false); setJsonPreviewData(null); }}
-                  className="text-gray-400 hover:text-gray-600 ml-1">
+                <button
+                  onClick={() => { setShowJsonPreviewModal(false); setJsonPreviewData(null); }}
+                  className="text-gray-400 hover:text-gray-600 ml-1"
+                >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -1274,7 +1447,6 @@ const WasteCottonInvoicePage = () => {
               </div>
             </div>
 
-            {/* Structured JSON sections */}
             {(() => {
               const j = jsonPreviewData.json[0];
               const Section = ({ title, color, children }) => (
@@ -1298,7 +1470,6 @@ const WasteCottonInvoicePage = () => {
 
               return (
                 <>
-                  {/* Version + TranDtls */}
                   <Section title="Version & Transaction Details (TranDtls)" color="gray">
                     <Row label="Version" value={j.Version} />
                     <Row label="TaxSch" value={j.TranDtls.TaxSch} />
@@ -1308,36 +1479,30 @@ const WasteCottonInvoicePage = () => {
                     <Row label="EcmGstin" value={j.TranDtls.EcmGstin} />
                   </Section>
 
-                  {/* DocDtls */}
                   <Section title="Document Details (DocDtls)" color="blue">
                     <Row label="Typ" value={j.DocDtls.Typ} />
                     <Row label="No" value={j.DocDtls.No} />
                     <Row label="Dt" value={j.DocDtls.Dt} />
                   </Section>
 
-                  {/* SellerDtls */}
                   <Section title="Seller Details (SellerDtls) — Fixed" color="teal">
                     {Object.entries(j.SellerDtls).map(([k, v]) => <Row key={k} label={k} value={v} />)}
                   </Section>
 
-                  {/* BuyerDtls */}
                   <Section title="Buyer Details (BuyerDtls)" color="purple">
                     {Object.entries(j.BuyerDtls).map(([k, v]) => <Row key={k} label={k} value={v} />)}
                   </Section>
 
-                  {/* ValDtls */}
                   <Section title="Value Details (ValDtls)" color="amber">
                     {Object.entries(j.ValDtls).map(([k, v]) => <Row key={k} label={k} value={v} />)}
                   </Section>
 
-                  {/* Itemlist */}
                   <Section title="Item List (Itemlist[0]) — Grouped" color="green">
                     {Object.entries(j.Itemlist[0])
                       .filter(([k]) => k !== "BchDtls")
                       .map(([k, v]) => <Row key={k} label={k} value={v} />)}
                   </Section>
 
-                  {/* Raw JSON */}
                   <div className="mb-4">
                     <div className="px-4 py-2 text-xs font-semibold bg-gray-800 text-gray-200 rounded-t-lg">
                       Raw JSON
@@ -1351,8 +1516,10 @@ const WasteCottonInvoicePage = () => {
             })()}
 
             <div className="flex justify-end pt-2 border-t">
-              <button onClick={() => { setShowJsonPreviewModal(false); setJsonPreviewData(null); }}
-                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm">
+              <button
+                onClick={() => { setShowJsonPreviewModal(false); setJsonPreviewData(null); }}
+                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+              >
                 Close
               </button>
             </div>
@@ -1377,12 +1544,16 @@ const WasteCottonInvoicePage = () => {
               </p>
               <p className="text-xs text-red-600 mt-2">This action cannot be undone.</p>
               <div className="mt-6 flex justify-center space-x-4">
-                <button onClick={() => { setShowDeleteModal(false); setInvoiceToDelete(null); }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm">
+                <button
+                  onClick={() => { setShowDeleteModal(false); setInvoiceToDelete(null); }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm"
+                >
                   Cancel
                 </button>
-                <button onClick={() => handleDelete(invoiceToDelete.id)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm">
+                <button
+                  onClick={() => handleDelete(invoiceToDelete.id)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
+                >
                   Delete
                 </button>
               </div>

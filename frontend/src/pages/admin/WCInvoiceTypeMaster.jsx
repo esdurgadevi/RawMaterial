@@ -564,9 +564,10 @@ const WCInvoiceTypeMaster = () => {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl my-8">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl lg:max-w-5xl max-h-[100vh] flex flex-col my-8">
+            {/* Sticky Header */}
+            <div className="sticky top-0 bg-white z-10 p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold text-gray-800">
                   {editingInvoice ? 'Edit Invoice Type' : 'Create New Invoice Type'}
                 </h3>
@@ -575,13 +576,16 @@ const WCInvoiceTypeMaster = () => {
                     setShowModal(false);
                     resetForm();
                   }}
-                  className="text-gray-400 hover:text-gray-500"
+                  className="text-gray-400 hover:text-gray-500 text-2xl leading-none"
                 >
                   ✕
                 </button>
               </div>
+            </div>
 
-              <form onSubmit={handleSubmit}>
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1">
+              <form onSubmit={handleSubmit} className="p-6">
                 {/* Header Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
                   <div>
@@ -647,7 +651,7 @@ const WCInvoiceTypeMaster = () => {
                   </div>
                 </div>
 
-                {/* Details Table - Shows all fields from the right panel */}
+                {/* Details Table */}
                 <div className="mb-8">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">Invoice Details</h4>
                   <p className="text-sm text-gray-600 mb-2">All fields from the right panel - each row represents one field</p>
@@ -758,11 +762,12 @@ const WCInvoiceTypeMaster = () => {
         </div>
       )}
 
+
       {/* View Modal */}
       {showViewModal && viewingInvoice && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl my-8">
-            <div className="p-6">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl lg:max-w-5xl my-8 max-h-[90vh] flex flex-col">
+            <div className="sticky top-0 bg-white z-10 p-6 border-b border-gray-200">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-800">Invoice Type Details</h3>
                 <button

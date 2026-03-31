@@ -174,37 +174,44 @@ const InwardLotPage = () => {
       const tarePerQty = parseFloat(selectedInward.tarePerQty) || 0;
       const freightPerQty = parseFloat(selectedInward.freightPerQty) || 0;
       
-      // Calculate weights
-      const grossWeight = grossPerQty * qty;
-      const tareWeight = tarePerQty * qty;
+      // Calculate weights with rounding for gross and tare
+      const grossWeight = Math.floor(grossPerQty * qty);
+      const tareWeight = Math.floor(tarePerQty * qty);
       const nettWeight = grossWeight - tareWeight;
       const freight = freightPerQty * qty;
-      
-      // Get tax values
+
+      // Get base candy rate
       const baseCandyRate = parseFloat(selectedInward.candyRate) || 0;
-      const igst = parseFloat(selectedInward.igst) || 0;
-      const sgst = parseFloat(selectedInward.sgst) || 0;
-      const cgst = parseFloat(selectedInward.cgst) || 0;
       
-      // Calculate candy rate with tax (using the applicable tax)
-      const applicableTax = igst || (sgst + cgst) || 0;
-      const candyRateWithTax = baseCandyRate + (baseCandyRate * applicableTax / 100);
+      // NEW CALCULATION METHOD: Freight-based adjustment
+      // Step 1: Calculate freight per KG
+      const freightPerKg = nettWeight > 0 ? freight / nettWeight : 0;
       
-      // Calculate rates
-      const ratePerKg = candyRateWithTax / 355.62;
+      // Step 2: Calculate freight adjustment in candy rate terms
+      const freightAdjustment = freightPerKg * 355.62;
+      
+      // Step 3: Adjusted candy rate = base rate + freight adjustment
+      const candyRateWithTax = Math.floor(baseCandyRate + freightAdjustment);
+      
+      // Step 4: Calculate rates
+      let ratePerKg = candyRateWithTax / 355.62;
+      // Round ratePerKg to 2 decimals
+      ratePerKg = Math.round(ratePerKg * 100) / 100;
       const quintalRate = ratePerKg * 100;
-      const assessValue = nettWeight * ratePerKg;
+      
+      // Step 5: Assess Value = Rate/Kg × Net Weight
+      let assessValue = nettWeight * ratePerKg;
       
       setFormData(prev => ({
         ...prev,
-        grossWeight: grossWeight.toFixed(3),
-        tareWeight: tareWeight.toFixed(3),
-        nettWeight: nettWeight.toFixed(3),
+        grossWeight: grossWeight.toString(),
+        tareWeight: tareWeight.toString(),
+        nettWeight: nettWeight.toString(),
         freight: freight.toFixed(2),
-        candyRateWithTax: candyRateWithTax.toFixed(2),
+        candyRateWithTax: Math.round(candyRateWithTax).toString(),
         ratePerKg: ratePerKg.toFixed(2),
         quintalRate: quintalRate.toFixed(2),
-        assessValue: assessValue.toFixed(2)
+        assessValue: Math.round(assessValue).toString()
       }));
     }
   }, [formData.qty, selectedInward]);
@@ -683,254 +690,254 @@ const InwardLotPage = () => {
     }
   };
 
- // Handle edit
-const handleEdit = async (id) => {
-  try {
-    setError(''); // Clear any previous errors
+  // Handle edit
+  const handleEdit = async (id) => {
+    try {
+      setError(''); // Clear any previous errors
+      
+      console.log('Editing lot with ID:', id);
+      
+      // First, get the lot details
+      const lotResponse = await inwardLotService.getById(id);
+      console.log('Lot response:', lotResponse);
+      
+      // Check if response has data property or is direct
+      const lot = lotResponse.data || lotResponse;
+      
+      if (!lot || !lot.id) {
+        setError('Invalid lot data received');
+        return;
+      }
+      
+      setSelectedLot(lot); // Set selectedLot FIRST
+      
+      let godown = null; // DECLARE GODOWN HERE
+      
+      try {
+        // Find the inward entry
+        if (lot.inwardId) {
+          console.log('Fetching inward entry with ID:', lot.inwardId);
+          const inwardResponse = await inwardEntryService.getById(lot.inwardId);
+          const inwardData = inwardResponse.inwardEntry || inwardResponse;
+          setSelectedInward(inwardData);
+          setInwardSearch(inwardData.inwardNo || '');
+        } else {
+          console.log('No inwardId found in lot data');
+          setSelectedInward(null);
+          setInwardSearch('');
+        }
+      } catch (inwardErr) {
+        console.error('Error fetching inward entry:', inwardErr);
+        setSelectedInward(null);
+      }
+      
+      try {
+        // Find the godown
+        const godownResponse = await godownService.getAll();
+        const godownsData = Array.isArray(godownResponse) ? godownResponse : [];
+        godown = godownsData.find(g => g.id === lot.godownId);
+        setSelectedGodown(godown);
+        setGodownSearch(godown?.godownName || '');
+      } catch (godownErr) {
+        console.error('Error fetching godowns:', godownErr);
+        setSelectedGodown(null);
+      }
+      
+      // Populate form with lot data
+      setFormData({
+        // Header
+        inwardId: lot.inwardId || '',
+        inwardNo: lot.inwardNo || '',
+        lotNo: lot.lotNo || '',
+        lotDate: lot.lotDate ? lot.lotDate.split('T')[0] : new Date().toISOString().split('T')[0],
+        
+        // Purchase details
+        supplier: lot.supplier || '',
+        broker: lot.broker || '',
+        variety: lot.variety || '',
+        mixingGroup: lot.mixingGroup || '',
+        station: lot.station || '',
+        companyBroker: lot.companyBroker || '',
+        rateType: lot.rateType || '',
+        
+        // Party details
+        billNo: lot.billNo || '',
+        billDate: lot.billDate || '',
+        lotNoParty: lot.inwardLotNo || '',
+        lorryNo: lot.lorryNo || '',
+        date: lot.inwardDate || '',
+        candyRate: lot.inwardCandyRate || '',
+        pMark: lot.pMark || '',
+        pressRunningNo: lot.pressRunningNo || '',
+        commisType: lot.commisType || '',
+        commisValue: lot.commisValue || '',
+        permitNo: lot.permitNo || '',
+        comm: lot.comm || '',
+        cooly: lot.cooly || '',
+        bale: lot.bale || '',
+        
+        // Tax details
+        gst: lot.gst || '',
+        sgst: lot.sgst || '',
+        cgst: lot.cgst || '',
+        igst: lot.igst || '',
+        sgstAmount: lot.sgstAmount || '',
+        cgstAmount: lot.cgstAmount || '',
+        igstAmount: lot.igstAmount || '',
+        Tax: lot.Tax || '',
+        TaxRs: lot.TaxRs || '',
+        
+        // Per Qty values
+        grossPerQty: lot.grossWeight && lot.qty ? (parseFloat(lot.grossWeight) / lot.qty).toFixed(3) : '',
+        tarePerQty: lot.tareWeight && lot.qty ? (parseFloat(lot.tareWeight) / lot.qty).toFixed(3) : '',
+        freightPerQty: lot.freight && lot.qty ? (parseFloat(lot.freight) / lot.qty).toFixed(2) : '',
+        
+        // User inputs
+        godownId: lot.godownId || '',
+        godownName: godown?.godownName || '',
+        qty: lot.qty || '',
+        paymentDays: lot.paymentDays || '',
+        lcNo: lot.lcNo || '',
+        setNo: lot.setNo || '',
+        cess: lot.cess || '0',
+        type: lot.type || '',
+        
+        // Calculated fields
+        grossWeight: lot.grossWeight || '',
+        tareWeight: lot.tareWeight || '',
+        nettWeight: lot.nettWeight || '',
+        freight: lot.freight || '0',
+        candyRateWithTax: lot.candyRate || '',
+        ratePerKg: lot.ratePerKg || '',
+        quintalRate: lot.quintalRate || '',
+        assessValue: lot.assessValue || ''
+      });
+      
+      // Set weightments
+      if (lot.weightments && lot.weightments.length > 0) {
+        const formattedWeightments = lot.weightments.map((w, index) => ({
+          id: w.id || index + 1,
+          slNo: index + 1,
+          baleNo: w.baleNo,
+          grossWeight: w.grossWeight,
+          tareWeight: w.tareWeight,
+          baleWeight: w.baleWeight,
+          baleValue: w.baleValue,
+          isEdited: false
+        }));
+        
+        setWeightments(formattedWeightments);
+        
+        // Calculate totals
+        const totals = formattedWeightments.reduce(
+          (acc, w) => {
+            acc.grossWeight += parseFloat(w.grossWeight) || 0;
+            acc.tareWeight += parseFloat(w.tareWeight) || 0;
+            acc.baleWeight += parseFloat(w.baleWeight) || 0;
+            acc.baleValue += parseFloat(w.baleValue) || 0;
+            return acc;
+          },
+          { grossWeight: 0, tareWeight: 0, baleWeight: 0, baleValue: 0 }
+        );
+        
+        setWeightmentTotals(totals);
+      }
+      
+      // Open the edit modal
+      setShowEditModal(true);
+      
+    } catch (error) {
+      console.error('Error loading lot for edit:', error);
+      setError('Failed to load lot details for editing');
+    }
+  };
+
+  // Handle update submit
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
     
-    console.log('Editing lot with ID:', id);
+    console.log('Selected lot in update:', selectedLot);
+    console.log('Selected lot ID:', selectedLot?.id);
     
-    // First, get the lot details
-    const lotResponse = await inwardLotService.getById(id);
-    console.log('Lot response:', lotResponse);
-    
-    // Check if response has data property or is direct
-    const lot = lotResponse.data || lotResponse;
-    
-    if (!lot || !lot.id) {
-      setError('Invalid lot data received');
+    if (!selectedLot) {
+      setError('No lot selected for update');
+      return;
+    }
+
+    if (!selectedLot.id) {
+      setError('Invalid lot data: missing ID');
+      return;
+    }
+
+    if (weightments.length === 0) {
+      setError('Please add weightments first');
+      return;
+    }
+
+    // Validate weightments
+    if (!validateWeightments()) {
       return;
     }
     
-    setSelectedLot(lot); // Set selectedLot FIRST
-    
-    let godown = null; // DECLARE GODOWN HERE
-    
+    setSubmitting(true);
     try {
-      // Find the inward entry
-      if (lot.inwardId) {
-        console.log('Fetching inward entry with ID:', lot.inwardId);
-        const inwardResponse = await inwardEntryService.getById(lot.inwardId);
-        const inwardData = inwardResponse.inwardEntry || inwardResponse;
-        setSelectedInward(inwardData);
-        setInwardSearch(inwardData.inwardNo || '');
-      } else {
-        console.log('No inwardId found in lot data');
-        setSelectedInward(null);
-        setInwardSearch('');
-      }
-    } catch (inwardErr) {
-      console.error('Error fetching inward entry:', inwardErr);
-      setSelectedInward(null);
-    }
-    
-    try {
-      // Find the godown
-      const godownResponse = await godownService.getAll();
-      const godownsData = Array.isArray(godownResponse) ? godownResponse : [];
-      godown = godownsData.find(g => g.id === lot.godownId);
-      setSelectedGodown(godown);
-      setGodownSearch(godown?.godownName || '');
-    } catch (godownErr) {
-      console.error('Error fetching godowns:', godownErr);
-      setSelectedGodown(null);
-    }
-    
-    // Populate form with lot data
-    setFormData({
-      // Header
-      inwardId: lot.inwardId || '',
-      inwardNo: lot.inwardNo || '',
-      lotNo: lot.lotNo || '',
-      lotDate: lot.lotDate ? lot.lotDate.split('T')[0] : new Date().toISOString().split('T')[0],
-      
-      // Purchase details
-      supplier: lot.supplier || '',
-      broker: lot.broker || '',
-      variety: lot.variety || '',
-      mixingGroup: lot.mixingGroup || '',
-      station: lot.station || '',
-      companyBroker: lot.companyBroker || '',
-      rateType: lot.rateType || '',
-      
-      // Party details
-      billNo: lot.billNo || '',
-      billDate: lot.billDate || '',
-      lotNoParty: lot.inwardLotNo || '',
-      lorryNo: lot.lorryNo || '',
-      date: lot.inwardDate || '',
-      candyRate: lot.inwardCandyRate || '',
-      pMark: lot.pMark || '',
-      pressRunningNo: lot.pressRunningNo || '',
-      commisType: lot.commisType || '',
-      commisValue: lot.commisValue || '',
-      permitNo: lot.permitNo || '',
-      comm: lot.comm || '',
-      cooly: lot.cooly || '',
-      bale: lot.bale || '',
-      
-      // Tax details
-      gst: lot.gst || '',
-      sgst: lot.sgst || '',
-      cgst: lot.cgst || '',
-      igst: lot.igst || '',
-      sgstAmount: lot.sgstAmount || '',
-      cgstAmount: lot.cgstAmount || '',
-      igstAmount: lot.igstAmount || '',
-      Tax: lot.Tax || '',
-      TaxRs: lot.TaxRs || '',
-      
-      // Per Qty values
-      grossPerQty: lot.grossWeight && lot.qty ? (parseFloat(lot.grossWeight) / lot.qty).toFixed(3) : '',
-      tarePerQty: lot.tareWeight && lot.qty ? (parseFloat(lot.tareWeight) / lot.qty).toFixed(3) : '',
-      freightPerQty: lot.freight && lot.qty ? (parseFloat(lot.freight) / lot.qty).toFixed(2) : '',
-      
-      // User inputs
-      godownId: lot.godownId || '',
-      godownName: godown?.godownName || '',
-      qty: lot.qty || '',
-      paymentDays: lot.paymentDays || '',
-      lcNo: lot.lcNo || '',
-      setNo: lot.setNo || '',
-      cess: lot.cess || '0',
-      type: lot.type || '',
-      
-      // Calculated fields
-      grossWeight: lot.grossWeight || '',
-      tareWeight: lot.tareWeight || '',
-      nettWeight: lot.nettWeight || '',
-      freight: lot.freight || '0',
-      candyRateWithTax: lot.candyRate || '',
-      ratePerKg: lot.ratePerKg || '',
-      quintalRate: lot.quintalRate || '',
-      assessValue: lot.assessValue || ''
-    });
-    
-    // Set weightments
-    if (lot.weightments && lot.weightments.length > 0) {
-      const formattedWeightments = lot.weightments.map((w, index) => ({
-        id: w.id || index + 1,
-        slNo: index + 1,
+      // Prepare lot header
+      const lotHeader = {
+        inwardId: selectedInward?.id || selectedLot.inwardId,
+        lotNo: formData.lotNo,
+        lotDate: formData.lotDate,
+        qty: parseInt(formData.qty) || 0,
+        freight: parseFloat(formData.freight) || 0,
+        grossWeight: parseFloat(formData.grossWeight) || 0,
+        tareWeight: parseFloat(formData.tareWeight) || 0,
+        nettWeight: parseFloat(formData.nettWeight) || 0,
+        candyRate: parseFloat(formData.candyRateWithTax) || 0,
+        quintalRate: parseFloat(formData.quintalRate) || 0,
+        ratePerKg: parseFloat(formData.ratePerKg) || 0,
+        assessValue: parseFloat(formData.assessValue) || 0,
+        godownId: parseInt(formData.godownId),
+        lcNo: formData.lcNo || null,
+        paymentDays: formData.paymentDays ? parseInt(formData.paymentDays) : null,
+        paymentDate: formData.paymentDate || null,
+        setNo: formData.setNo || null,
+        cess: parseFloat(formData.cess) || 0,
+        type: formData.type || null
+      };
+
+      // Prepare weightments
+      const weightmentsData = weightments.map(w => ({
+        id: w.id, // Include ID if it exists (for updating existing weightments)
         baleNo: w.baleNo,
-        grossWeight: w.grossWeight,
-        tareWeight: w.tareWeight,
-        baleWeight: w.baleWeight,
-        baleValue: w.baleValue,
-        isEdited: false
+        grossWeight: parseFloat(w.grossWeight) || 0,
+        tareWeight: parseFloat(w.tareWeight) || 0,
+        baleWeight: parseFloat(w.baleWeight) || 0,
+        baleValue: parseFloat(w.baleValue) || 0,
       }));
       
-      setWeightments(formattedWeightments);
+      console.log('Updating lot with ID:', selectedLot.id);
+      console.log('Lot header:', lotHeader);
+      console.log('Weightments:', weightmentsData);
       
-      // Calculate totals
-      const totals = formattedWeightments.reduce(
-        (acc, w) => {
-          acc.grossWeight += parseFloat(w.grossWeight) || 0;
-          acc.tareWeight += parseFloat(w.tareWeight) || 0;
-          acc.baleWeight += parseFloat(w.baleWeight) || 0;
-          acc.baleValue += parseFloat(w.baleValue) || 0;
-          return acc;
-        },
-        { grossWeight: 0, tareWeight: 0, baleWeight: 0, baleValue: 0 }
-      );
+      // Update lot with weightments
+      await inwardLotService.update(selectedLot.id, lotHeader, weightmentsData);
       
-      setWeightmentTotals(totals);
+      setSuccess('Lot updated successfully!');
+      
+      // Reset and close
+      setTimeout(() => {
+        setShowEditModal(false);
+        fetchLots();
+        resetForm();
+      }, 2000);
+      
+    } catch (err) {
+      console.error('Error updating lot:', err);
+      setError(err.response?.data?.message || 'Failed to update lot');
+    } finally {
+      setSubmitting(false);
     }
-    
-    // Open the edit modal
-    setShowEditModal(true);
-    
-  } catch (error) {
-    console.error('Error loading lot for edit:', error);
-    setError('Failed to load lot details for editing');
-  }
-};
-
-// Handle update submit
-const handleUpdateSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
-  
-  console.log('Selected lot in update:', selectedLot);
-  console.log('Selected lot ID:', selectedLot?.id);
-  
-  if (!selectedLot) {
-    setError('No lot selected for update');
-    return;
-  }
-
-  if (!selectedLot.id) {
-    setError('Invalid lot data: missing ID');
-    return;
-  }
-
-  if (weightments.length === 0) {
-    setError('Please add weightments first');
-    return;
-  }
-
-  // Validate weightments
-  if (!validateWeightments()) {
-    return;
-  }
-  
-  setSubmitting(true);
-  try {
-    // Prepare lot header
-    const lotHeader = {
-      inwardId: selectedInward?.id || selectedLot.inwardId,
-      lotNo: formData.lotNo,
-      lotDate: formData.lotDate,
-      qty: parseInt(formData.qty) || 0,
-      freight: parseFloat(formData.freight) || 0,
-      grossWeight: parseFloat(formData.grossWeight) || 0,
-      tareWeight: parseFloat(formData.tareWeight) || 0,
-      nettWeight: parseFloat(formData.nettWeight) || 0,
-      candyRate: parseFloat(formData.candyRateWithTax) || 0,
-      quintalRate: parseFloat(formData.quintalRate) || 0,
-      ratePerKg: parseFloat(formData.ratePerKg) || 0,
-      assessValue: parseFloat(formData.assessValue) || 0,
-      godownId: parseInt(formData.godownId),
-      lcNo: formData.lcNo || null,
-      paymentDays: formData.paymentDays ? parseInt(formData.paymentDays) : null,
-      paymentDate: formData.paymentDate || null,
-      setNo: formData.setNo || null,
-      cess: parseFloat(formData.cess) || 0,
-      type: formData.type || null
-    };
-
-    // Prepare weightments
-    const weightmentsData = weightments.map(w => ({
-      id: w.id, // Include ID if it exists (for updating existing weightments)
-      baleNo: w.baleNo,
-      grossWeight: parseFloat(w.grossWeight) || 0,
-      tareWeight: parseFloat(w.tareWeight) || 0,
-      baleWeight: parseFloat(w.baleWeight) || 0,
-      baleValue: parseFloat(w.baleValue) || 0,
-    }));
-    
-    console.log('Updating lot with ID:', selectedLot.id);
-    console.log('Lot header:', lotHeader);
-    console.log('Weightments:', weightmentsData);
-    
-    // Update lot with weightments
-    await inwardLotService.update(selectedLot.id, lotHeader, weightmentsData);
-    
-    setSuccess('Lot updated successfully!');
-    
-    // Reset and close
-    setTimeout(() => {
-      setShowEditModal(false);
-      fetchLots();
-      resetForm();
-    }, 2000);
-    
-  } catch (err) {
-    console.error('Error updating lot:', err);
-    setError(err.response?.data?.message || 'Failed to update lot');
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
   // Handle delete
   const handleDelete = async (id, lotNo) => {
@@ -1203,120 +1210,110 @@ const handleUpdateSubmit = async (e) => {
       </div>
 
       {/* Lots Table */}
-<div className="bg-white rounded-lg shadow-sm overflow-hidden">
-  <div className="px-6 py-4 border-b border-gray-200">
-    <h2 className="text-lg font-semibold text-gray-800">Lots ({filteredLots.length})</h2>
-  </div>
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-800">Lots ({filteredLots.length})</h2>
+        </div>
 
-  {loading ? (
-    <div className="p-8 text-center">
-      <span className="text-4xl text-blue-600 animate-spin inline-block mb-4">↻</span>
-      <p className="text-gray-600">Loading lots...</p>
-    </div>
-  ) : filteredLots.length === 0 ? (
-    <div className="p-8 text-center">
-      <span className="text-5xl text-gray-400 mb-4 inline-block">📦</span>
-      <p className="text-gray-600 mb-2">No lots found</p>
-      {searchTerm ? (
-        <p className="text-sm text-gray-500">Try adjusting your search</p>
-      ) : (
-        <button
-          onClick={openCreateModal}
-          className="text-blue-600 hover:text-blue-800 font-medium"
-        >
-          Create your first lot
-        </button>
-      )}
-    </div>
-  ) : (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              CODE
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              LOT NO (QTY, FREIGHT)
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              PURCHASE ORDER NO (CANDY RATE)
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              INWARD NO
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              ACTIONS
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {filteredLots.map((lot, index) => (
-            <tr key={lot.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4">
-                <div className="text-sm font-medium text-gray-900">
-                  #{String(index + 1).padStart(4, '0')}
-                </div>
-              </td>
-              <td className="px-6 py-4">
-                <div className="text-sm font-medium text-gray-900">
-                  {lot.lotNo || 'N/A'}
-                </div>
-                <div className="text-sm text-gray-500">
-                  Qty: {lot.qty || 0} bales | Freight: ₹{lot.freight || '0'}
-                </div>
-              </td>
-              <td className="px-6 py-4">
-                <div className="text-sm font-medium text-gray-900">
-                  {lot.InwardEntry?.purchaseOrder?.orderNo || 'N/A'}
-                </div>
-                <div className="text-sm text-gray-500">
-                  Candy Rate: ₹{lot.candyRate || 'N/A'}
-                </div>
-              </td>
-              <td className="px-6 py-4">
-                <div className="text-sm font-medium text-gray-900">
-                  {lot.InwardEntry?.inwardNo || 'N/A'}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleView(lot.id)}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center"
-                  >
-                    <span className="mr-1">👁️</span>
-                    View
-                  </button>
-                  <button
-                    onClick={() => handleEdit(lot.id)}
-                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center"
-                  >
-                    <span className="mr-1">✏️</span>
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(lot.id, lot.lotNo)}
-                    className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center"
-                  >
-                    <span className="mr-1">🗑️</span>
-                    Delete
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )}
+        {loading ? (
+          <div className="p-8 text-center">
+            <span className="text-4xl text-blue-600 animate-spin inline-block mb-4">↻</span>
+            <p className="text-gray-600">Loading lots...</p>
+          </div>
+        ) : filteredLots.length === 0 ? (
+          <div className="p-8 text-center">
+            <span className="text-5xl text-gray-400 mb-4 inline-block">📦</span>
+            <p className="text-gray-600 mb-2">No lots found</p>
+            {searchTerm ? (
+              <p className="text-sm text-gray-500">Try adjusting your search</p>
+            ) : (
+              <button
+                onClick={openCreateModal}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Create your first lot
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CODE</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">LOT NO (QTY, FREIGHT)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PURCHASE ORDER NO (CANDY RATE)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">INWARD NO</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredLots.map((lot, index) => (
+                  <tr key={lot.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        #{String(index + 1).padStart(4, '0')}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {lot.lotNo || 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Qty: {lot.qty || 0} bales | Freight: ₹{lot.freight || '0'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {lot.InwardEntry?.purchaseOrder?.orderNo || 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Candy Rate: ₹{lot.candyRate || 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {lot.InwardEntry?.inwardNo || 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleView(lot.id)}
+                          className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center"
+                        >
+                          <span className="mr-1">👁️</span>
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleEdit(lot.id)}
+                          className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center"
+                        >
+                          <span className="mr-1">✏️</span>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(lot.id, lot.lotNo)}
+                          className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center"
+                        >
+                          <span className="mr-1">🗑️</span>
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-  <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
-    <div className="text-sm text-gray-600">
-      Showing {filteredLots.length} of {lots.length} lots
-    </div>
-  </div>
-</div>
+        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
+          <div className="text-sm text-gray-600">
+            Showing {filteredLots.length} of {lots.length} lots
+          </div>
+        </div>
+      </div>
 
       {/* Create Modal */}
       {showCreateModal && (
@@ -2072,7 +2069,7 @@ const handleUpdateSubmit = async (e) => {
                     {/* Godown */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h5 className="font-semibold mb-3 text-blue-800">Godown</h5>
-                      <p className="font-medium">{selectedLot.godownName || 'N/A'}</p>
+                      <p className="font-medium">{selectedLot.name || 'N/A'}</p>
                     </div>
                   </div>
 
@@ -2100,7 +2097,7 @@ const handleUpdateSubmit = async (e) => {
                         </div>
                         <div className="col-span-2">
                           <p className="text-xs text-gray-500">Assess Value</p>
-                          <p className="font-semibold text-green-600">₹{formatNumber(selectedLot.assessValue, 2)}</p>
+                          <p className="font-semibold text-green-600">₹{formatNumber(selectedLot.assessValue, 0)}</p>
                         </div>
                       </div>
                     </div>
