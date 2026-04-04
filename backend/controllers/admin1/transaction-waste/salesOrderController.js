@@ -1,6 +1,21 @@
 // controllers/salesOrderController.js
 import * as salesOrderService from "../../../services/admin1/transaction-waste/salesOrderService.js";
+import { getNextSalesOrderNo } from "../../../utils/helpers.js";
+export const getNextSalesOrderNoController = async (req, res) => {
+  try {
+    const nextOrderNo = await getNextSalesOrderNo();
 
+    res.status(200).json({
+      message: "Next sales order number generated",
+      nextOrderNo,
+    });
+  } catch (error) {
+    console.error("Error generating sales order no:", error);
+    res.status(500).json({
+      message: "Failed to generate next sales order number",
+    });
+  }
+};
 export const createSalesOrder = async (req, res) => {
   try {
     const order = await salesOrderService.create(req.body);

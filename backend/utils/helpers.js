@@ -18,7 +18,7 @@ export const getNextPurchaseOrderNo = async () => {
   let year = now.getFullYear();
 
   // Financial year: April – March
-  if (now.getMonth() < 4) { 
+  if (now.getMonth() < 3) { 
     year = year - 1;
   }
 
@@ -60,7 +60,7 @@ export const getNextInwardNo = async () => {
   let year = now.getFullYear();
 
   // Financial year: April to March
-  if (now.getMonth() < 4) {
+  if (now.getMonth() < 3) {
     year -= 1; // Jan–Mar belong to previous FY
   }
 
@@ -100,7 +100,7 @@ export const getNextLotNo = async () => {
     let year = now.getFullYear();
 
     // Financial year logic (Apr–Mar)
-    if (now.getMonth() < 4) {
+    if (now.getMonth() < 3) {
       year -= 1; // Jan–Mar belongs to previous FY
     }
 
@@ -147,7 +147,7 @@ export const getNextIssueNumber = async () => {
     let year = now.getFullYear();
 
     // Financial year: April–March
-    if (now.getMonth() < 4) {
+    if (now.getMonth() < 3) {
       year -= 1; // Jan–Mar belong to previous FY
     }
 
@@ -192,7 +192,7 @@ export const getNextLocationTransferNo = async () => {
   let year = now.getFullYear();
 
   // Financial year: April 1 – March 31
-  if (now.getMonth() < 4) {
+  if (now.getMonth() < 3) {
     year = year - 1;
   }
 
@@ -225,6 +225,37 @@ export const getNextLocationTransferNo = async () => {
 
   return `${prefix}${padded}`;
 };
+
+// transaction-waste waste cotton sales order 
+const { SalesOrder } = db;
+
+export const getNextSalesOrderNo = async () => {
+  try {
+    const result = await SalesOrder.findOne({
+      attributes: [
+        [
+          SalesOrder.sequelize.fn(
+            "MAX",
+            SalesOrder.sequelize.cast(
+              SalesOrder.sequelize.col("orderNo"),
+              "INTEGER"
+            )
+          ),
+          "maxOrderNo",
+        ],
+      ],
+      raw: true,
+    });
+
+    const maxOrderNo = result?.maxOrderNo || 0;
+
+    return (parseInt(maxOrderNo, 10) + 1).toString();
+  } catch (error) {
+    console.error("Error generating sales order number:", error);
+    throw error;
+  }
+};
+
 
 //masters Auto Code generation function
 

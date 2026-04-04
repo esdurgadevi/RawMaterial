@@ -13,7 +13,6 @@ const {
   CompanyBroker,
 } = db;
 
-
 export const createInwardEntry = async (data) => {
   if (!data.inwardDate) {
     throw new Error("Inward Date is required");
@@ -23,18 +22,29 @@ export const createInwardEntry = async (data) => {
     data.inwardNo = await getNextInwardNo();
   }
 
+  // Convert safely
   const qty = Number(data.Qty || 0);
+  const grossWeight = Number(data.grossWeight || 0);
+  const tareWeight = Number(data.tareWeight || 0);
+  const freight = Number(data.freight || 0);
 
-  const roundUp2 = (value) => Math.ceil(value * 100) / 100;
+  // Helper for display only
+  const round2 = (value) => Math.round(value * 100) / 100;
 
-  data.grossPerQty =
-    qty > 0 ? roundUp2(Number(data.grossWeight || 0) / qty) : 0;
+  // ✅ Store EXACT values (no rounding)
+  data.grossPerQty = qty > 0 ? grossWeight / qty : 0;
+  data.tarePerQty = qty > 0 ? tareWeight / qty : 0;
+  data.freightPerQty = qty > 0 ? freight / qty : 0;
 
-  data.tarePerQty =
-    qty > 0 ? roundUp2(Number(data.tareWeight || 0) / qty) : 0;
+  // ✅ Optional: store rounded values separately (for UI/report)
+  data.grossPerQtyDisplay = qty > 0 ? round2(grossWeight / qty) : 0;
+  data.tarePerQtyDisplay = qty > 0 ? round2(tareWeight / qty) : 0;
+  data.freightPerQtyDisplay = qty > 0 ? round2(freight / qty) : 0;
 
-  data.freightPerQty =
-    qty > 0 ? roundUp2(Number(data.freight || 0) / qty) : 0;
+  // ✅ Extra safety check (optional but good)
+  if (qty <= 0) {
+    throw new Error("Quantity must be greater than 0");
+  }
 
   return await InwardEntry.create(data);
 };
