@@ -508,6 +508,7 @@ const CostMasterManagement = () => {
                         name="cost"
                         value={formData.cost}
                         onChange={handleInputChange}
+                        onWheel={(e) => e.target.blur()}
                         required
                         min="0"
                         step="0.01"

@@ -860,6 +860,7 @@ const WastePackingPage = () => {
                   name="tareWeight"
                   value={formData.tareWeight}
                   onChange={handleFormChange}
+                  onWheel={(e) => e.target.blur()}
                   step="0.001"
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -878,6 +879,7 @@ const WastePackingPage = () => {
                   name="rate"
                   value={formData.rate}
                   onChange={handleFormChange}
+                  onWheel={(e) => e.target.blur()}
                   step="0.01"
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -909,6 +911,7 @@ const WastePackingPage = () => {
                   name="noOfBales"
                   value={formData.noOfBales}
                   onChange={handleNoOfBalesChange}
+                  onWheel={(e) => e.target.blur()}
                   min="1"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter number of bales"
@@ -1014,6 +1017,7 @@ const WastePackingPage = () => {
                               value={bale.grossWeight}
                               onChange={(e) => handleBaleChange(index, "grossWeight", e.target.value)}
                               onKeyDown={(e) => handleKeyDown(e, index)}
+                              onWheel={(e) => e.target.blur()}
                               step="0.001"
                               min="0"
                               className="w-32 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1315,6 +1319,7 @@ const WastePackingPage = () => {
                         details: updatedDetails
                       });
                     }}
+                    onWheel={(e) => e.target.blur()}
                     step="0.001"
                     min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1481,6 +1486,7 @@ const WastePackingPage = () => {
                                     totalWeight: newTotal
                                   });
                                 }}
+                                onWheel={(e) => e.target.blur()}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
                                     e.preventDefault();

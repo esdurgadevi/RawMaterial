@@ -622,13 +622,13 @@ const WCInvoiceTypeMaster = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Round Off Digits
                     </label>
+                    {/* Changed to text input to prevent scroll-induced value changes */}
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       name="roundOffDigits"
                       value={formData.roundOffDigits}
                       onChange={handleHeadChange}
-                      min="0"
-                      max="10"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="0"
                     />
@@ -638,13 +638,13 @@ const WCInvoiceTypeMaster = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Packing & Forwarding Charges
                     </label>
+                    {/* Changed to text input to prevent scroll-induced value changes */}
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       name="packingForwardingCharges"
                       value={formData.packingForwardingCharges}
                       onChange={handleHeadChange}
-                      min="0"
-                      step="0.01"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="0.00"
                     />

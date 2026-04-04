@@ -1392,6 +1392,7 @@ switch(formData.selectedRateType) {
           name="quantity"
           value={formData.quantity}
           onChange={handleInputChange}
+          onWheel={(e) => e.target.blur()}
           required
           min="0"
           step="0.01"
@@ -1413,6 +1414,7 @@ switch(formData.selectedRateType) {
       name="candyRate"
       value={formData.candyRate}
       onChange={handleInputChange}
+      onWheel={(e) => e.target.blur()}
       min="0"
       step="0.01"
       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1434,6 +1436,7 @@ switch(formData.selectedRateType) {
       name="quintalRate"
       value={formData.quintalRate}
       onChange={handleInputChange}
+      onWheel={(e) => e.target.blur()}
       min="0"
       step="0.01"
       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1456,6 +1459,7 @@ switch(formData.selectedRateType) {
       name="ratePerKg"
       value={formData.ratePerKg}
       onChange={handleInputChange}
+      onWheel={(e) => e.target.blur()}
       required
       min="0"
       step="0.01"
@@ -1478,6 +1482,7 @@ switch(formData.selectedRateType) {
       name="approxLotValue"
       value={formData.approxLotValue}
       onChange={handleInputChange}
+      onWheel={(e) => e.target.blur()}
       min="0"
       step="0.01"
       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1580,6 +1585,7 @@ switch(formData.selectedRateType) {
                               name="moist"
                               value={formData.moist}
                               onChange={handleInputChange}
+                              onWheel={(e) => e.target.blur()}
                               min="0"
                               max="100"
                               step="0.01"
@@ -1599,6 +1605,7 @@ switch(formData.selectedRateType) {
                               name="mic"
                               value={formData.mic}
                               onChange={handleInputChange}
+                              onWheel={(e) => e.target.blur()}
                               min="0"
                               step="0.01"
                               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1617,6 +1624,7 @@ switch(formData.selectedRateType) {
                               name="str"
                               value={formData.str}
                               onChange={handleInputChange}
+                              onWheel={(e) => e.target.blur()}
                               min="0"
                               step="0.01"
                               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1635,6 +1643,7 @@ switch(formData.selectedRateType) {
                               name="rd"
                               value={formData.rd}
                               onChange={handleInputChange}
+                              onWheel={(e) => e.target.blur()}
                               min="0"
                               step="0.01"
                               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

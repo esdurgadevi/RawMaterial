@@ -750,6 +750,7 @@ const WasteRate = () => {
                         name="rate"
                         value={formData.rate}
                         onChange={handleInputChange}
+                        onWheel={(e) => e.target.blur()}
                         required
                         min="0"
                         step="0.01"

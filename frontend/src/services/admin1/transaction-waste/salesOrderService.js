@@ -27,6 +27,10 @@ api.interceptors.request.use(
 
 // ✅ Service methods
 const salesOrderService = {
+  getNextSalesOrderNo: async () => {
+  const response = await api.get("/next-order-no");
+  return response.data.nextOrderNo;
+},
   // 🔹 Get all sales orders
   getAll: async () => {
     const response = await api.get("/");

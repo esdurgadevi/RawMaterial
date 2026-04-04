@@ -290,6 +290,7 @@ const InvoiceForm = React.memo(({
               type={type}
               name={name}
               value={formData[name]}
+              onWheel={type === "number" ? (e) => e.target.blur() : undefined}
               onChange={handleFormChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
             />
@@ -341,6 +342,7 @@ const InvoiceForm = React.memo(({
             name="cgst"
             value={formData.cgst}
             onChange={handleFormChange}
+            onWheel={(e) => e.target.blur()}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
           />
         </div>
@@ -352,6 +354,7 @@ const InvoiceForm = React.memo(({
             name="sgst"
             value={formData.sgst}
             onChange={handleFormChange}
+            onWheel={(e) => e.target.blur()}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
           />
         </div>
@@ -363,6 +366,7 @@ const InvoiceForm = React.memo(({
             name="igst"
             value={formData.igst}
             onChange={handleFormChange}
+            onWheel={(e) => e.target.blur()}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
           />
         </div>
@@ -536,6 +540,7 @@ const InvoiceForm = React.memo(({
                         value={bale.grossWt}
                         step="0.001"
                         onChange={(e) => handleDetailChange(index, "grossWt", e.target.value)}
+                        onWheel={(e) => e.target.blur()}
                         className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
                       />
                     </td>
@@ -545,6 +550,7 @@ const InvoiceForm = React.memo(({
                         value={bale.tareWt}
                         step="0.001"
                         onChange={(e) => handleDetailChange(index, "tareWt", e.target.value)}
+                        onWheel={(e) => e.target.blur()}
                         className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
                       />
                     </td>
@@ -584,6 +590,7 @@ const InvoiceForm = React.memo(({
           value={ratePerKg}
           step="0.01"
           onChange={handleFormChange}
+          onWheel={(e) => e.target.blur()}
           className="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm"
         />
       </div>
@@ -755,7 +762,8 @@ const WasteCottonInvoicePage = () => {
       0
     );
 
-    const baseVariables = {
+    // First pass: Calculate Assess Value to use it for GST calculations
+    const tempVariables = {
       totalKgs,
       ratePerKg,
       ratePer: 1,
@@ -764,6 +772,34 @@ const WasteCottonInvoicePage = () => {
       tcsRs: 0,
       gstAmt: 0,
       igstAmt: 0,
+    };
+
+    const tempCalculated = formulaEvaluator.calculateAllFields(
+      selectedInvoiceType.details,
+      tempVariables
+    );
+
+    const assessValue = tempCalculated["Assess Value"] || tempCalculated["X"] || 0;
+    const cgstRate = parseFloat(formData.cgst) || 0;
+    const sgstRate = parseFloat(formData.sgst) || 0;
+    const igstRate = parseFloat(formData.igst) || 0;
+
+    // Calculate actual GST amounts
+    const cgstAmount = parseFloat((assessValue * (cgstRate / 100)).toFixed(2));
+    const sgstAmount = parseFloat((assessValue * (sgstRate / 100)).toFixed(2));
+    const igstAmount = parseFloat((assessValue * (igstRate / 100)).toFixed(2));
+    const gstAmount = cgstAmount + sgstAmount; // Total GST (CGST + SGST)
+
+    // Second pass with calculated GST values
+    const baseVariables = {
+      totalKgs,
+      ratePerKg,
+      ratePer: 1,
+      charityRs: 0,
+      chessRs: 0,
+      tcsRs: 0,
+      gstAmt: gstAmount,
+      igstAmt: igstAmount,
     };
 
     const calculated = formulaEvaluator.calculateAllFields(
@@ -781,6 +817,8 @@ const WasteCottonInvoicePage = () => {
       hsCess: calculated["H.S.Cess"] || calculated["E"] || 0,
       tcs: calculated["TCS"] || calculated["F"] || 0,
       pfCharges: calculated["Others"] || calculated["G"] || 0,
+      cgstAmt: cgstAmount,
+      sgstAmt: sgstAmount,
       subTotal: calculated["Sub Total"] || calculated["H"] || 0,
       cenvat: calculated["Cenvat"] || calculated["J"] || 0,
       invoiceValue: calculated["Total Value"] || calculated["I"] || 0,

@@ -1676,6 +1676,7 @@ const InwardLotPage = () => {
                             name="qty"
                             value={formData.qty}
                             onChange={handleInputChange}
+                            onWheel={(e) => e.target.blur()}
                             min="1"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="Enter quantity"
@@ -1706,6 +1707,7 @@ const InwardLotPage = () => {
                             name="paymentDays"
                             value={formData.paymentDays}
                             onChange={handleInputChange}
+                            onWheel={(e) => e.target.blur()}
                             min="0"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="Enter payment days"
@@ -1735,6 +1737,7 @@ const InwardLotPage = () => {
                             name="cess"
                             value={formData.cess}
                             onChange={handleInputChange}
+                            onWheel={(e) => e.target.blur()}
                             min="0"
                             step="0.01"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1893,6 +1896,7 @@ const InwardLotPage = () => {
                             value={weightment.grossWeight}
                             onChange={(e) => handleWeightmentChange(index, 'grossWeight', e.target.value)}
                             onKeyDown={(e) => handleKeyDown(e, index, 'grossWeight')}
+                            onWheel={(e) => e.target.blur()}
                             step="0.001"
                             className={`w-32 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                               weightment.isEdited ? 'border-yellow-500' : 'border-gray-300'
@@ -1906,6 +1910,7 @@ const InwardLotPage = () => {
                             value={weightment.tareWeight}
                             onChange={(e) => handleWeightmentChange(index, 'tareWeight', e.target.value)}
                             onKeyDown={(e) => handleKeyDown(e, index, 'tareWeight')}
+                            onWheel={(e) => e.target.blur()}
                             step="0.001"
                             className={`w-32 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                               weightment.isEdited ? 'border-yellow-500' : 'border-gray-300'
@@ -2574,6 +2579,7 @@ const InwardLotPage = () => {
                         name="qty"
                         value={formData.qty}
                         onChange={handleInputChange}
+                        onWheel={(e) => e.target.blur()}
                         min="1"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Enter quantity"
@@ -2604,6 +2610,7 @@ const InwardLotPage = () => {
                         name="paymentDays"
                         value={formData.paymentDays}
                         onChange={handleInputChange}
+                        onWheel={(e) => e.target.blur()}
                         min="0"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Enter payment days"
@@ -2633,6 +2640,7 @@ const InwardLotPage = () => {
                         name="cess"
                         value={formData.cess}
                         onChange={handleInputChange}
+                        onWheel={(e) => e.target.blur()}
                         min="0"
                         step="0.01"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

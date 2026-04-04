@@ -67,6 +67,25 @@ const WasteCottonSalesPage = () => {
     fetchSalesOrders();
   }, []);
 
+  // Fetch next order number when create modal is opened
+  useEffect(() => {
+    if (showCreateModal && !selectedOrder) {
+      const fetchNextOrderNo = async () => {
+        try {
+          const nextOrderNo = await salesOrderService.getNextSalesOrderNo();
+          setFormData(prev => ({
+            ...prev,
+            orderNo: nextOrderNo
+          }));
+        } catch (error) {
+          console.error("Error fetching next order no:", error);
+          toast.error("Failed to fetch next order number");
+        }
+      };
+      fetchNextOrderNo();
+    }
+  }, [showCreateModal]);
+
   const fetchMasterData = async () => {
     try {
       setLoadingMasters(true);
@@ -631,7 +650,8 @@ const WasteCottonSalesPage = () => {
                       name="orderNo"
                       value={formData.orderNo}
                       onChange={handleFormChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
                   </div>
@@ -731,6 +751,7 @@ const WasteCottonSalesPage = () => {
                       name="creditDays"
                       value={formData.creditDays}
                       onChange={handleFormChange}
+                      onWheel={(e) => e.target.blur()}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       min="0"
                       placeholder="0"
@@ -833,6 +854,7 @@ const WasteCottonSalesPage = () => {
                               type="number"
                               value={detail.qty}
                               onChange={(e) => handleDetailChange(index, "qty", e.target.value)}
+                              onWheel={(e) => e.target.blur()}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                               min="0"
                             />
@@ -842,6 +864,7 @@ const WasteCottonSalesPage = () => {
                               type="number"
                               value={detail.totalWt}
                               onChange={(e) => handleDetailChange(index, "totalWt", e.target.value)}
+                              onWheel={(e) => e.target.blur()}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                               step="0.001"
                               min="0"
@@ -852,6 +875,7 @@ const WasteCottonSalesPage = () => {
                               type="number"
                               value={detail.rate}
                               onChange={(e) => handleDetailChange(index, "rate", e.target.value)}
+                              onWheel={(e) => e.target.blur()}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                               step="0.01"
                               min="0"
@@ -1169,6 +1193,7 @@ const WasteCottonSalesPage = () => {
                       name="creditDays"
                       value={formData.creditDays}
                       onChange={handleFormChange}
+                      onWheel={(e) => e.target.blur()}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       min="0"
                     />
@@ -1268,6 +1293,7 @@ const WasteCottonSalesPage = () => {
                               type="number"
                               value={detail.qty}
                               onChange={(e) => handleDetailChange(index, "qty", e.target.value)}
+                              onWheel={(e) => e.target.blur()}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                               min="0"
                             />
@@ -1277,6 +1303,7 @@ const WasteCottonSalesPage = () => {
                               type="number"
                               value={detail.totalWt}
                               onChange={(e) => handleDetailChange(index, "totalWt", e.target.value)}
+                              onWheel={(e) => e.target.blur()}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                               step="0.001"
                               min="0"
@@ -1287,6 +1314,7 @@ const WasteCottonSalesPage = () => {
                               type="number"
                               value={detail.rate}
                               onChange={(e) => handleDetailChange(index, "rate", e.target.value)}
+                              onWheel={(e) => e.target.blur()}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                               step="0.01"
                               min="0"

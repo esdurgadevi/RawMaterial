@@ -605,6 +605,7 @@ const IssueEntryManagement = () => {
                         name="mixingNo"
                         value={formData.mixingNo}
                         onChange={handleInputChange}
+                        onWheel={(e) => e.target.blur()}
                         className="w-full border rounded px-3 py-2"
                       />
                     </div>

@@ -1006,12 +1006,11 @@ const Supplier = () => {
                           Opening Credit
                         </label>
                         <input
-                          type="number"
+                          type="text"
                           name="openingCredit"
                           value={formData.openingCredit}
                           onChange={handleInputChange}
-                          step="0.01"
-                          min="0"
+                          inputMode="decimal"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="0.00"
                         />
@@ -1023,12 +1022,11 @@ const Supplier = () => {
                           Opening Debit
                         </label>
                         <input
-                          type="number"
+                          type="text"
                           name="openingDebit"
                           value={formData.openingDebit}
                           onChange={handleInputChange}
-                          step="0.01"
-                          min="0"
+                          inputMode="decimal"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="0.00"
                         />

@@ -802,6 +802,7 @@ const LotTestResultEntryPage = () => {
                     name="rd"
                     value={formData.rd}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.1"
@@ -816,6 +817,7 @@ const LotTestResultEntryPage = () => {
                     name="staple"
                     value={formData.staple}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.1"
@@ -831,6 +833,7 @@ const LotTestResultEntryPage = () => {
                     name="plusB"
                     value={formData.plusB}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.1"
@@ -845,6 +848,7 @@ const LotTestResultEntryPage = () => {
                     name="moist"
                     value={formData.moist}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.1"
@@ -859,6 +863,7 @@ const LotTestResultEntryPage = () => {
                     name="mr"
                     value={formData.mr}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.01"
@@ -874,6 +879,7 @@ const LotTestResultEntryPage = () => {
                     name="twoPointFive"
                     value={formData.twoPointFive}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.01"
@@ -901,6 +907,7 @@ const LotTestResultEntryPage = () => {
                     name="ui"
                     value={formData.ui}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.1"
@@ -916,6 +923,7 @@ const LotTestResultEntryPage = () => {
                     name="eLog"
                     value={formData.eLog}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.1"
@@ -930,6 +938,7 @@ const LotTestResultEntryPage = () => {
                     name="strength"
                     value={formData.strength}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.1"
@@ -943,6 +952,7 @@ const LotTestResultEntryPage = () => {
                     type="number"
                     name="strength1"
                     value={formData.strength1}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none"
                     placeholder=""
                     step="0.1"
@@ -959,6 +969,7 @@ const LotTestResultEntryPage = () => {
                     name="sfi"
                     value={formData.sfi}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.1"
@@ -973,6 +984,7 @@ const LotTestResultEntryPage = () => {
                     name="mic"
                     value={formData.mic}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.1"
@@ -987,6 +999,7 @@ const LotTestResultEntryPage = () => {
                     name="ml50"
                     value={formData.ml50}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="0.1"
@@ -1030,6 +1043,7 @@ const LotTestResultEntryPage = () => {
                     name="sci"
                     value={formData.sci}
                     onChange={handleInputChange}
+                    onWheel={(e) => e.target.blur()}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder=""
                     step="1"
