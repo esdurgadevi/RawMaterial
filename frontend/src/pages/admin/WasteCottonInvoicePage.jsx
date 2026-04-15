@@ -382,6 +382,7 @@ const InvoiceForm = React.memo(({
           { label: "Duty", key: "duty" },
           { label: "Cess", key: "cess" },
           { label: "H.S. Cess", key: "hsCess" },
+          { label: "TCS Amt", key: "tcsRs" },
           { label: "TCS", key: "tcs" },
           { label: "PF / Other Charges", key: "pfCharges" },
           { label: "CGST Amt (2.5%)", key: "cgstAmt", isCalculated: true },
@@ -677,6 +678,7 @@ const WasteCottonInvoicePage = () => {
     cess: 0,
     hsCess: 0,
     tcs: 0,
+    tcsRs: 0,
     pfCharges: 0,
     subTotal: 0,
     roundOff: 0,
@@ -807,6 +809,10 @@ const WasteCottonInvoicePage = () => {
       baseVariables
     );
 
+    console.log('All Calculated Values:', calculated);
+    console.log('TCSRs:', calculated['TCSRs'] || calculated['TCSRS'] || 0);
+    console.log('TCS:', calculated['TCS'] || calculated['F'] || 0);
+
     setFormData((prev) => ({
       ...prev,
       assessableValue: calculated["Assess Value"] || calculated["X"] || 0,
@@ -816,6 +822,7 @@ const WasteCottonInvoicePage = () => {
       cess: calculated["Chess"] || calculated["D"] || 0,
       hsCess: calculated["H.S.Cess"] || calculated["E"] || 0,
       tcs: calculated["TCS"] || calculated["F"] || 0,
+      tcsRs: calculated["TCSRs"] || calculated["TCSRS"] || calculated["F"] || 0,
       pfCharges: calculated["Others"] || calculated["G"] || 0,
       cgstAmt: cgstAmount,
       sgstAmt: sgstAmount,
@@ -1112,6 +1119,7 @@ const WasteCottonInvoicePage = () => {
       cess: invoice.cess || 0,
       hsCess: invoice.hsCess || 0,
       tcs: invoice.tcs || 0,
+      tcsRs: invoice.tcsRs || 0,
       pfCharges: invoice.pfCharges || 0,
       subTotal: invoice.subTotal || 0,
       roundOff: invoice.roundOff || 0,

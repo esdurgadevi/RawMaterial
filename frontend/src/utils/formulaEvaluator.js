@@ -77,35 +77,56 @@ class FormulaEvaluator {
 
   /**
    * Calculate all fields in order based on their formulas
+   * Uses multiple passes to resolve field dependencies (e.g., TCS depends on TCSRs which is calculated later)
    * @param {Array} fields - Array of field objects with formulas
    * @param {Object} baseVariables - Base variables (totalKgs, ratePerKg, etc.)
    * @returns {Object} - Calculated values mapped by fieldName and shortCode
    */
   calculateAllFields(fields, baseVariables) {
     const results = {};
-    const variables = { ...baseVariables };
+    let variables = { ...baseVariables };
 
     // Sort fields by sequence
     const sortedFields = [...fields].sort((a, b) => a.sequence - b.sequence);
 
-    // Calculate each field in sequence
-    sortedFields.forEach(field => {
-      if (field.formula && field.formula.trim() !== '') {
-        // Create a copy of variables including previously calculated results
-        const evalVariables = { ...variables, ...results };
-        
-        // Calculate the value
-        const value = this.evaluate(field.formula, evalVariables);
-        
-        // Store result using both fieldName and shortCode as keys
-        results[field.fieldName] = value;
-        results[field.shortCode] = value;
-        
-        // Also store in variables for subsequent calculations
-        variables[field.fieldName] = value;
-        variables[field.shortCode] = value;
+    // Multiple passes to resolve dependencies
+    // Pass 1: Calculate all fields
+    // Pass 2+: Recalculate fields using values from Pass 1 (resolves forward dependencies like TCS←TCSRs)
+    const maxPasses = 3;
+    
+    for (let pass = 0; pass < maxPasses; pass++) {
+      let hasChanges = false;
+      const passResults = { ...results }; // Carry forward previous results
+
+      sortedFields.forEach(field => {
+        if (field.formula && field.formula.trim() !== '') {
+          // Merge base variables, current results, and pass results
+          const evalVariables = { ...baseVariables, ...results, ...passResults };
+          
+          // Calculate the value
+          const newValue = this.evaluate(field.formula, evalVariables);
+          const oldValue = passResults[field.fieldName] || 0;
+          
+          // Track if value changed
+          if (Math.abs(newValue - oldValue) > 0.01) {
+            hasChanges = true;
+          }
+          
+          // Store result using both fieldName and shortCode as keys
+          passResults[field.fieldName] = newValue;
+          passResults[field.shortCode] = newValue;
+        }
+      });
+
+      // Update variables with all calculated values for next iteration
+      variables = { ...baseVariables, ...passResults };
+      Object.assign(results, passResults);
+      
+      // If no significant changes, values have converged
+      if (!hasChanges) {
+        break;
       }
-    });
+    }
 
     return results;
   }
