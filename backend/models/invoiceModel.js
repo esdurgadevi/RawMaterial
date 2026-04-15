@@ -85,6 +85,11 @@ const InvoiceModel = (sequelize) => {
         defaultValue: 0.0,
       },
 
+      tcsRs: {
+        type: DataTypes.DECIMAL(12, 2),
+        defaultValue: 0.0,
+      },
+
       pfCharges: {
         type: DataTypes.DECIMAL(12, 2),
         defaultValue: 0.0,

@@ -283,10 +283,10 @@ export const updateInwardLot = async (id, data) => {
     });
 
     // 3️⃣ Re-insert new weightments
-    const weightmentRows = weightments.map((item) => ({
-      ...item,
-      lotNo: lot.lotNo,
-    }));
+    const weightmentRows = weightments.map(({ id, ...item }) => ({
+  ...item,
+  lotNo: lot.lotNo,
+}));
 
     await InwardLotWeightment.bulkCreate(weightmentRows, {
       transaction,
@@ -297,6 +297,7 @@ export const updateInwardLot = async (id, data) => {
     return { message: "Inward Lot updated successfully" };
 
   } catch (error) {
+    console.log(error);
     await transaction.rollback();
     throw error;
   }

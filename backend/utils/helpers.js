@@ -110,7 +110,7 @@ export const getNextLotNo = async () => {
       .toString()
       .slice(-2)}`;
 
-    const prefix = `LOT/${financialYear}/`;
+    const prefix = `UC/${financialYear}/`;
 
     const lastLot = await InwardLot.findOne({
       where: {

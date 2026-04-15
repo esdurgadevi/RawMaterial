@@ -74,6 +74,7 @@ export const create = async (data) => {
         cess: parseFloat(data.cess) || 0,
         hsCess: parseFloat(data.hsCess) || 0,
         tcs: parseFloat(data.tcs) || 0,
+        tcsRs: parseFloat(data.tcsRs) || 0,
         pfCharges: parseFloat(data.pfCharges) || 0,
 
         subTotal: parseFloat(data.subTotal),
@@ -211,6 +212,41 @@ export const update = async (id, data) => {
             ? parseFloat(data.vatTax)
             : invoice.vatTax,
 
+        cenvat:
+          data.cenvat !== undefined
+            ? parseFloat(data.cenvat)
+            : invoice.cenvat,
+
+        duty:
+          data.duty !== undefined
+            ? parseFloat(data.duty)
+            : invoice.duty,
+
+        cess:
+          data.cess !== undefined
+            ? parseFloat(data.cess)
+            : invoice.cess,
+
+        hsCess:
+          data.hsCess !== undefined
+            ? parseFloat(data.hsCess)
+            : invoice.hsCess,
+
+        tcs:
+          data.tcs !== undefined
+            ? parseFloat(data.tcs)
+            : invoice.tcs,
+
+        tcsRs:
+          data.tcsRs !== undefined
+            ? parseFloat(data.tcsRs)
+            : invoice.tcsRs,
+
+        pfCharges:
+          data.pfCharges !== undefined
+            ? parseFloat(data.pfCharges)
+            : invoice.pfCharges,
+
         subTotal:
           data.subTotal !== undefined
             ? parseFloat(data.subTotal)
@@ -225,6 +261,31 @@ export const update = async (id, data) => {
           data.invoiceValue !== undefined
             ? parseFloat(data.invoiceValue)
             : invoice.invoiceValue,
+
+        gst:
+          data.gst !== undefined
+            ? parseFloat(data.gst)
+            : invoice.gst,
+
+        igst:
+          data.igst !== undefined
+            ? parseFloat(data.igst)
+            : invoice.igst,
+
+        creditDays: data.creditDays ?? invoice.creditDays,
+        interestPercent:
+          data.interestPercent !== undefined
+            ? parseFloat(data.interestPercent)
+            : invoice.interestPercent,
+
+        transport: data.transport ?? invoice.transport,
+        lrNo: data.lrNo ?? invoice.lrNo,
+        lrDate: data.lrDate ?? invoice.lrDate,
+        vehicleNo: data.vehicleNo ?? invoice.vehicleNo,
+        removalTime: data.removalTime ?? invoice.removalTime,
+        eBill: data.eBill ?? invoice.eBill,
+        exportTo: data.exportTo ?? invoice.exportTo,
+        approve: data.approve ?? invoice.approve,
 
         salesOrderId: data.salesOrderId ?? invoice.salesOrderId,
       },
