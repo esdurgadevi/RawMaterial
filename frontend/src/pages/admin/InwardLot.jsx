@@ -7,20 +7,20 @@ import godownService from '../../services/admin1/master/godownService';
 
 const InwardLotPage = () => {
   const navigate = useNavigate();
-  
+
   // States for list view
   const [lots, setLots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showWeightmentModal, setShowWeightmentModal] = useState(false);
-  
+
   // Data states
   const [selectedLot, setSelectedLot] = useState(null);
   const [inwardEntries, setInwardEntries] = useState([]);
@@ -29,7 +29,7 @@ const InwardLotPage = () => {
   const [selectedGodown, setSelectedGodown] = useState(null);
   const [inwardBales, setInwardBales] = useState(null);
   const [inwardLotsData, setInwardLotsData] = useState(null);
-  
+
   // Existing lots states
   const [existingLots, setExistingLots] = useState([]);
   const [existingLotsTotals, setExistingLotsTotals] = useState({
@@ -38,25 +38,25 @@ const InwardLotPage = () => {
     totalNettWeight: 0
   });
   const [existingLotsLoading, setExistingLotsLoading] = useState(false);
-  
+
   // Loading states
   const [inwardLoading, setInwardLoading] = useState(false);
   const [godownLoading, setGodownLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [lotNoLoading, setLotNoLoading] = useState(false);
-  
+
   // Dropdown visibility states
   const [showInwardDropdown, setShowInwardDropdown] = useState(false);
   const [showGodownDropdown, setShowGodownDropdown] = useState(false);
-  
+
   // Search states
   const [inwardSearch, setInwardSearch] = useState('');
   const [godownSearch, setGodownSearch] = useState('');
-  
+
   // Refs for dropdowns
   const inwardRef = useRef(null);
   const godownRef = useRef(null);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     // Header
@@ -64,7 +64,7 @@ const InwardLotPage = () => {
     inwardNo: '',
     lotNo: '',
     lotDate: new Date().toISOString().split('T')[0],
-    
+
     // Purchase details (from inward)
     supplier: '',
     broker: '',
@@ -73,7 +73,7 @@ const InwardLotPage = () => {
     station: '',
     companyBroker: '',
     rateType: '',
-    
+
     // Party details (from inward)
     billNo: '',
     billDate: '',
@@ -89,7 +89,7 @@ const InwardLotPage = () => {
     comm: '',
     cooly: '',
     bale: '',
-    
+
     // Tax details (from inward)
     gst: '',
     sgst: '',
@@ -100,12 +100,12 @@ const InwardLotPage = () => {
     igstAmount: '',
     Tax: '',
     TaxRs: '',
-    
+
     // Per Qty values (from inward)
     grossPerQty: '',
     tarePerQty: '',
     freightPerQty: '',
-    
+
     // User inputs
     godownId: '',
     godownName: '',
@@ -115,7 +115,7 @@ const InwardLotPage = () => {
     setNo: '',
     cess: '0',
     type: '',
-    
+
     // Calculated fields
     grossWeight: '',
     tareWeight: '',
@@ -187,13 +187,13 @@ const InwardLotPage = () => {
     const qty = parseFloat(formData.qty) || 0;
     if (qty <= 0) return;
 
-    const totalInwardQty  = parseInt(selectedInward.Qty) || 0;
-    const newTotalQty     = existingLotsTotals.totalQty + qty;
-    const isLastLot       = newTotalQty === totalInwardQty;
+    const totalInwardQty = parseInt(selectedInward.Qty) || 0;
+    const newTotalQty = existingLotsTotals.totalQty + qty;
+    const isLastLot = newTotalQty === totalInwardQty;
 
     // Per-qty values from inward (used for all non-last lots, and for tare on last lot)
-    const grossPerQty   = parseFloat(selectedInward.grossPerQty)   || 0;
-    const tarePerQty    = parseFloat(selectedInward.tarePerQty)    || 0;
+    const grossPerQty = parseFloat(selectedInward.grossPerQty) || 0;
+    const tarePerQty = parseFloat(selectedInward.tarePerQty) || 0;
     const freightPerQty = parseFloat(selectedInward.freightPerQty) || 0;
 
     let grossWeight, tareWeight, nettWeight, freight;
@@ -206,41 +206,41 @@ const InwardLotPage = () => {
       // Tare weight  = perQty × qty  (proportional; not a tallied field)
       // Gross weight = nett + tare   (back-calculated so gross also tallies)
       //
-      nettWeight  = (parseFloat(selectedInward.nettWeight) || 0)
-                    - existingLotsTotals.totalNettWeight;
-      freight     = (parseFloat(selectedInward.freight)    || 0)
-                    - existingLotsTotals.totalFreight;
-      tareWeight  = Math.floor(tarePerQty * qty);
+      nettWeight = (parseFloat(selectedInward.nettWeight) || 0)
+        - existingLotsTotals.totalNettWeight;
+      freight = (parseFloat(selectedInward.freight) || 0)
+        - existingLotsTotals.totalFreight;
+      tareWeight = Math.floor(tarePerQty * qty);
       grossWeight = nettWeight + tareWeight;
     } else {
       // ── NORMAL LOT: standard perQty × qty calculation ─────────────────────
       grossWeight = Math.floor(grossPerQty * qty);
-      tareWeight  = Math.floor(tarePerQty  * qty);
-      nettWeight  = grossWeight - tareWeight;
-      freight     = freightPerQty * qty;
+      tareWeight = Math.floor(tarePerQty * qty);
+      nettWeight = grossWeight - tareWeight;
+      freight = freightPerQty * qty;
     }
 
     // ── Rate calculations (same for both last and normal lots) ────────────────
-    const baseCandyRate    = parseFloat(selectedInward.candyRate) || 0;
-    const freightPerKg     = nettWeight > 0 ? freight / nettWeight : 0;
+    const baseCandyRate = parseFloat(selectedInward.candyRate) || 0;
+    const freightPerKg = nettWeight > 0 ? freight / nettWeight : 0;
     const freightAdjustment = freightPerKg * 355.62;
     const candyRateWithTax = Math.floor(baseCandyRate + freightAdjustment);
 
-    let ratePerKg   = candyRateWithTax / 355.62;
-    ratePerKg       = Math.round(ratePerKg * 100) / 100;
+    let ratePerKg = candyRateWithTax / 355.62;
+    ratePerKg = Math.round(ratePerKg * 100) / 100;
     const quintalRate = ratePerKg * 100;
     const assessValue = Math.round(nettWeight * ratePerKg);
 
     setFormData(prev => ({
       ...prev,
-      grossWeight:      grossWeight.toFixed ? grossWeight.toFixed(3) : String(Math.round(grossWeight)),
-      tareWeight:       String(Math.round(tareWeight)),
-      nettWeight:       nettWeight.toFixed ? nettWeight.toFixed(3) : String(Math.round(nettWeight)),
-      freight:          freight.toFixed(2),
+      grossWeight: grossWeight.toFixed ? grossWeight.toFixed(3) : String(Math.round(grossWeight)),
+      tareWeight: String(Math.round(tareWeight)),
+      nettWeight: nettWeight.toFixed ? nettWeight.toFixed(3) : String(Math.round(nettWeight)),
+      freight: freight.toFixed(2),
       candyRateWithTax: Math.round(candyRateWithTax).toString(),
-      ratePerKg:        ratePerKg.toFixed(2),
-      quintalRate:      quintalRate.toFixed(2),
-      assessValue:      assessValue.toString(),
+      ratePerKg: ratePerKg.toFixed(2),
+      quintalRate: quintalRate.toFixed(2),
+      assessValue: assessValue.toString(),
       isLastLot,
     }));
   }, [formData.qty, selectedInward, existingLotsTotals]);
@@ -251,24 +251,24 @@ const InwardLotPage = () => {
       setExistingLotsLoading(true);
       const response = await inwardLotService.getAll();
       const allLots = Array.isArray(response) ? response : [];
-      
+
       const filteredLots = allLots.filter(lot =>
         lot.InwardEntry?.inwardNo === inwardNo
       );
-      
+
       setExistingLots(filteredLots);
-      
+
       const totals = filteredLots.reduce((acc, lot) => ({
-        totalQty:        acc.totalQty        + (parseInt(lot.qty)            || 0),
-        totalFreight:    acc.totalFreight    + (parseFloat(lot.freight)      || 0),
-        totalNettWeight: acc.totalNettWeight + (parseFloat(lot.nettWeight)   || 0),
+        totalQty: acc.totalQty + (parseInt(lot.qty) || 0),
+        totalFreight: acc.totalFreight + (parseFloat(lot.freight) || 0),
+        totalNettWeight: acc.totalNettWeight + (parseFloat(lot.nettWeight) || 0),
       }), { totalQty: 0, totalFreight: 0, totalNettWeight: 0 });
-      
+
       setExistingLotsTotals(totals);
-      
+
       console.log('Existing lots for inward:', filteredLots);
       console.log('Totals:', totals);
-      
+
     } catch (err) {
       console.error('Error fetching existing lots:', err);
     } finally {
@@ -285,7 +285,7 @@ const InwardLotPage = () => {
     } catch (err) {
       console.error('Error fetching next lot number:', err);
       const currentYear = new Date().getFullYear().toString().slice(-2);
-      const nextYear    = (parseInt(currentYear) + 1).toString().padStart(2, '0');
+      const nextYear = (parseInt(currentYear) + 1).toString().padStart(2, '0');
       const defaultLotNo = `UC/${currentYear}-${nextYear}/${String(Math.floor(Math.random() * 1000)).padStart(4, '0')}`;
       setFormData(prev => ({ ...prev, lotNo: defaultLotNo }));
     } finally {
@@ -312,7 +312,7 @@ const InwardLotPage = () => {
   const fetchInwardEntries = async () => {
     setInwardLoading(true);
     try {
-      const response  = await inwardEntryService.getAll();
+      const response = await inwardEntryService.getAll();
       const entriesData = response?.inwardEntries || (Array.isArray(response) ? response : []);
       setInwardEntries(entriesData);
     } catch (err) {
@@ -326,7 +326,7 @@ const InwardLotPage = () => {
   const fetchGodowns = async () => {
     setGodownLoading(true);
     try {
-      const response    = await godownService.getAll();
+      const response = await godownService.getAll();
       const godownsData = Array.isArray(response) ? response : [];
       setGodowns(godownsData);
     } catch (err) {
@@ -341,88 +341,88 @@ const InwardLotPage = () => {
     try {
       setLoading(true);
       const response = await inwardEntryService.getById(inwardId);
-      const inward   = response.inwardEntry || response;
-      
+      const inward = response.inwardEntry || response;
+
       setSelectedInward(inward);
       setInwardSearch(inward.inwardNo || '');
-      
+
       await fetchExistingLotsForInward(inward.inwardNo);
-      
-      const qty          = parseInt(inward.Qty) || 0;
+
+      const qty = parseInt(inward.Qty) || 0;
       const grossPerBale = parseFloat(inward.grossPerQty) || 0;
-      const tarePerBale  = parseFloat(inward.tarePerQty)  || 0;
-      const netPerBale   = grossPerBale - tarePerBale;
-      
+      const tarePerBale = parseFloat(inward.tarePerQty) || 0;
+      const netPerBale = grossPerBale - tarePerBale;
+
       const balesObject = {
-        inwardNo:        inward.inwardNo,
-        inwardId:        inward.id,
-        totalBales:      qty,
+        inwardNo: inward.inwardNo,
+        inwardId: inward.id,
+        totalBales: qty,
         totalGrossWeight: parseFloat(inward.grossWeight) || 0,
-        totalTareWeight:  parseFloat(inward.tareWeight)  || 0,
-        totalNetWeight:   parseFloat(inward.nettWeight)  || 0,
+        totalTareWeight: parseFloat(inward.tareWeight) || 0,
+        totalNetWeight: parseFloat(inward.nettWeight) || 0,
         perBaleWeights: { grossPerBale, tarePerBale, netPerBale },
         balesList: Array.from({ length: qty }, (_, index) => ({
-          slNo:        index + 1,
-          baleIndex:   index + 1,
+          slNo: index + 1,
+          baleIndex: index + 1,
           grossWeight: grossPerBale,
-          tareWeight:  tarePerBale,
-          netWeight:   netPerBale,
+          tareWeight: tarePerBale,
+          netWeight: netPerBale,
         })),
       };
-      
+
       setInwardBales(balesObject);
-      
+
       setInwardLotsData({
-        inwardNo:         inward.inwardNo,
-        inwardId:         inward.id,
-        totalBales:       qty,
+        inwardNo: inward.inwardNo,
+        inwardId: inward.id,
+        totalBales: qty,
         totalGrossWeight: parseFloat(inward.grossWeight) || 0,
-        totalTareWeight:  parseFloat(inward.tareWeight)  || 0,
-        totalNetWeight:   parseFloat(inward.nettWeight)  || 0,
+        totalTareWeight: parseFloat(inward.tareWeight) || 0,
+        totalNetWeight: parseFloat(inward.nettWeight) || 0,
       });
-      
+
       setFormData(prev => ({
         ...prev,
-        inwardId:       inward.id,
-        inwardNo:       inward.inwardNo       || '',
-        supplier:       inward.supplier       || '',
-        broker:         inward.broker         || '',
-        variety:        inward.variety        || '',
-        mixingGroup:    inward.mixingGroup    || '',
-        station:        inward.station        || '',
-        companyBroker:  inward.companyBroker  || '',
-        rateType:       inward.rateType       || '',
-        billNo:         inward.billNo         || '',
-        billDate:       inward.billDate       || '',
-        lotNoParty:     inward.lotNo          || '',
-        lorryNo:        inward.lorryNo        || '',
-        date:           inward.date           || '',
-        candyRate:      inward.candyRate      || '',
-        pMark:          inward.pMark          || '',
+        inwardId: inward.id,
+        inwardNo: inward.inwardNo || '',
+        supplier: inward.supplier || '',
+        broker: inward.broker || '',
+        variety: inward.variety || '',
+        mixingGroup: inward.mixingGroup || '',
+        station: inward.station || '',
+        companyBroker: inward.companyBroker || '',
+        rateType: inward.rateType || '',
+        billNo: inward.billNo || '',
+        billDate: inward.billDate || '',
+        lotNoParty: inward.lotNo || '',
+        lorryNo: inward.lorryNo || '',
+        date: inward.date || '',
+        candyRate: inward.candyRate || '',
+        pMark: inward.pMark || '',
         pressRunningNo: inward.pressRunningNo || '',
-        commisType:     inward.commisType     || '',
-        commisValue:    inward.commisValue    || '',
-        permitNo:       inward.permitNo       || '',
-        comm:           inward.comm           || '',
-        cooly:          inward.cooly          || '',
-        bale:           inward.bale           || '',
-        gst:            inward.gst            || '',
-        sgst:           inward.sgst           || '',
-        cgst:           inward.cgst           || '',
-        igst:           inward.igst           || '',
-        sgstAmount:     inward.sgstAmount     || '',
-        cgstAmount:     inward.cgstAmount     || '',
-        igstAmount:     inward.igstAmount     || '',
-        Tax:            inward.Tax            || '',
-        TaxRs:          inward.TaxRs          || '',
-        grossPerQty:    inward.grossPerQty    || '',
-        tarePerQty:     inward.tarePerQty     || '',
-        freightPerQty:  inward.freightPerQty  || '',
-        type:           inward.type           || '',
+        commisType: inward.commisType || '',
+        commisValue: inward.commisValue || '',
+        permitNo: inward.permitNo || '',
+        comm: inward.comm || '',
+        cooly: inward.cooly || '',
+        bale: inward.bale || '',
+        gst: inward.gst || '',
+        sgst: inward.sgst || '',
+        cgst: inward.cgst || '',
+        igst: inward.igst || '',
+        sgstAmount: inward.sgstAmount || '',
+        cgstAmount: inward.cgstAmount || '',
+        igstAmount: inward.igstAmount || '',
+        Tax: inward.Tax || '',
+        TaxRs: inward.TaxRs || '',
+        grossPerQty: inward.grossPerQty || '',
+        tarePerQty: inward.tarePerQty || '',
+        freightPerQty: inward.freightPerQty || '',
+        type: inward.type || '',
       }));
-      
+
       setShowInwardDropdown(false);
-      
+
     } catch (error) {
       console.error('Error fetching inward details:', error);
       setError('Failed to load inward entry details');
@@ -435,7 +435,7 @@ const InwardLotPage = () => {
   const handleGodownSelect = (godown) => {
     setFormData(prev => ({
       ...prev,
-      godownId:   godown.id,
+      godownId: godown.id,
       godownName: godown.godownName,
     }));
     setSelectedGodown(godown);
@@ -481,21 +481,21 @@ const InwardLotPage = () => {
   // Validate if this is the last lot
   const validateLastLot = () => {
     if (!selectedInward) return false;
-    
-    const totalInwardQty    = parseInt(selectedInward.Qty) || 0;
-    const currentQty        = parseInt(formData.qty)       || 0;
-    const totalExistingQty  = existingLotsTotals.totalQty;
-    const newTotalQty       = totalExistingQty + currentQty;
-    const isLastLot         = newTotalQty === totalInwardQty;
-    
+
+    const totalInwardQty = parseInt(selectedInward.Qty) || 0;
+    const currentQty = parseInt(formData.qty) || 0;
+    const totalExistingQty = existingLotsTotals.totalQty;
+    const newTotalQty = totalExistingQty + currentQty;
+    const isLastLot = newTotalQty === totalInwardQty;
+
     if (isLastLot) {
       // Because we already forced the weights to match in the useEffect,
       // these checks should always pass. They remain as a safety net.
       const totalExistingNettWeight = existingLotsTotals.totalNettWeight;
-      const currentNettWeight       = parseFloat(formData.nettWeight) || 0;
-      const totalNettWeight         = totalExistingNettWeight + currentNettWeight;
-      const inwardNettWeight        = parseFloat(selectedInward.nettWeight) || 0;
-      const weightTolerance         = 1.0; // 1 kg tolerance (accounts for rounding)
+      const currentNettWeight = parseFloat(formData.nettWeight) || 0;
+      const totalNettWeight = totalExistingNettWeight + currentNettWeight;
+      const inwardNettWeight = parseFloat(selectedInward.nettWeight) || 0;
+      const weightTolerance = 1.0; // 1 kg tolerance (accounts for rounding)
 
       if (Math.abs(totalNettWeight - inwardNettWeight) > weightTolerance) {
         setError(
@@ -504,12 +504,12 @@ const InwardLotPage = () => {
         );
         return false;
       }
-      
+
       const totalExistingFreight = existingLotsTotals.totalFreight;
-      const currentFreight       = parseFloat(formData.freight)  || 0;
-      const totalFreight         = totalExistingFreight + currentFreight;
-      const inwardFreight        = parseFloat(selectedInward.freight) || 0;
-      const freightTolerance     = 1.0;
+      const currentFreight = parseFloat(formData.freight) || 0;
+      const totalFreight = totalExistingFreight + currentFreight;
+      const inwardFreight = parseFloat(selectedInward.freight) || 0;
+      const freightTolerance = 1.0;
 
       if (Math.abs(totalFreight - inwardFreight) > freightTolerance) {
         setError(
@@ -518,13 +518,13 @@ const InwardLotPage = () => {
         );
         return false;
       }
-      
+
       setSuccess(
         `This is the last lot for inward ${selectedInward.inwardNo}. ` +
         `All weights and freight tally correctly!`
       );
     }
-    
+
     return true;
   };
 
@@ -534,48 +534,48 @@ const InwardLotPage = () => {
       setError('Please enter valid quantity first');
       return;
     }
-    
+
     if (selectedInward) {
-      const totalInwardQty   = parseInt(selectedInward.Qty) || 0;
-      const currentQty       = parseInt(formData.qty)       || 0;
+      const totalInwardQty = parseInt(selectedInward.Qty) || 0;
+      const currentQty = parseInt(formData.qty) || 0;
       const totalExistingQty = existingLotsTotals.totalQty;
-      const remainingQty     = totalInwardQty - totalExistingQty;
-      
+      const remainingQty = totalInwardQty - totalExistingQty;
+
       if (currentQty > remainingQty) {
         setError(`Only ${remainingQty} bales remaining for this inward entry. Please adjust quantity.`);
         return;
       }
     }
-    
-    const qty          = parseInt(formData.qty);
+
+    const qty = parseInt(formData.qty);
     const grossPerBale = parseFloat(formData.grossWeight) / qty;
-    const tarePerBale  = parseFloat(formData.tareWeight)  / qty;
-    const ratePerKg    = parseFloat(formData.ratePerKg)   || 0;
-    
+    const tarePerBale = parseFloat(formData.tareWeight) / qty;
+    const ratePerKg = parseFloat(formData.ratePerKg) || 0;
+
     const newWeightments = Array.from({ length: qty }, (_, index) => ({
-      id:          index + 1,
-      slNo:        index + 1,
-      baleNo:      generateBaleNumber(index + 1),
+      id: index + 1,
+      slNo: index + 1,
+      baleNo: generateBaleNumber(index + 1),
       grossWeight: grossPerBale.toFixed(3),
-      tareWeight:  tarePerBale.toFixed(3),
-      baleWeight:  (grossPerBale - tarePerBale).toFixed(3),
-      baleValue:   ((grossPerBale - tarePerBale) * ratePerKg).toFixed(2),
-      isEdited:    false,
+      tareWeight: tarePerBale.toFixed(3),
+      baleWeight: (grossPerBale - tarePerBale).toFixed(3),
+      baleValue: ((grossPerBale - tarePerBale) * ratePerKg).toFixed(2),
+      isEdited: false,
     }));
-    
+
     setWeightments(newWeightments);
-    
+
     const totals = newWeightments.reduce(
       (acc, w) => {
         acc.grossWeight += parseFloat(w.grossWeight) || 0;
-        acc.tareWeight  += parseFloat(w.tareWeight)  || 0;
-        acc.baleWeight  += parseFloat(w.baleWeight)  || 0;
-        acc.baleValue   += parseFloat(w.baleValue)   || 0;
+        acc.tareWeight += parseFloat(w.tareWeight) || 0;
+        acc.baleWeight += parseFloat(w.baleWeight) || 0;
+        acc.baleValue += parseFloat(w.baleValue) || 0;
         return acc;
       },
       { grossWeight: 0, tareWeight: 0, baleWeight: 0, baleValue: 0 }
     );
-    
+
     setWeightmentTotals(totals);
     setShowWeightmentModal(true);
   };
@@ -589,56 +589,56 @@ const InwardLotPage = () => {
   const handleWeightmentChange = (index, field, value) => {
     const updatedWeightments = [...weightments];
     const numValue = value === '' ? '' : parseFloat(value) || 0;
-    
+
     updatedWeightments[index][field] = numValue;
     updatedWeightments[index].isEdited = true;
-    
+
     if (field === 'grossWeight' || field === 'tareWeight') {
-      const gross      = parseFloat(updatedWeightments[index].grossWeight) || 0;
-      const tare       = parseFloat(updatedWeightments[index].tareWeight)  || 0;
+      const gross = parseFloat(updatedWeightments[index].grossWeight) || 0;
+      const tare = parseFloat(updatedWeightments[index].tareWeight) || 0;
       const baleWeight = gross - tare;
       updatedWeightments[index].baleWeight = baleWeight.toFixed(3);
-      const ratePerKg  = parseFloat(formData.ratePerKg) || 0;
-      updatedWeightments[index].baleValue  = (baleWeight * ratePerKg).toFixed(2);
+      const ratePerKg = parseFloat(formData.ratePerKg) || 0;
+      updatedWeightments[index].baleValue = (baleWeight * ratePerKg).toFixed(2);
     }
-    
+
     if (field === 'baleWeight') {
       const ratePerKg = parseFloat(formData.ratePerKg) || 0;
       updatedWeightments[index].baleValue = (numValue * ratePerKg).toFixed(2);
     }
-    
+
     setWeightments(updatedWeightments);
-    
+
     const totals = updatedWeightments.reduce(
       (acc, w) => {
         acc.grossWeight += parseFloat(w.grossWeight) || 0;
-        acc.tareWeight  += parseFloat(w.tareWeight)  || 0;
-        acc.baleWeight  += parseFloat(w.baleWeight)  || 0;
-        acc.baleValue   += parseFloat(w.baleValue)   || 0;
+        acc.tareWeight += parseFloat(w.tareWeight) || 0;
+        acc.baleWeight += parseFloat(w.baleWeight) || 0;
+        acc.baleValue += parseFloat(w.baleValue) || 0;
         return acc;
       },
       { grossWeight: 0, tareWeight: 0, baleWeight: 0, baleValue: 0 }
     );
-    
+
     setWeightmentTotals(totals);
   };
 
   // Validate weightments before submit
   const validateWeightments = () => {
     const headerGross = parseFloat(formData.grossWeight) || 0;
-    const headerTare  = parseFloat(formData.tareWeight)  || 0;
-    const headerNet   = parseFloat(formData.nettWeight)  || 0;
-    
+    const headerTare = parseFloat(formData.tareWeight) || 0;
+    const headerNet = parseFloat(formData.nettWeight) || 0;
+
     const weightmentGross = weightmentTotals.grossWeight;
-    const weightmentTare  = weightmentTotals.tareWeight;
-    const weightmentNet   = weightmentTotals.baleWeight;
-    
+    const weightmentTare = weightmentTotals.tareWeight;
+    const weightmentNet = weightmentTotals.baleWeight;
+
     const tolerance = 0.5;
-    
+
     const grossMatch = Math.abs(headerGross - weightmentGross) <= tolerance;
-    const tareMatch  = Math.abs(headerTare  - weightmentTare)  <= tolerance;
-    const netMatch   = Math.abs(headerNet   - weightmentNet)   <= tolerance;
-    
+    const tareMatch = Math.abs(headerTare - weightmentTare) <= tolerance;
+    const netMatch = Math.abs(headerNet - weightmentNet) <= tolerance;
+
     if (!grossMatch || !tareMatch || !netMatch) {
       setError(
         `Weightment totals must match header values.\n` +
@@ -648,7 +648,7 @@ const InwardLotPage = () => {
       );
       return false;
     }
-    
+
     return true;
   };
 
@@ -658,17 +658,17 @@ const InwardLotPage = () => {
       e.preventDefault();
       const fields = ['grossWeight', 'tareWeight'];
       const currentFieldIndex = fields.indexOf(field);
-      
+
       if (currentFieldIndex < fields.length - 1) {
-        const nextField  = fields[currentFieldIndex + 1];
+        const nextField = fields[currentFieldIndex + 1];
         const nextInputId = `weightment-${index}-${nextField}`;
-        const nextInput   = inputRefs.current[nextInputId];
+        const nextInput = inputRefs.current[nextInputId];
         if (nextInput) nextInput.focus();
       } else {
-        const nextIndex   = index + 1;
+        const nextIndex = index + 1;
         if (nextIndex < weightments.length) {
           const nextInputId = `weightment-${nextIndex}-grossWeight`;
-          const nextInput   = inputRefs.current[nextInputId];
+          const nextInput = inputRefs.current[nextInputId];
           if (nextInput) nextInput.focus();
         }
       }
@@ -679,7 +679,7 @@ const InwardLotPage = () => {
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (!selectedInward) { setError('Please select an inward entry'); return; }
     if (!formData.godownId) { setError('Please select a godown'); return; }
     if (!formData.qty || parseInt(formData.qty) <= 0) { setError('Please enter valid quantity'); return; }
@@ -691,44 +691,44 @@ const InwardLotPage = () => {
 
     try {
       const lotHeader = {
-        inwardId:    selectedInward.id,
-        lotNo:       formData.lotNo,
-        lotDate:     formData.lotDate,
-        qty:         parseInt(formData.qty)              || 0,
-        freight:     parseFloat(formData.freight)        || 0,
-        grossWeight: parseFloat(formData.grossWeight)    || 0,
-        tareWeight:  parseFloat(formData.tareWeight)     || 0,
-        nettWeight:  parseFloat(formData.nettWeight)     || 0,
-        candyRate:   parseFloat(formData.candyRateWithTax) || 0,
-        quintalRate: parseFloat(formData.quintalRate)    || 0,
-        ratePerKg:   parseFloat(formData.ratePerKg)     || 0,
-        assessValue: parseFloat(formData.assessValue)   || 0,
-        godownId:    parseInt(formData.godownId),
-        lcNo:        formData.lcNo        || null,
+        inwardId: selectedInward.id,
+        lotNo: formData.lotNo,
+        lotDate: formData.lotDate,
+        qty: parseInt(formData.qty) || 0,
+        freight: parseFloat(formData.freight) || 0,
+        grossWeight: parseFloat(formData.grossWeight) || 0,
+        tareWeight: parseFloat(formData.tareWeight) || 0,
+        nettWeight: parseFloat(formData.nettWeight) || 0,
+        candyRate: parseFloat(formData.candyRateWithTax) || 0,
+        quintalRate: parseFloat(formData.quintalRate) || 0,
+        ratePerKg: parseFloat(formData.ratePerKg) || 0,
+        assessValue: parseFloat(formData.assessValue) || 0,
+        godownId: parseInt(formData.godownId),
+        lcNo: formData.lcNo || null,
         paymentDays: formData.paymentDays ? parseInt(formData.paymentDays) : null,
         paymentDate: formData.paymentDate || null,
-        setNo:       formData.setNo       || null,
-        cess:        parseFloat(formData.cess) || 0,
-        type:        formData.type        || null,
+        setNo: formData.setNo || null,
+        cess: parseFloat(formData.cess) || 0,
+        type: formData.type || null,
       };
 
       const weightmentsData = weightments.map(w => ({
-        baleNo:      w.baleNo,
+        baleNo: w.baleNo,
         grossWeight: parseFloat(w.grossWeight) || 0,
-        tareWeight:  parseFloat(w.tareWeight)  || 0,
-        baleWeight:  parseFloat(w.baleWeight)  || 0,
-        baleValue:   parseFloat(w.baleValue)   || 0,
+        tareWeight: parseFloat(w.tareWeight) || 0,
+        baleWeight: parseFloat(w.baleWeight) || 0,
+        baleValue: parseFloat(w.baleValue) || 0,
       }));
 
       await inwardLotService.create(lotHeader, weightmentsData);
-      
+
       setSuccess('Lot created successfully!');
       setTimeout(() => {
         resetForm();
         setShowCreateModal(false);
         fetchLots();
       }, 2000);
-      
+
     } catch (err) {
       console.error('Error creating lot:', err);
       setError(err.response?.data?.message || 'Failed to create lot');
@@ -755,13 +755,13 @@ const InwardLotPage = () => {
       setError('');
       const lotResponse = await inwardLotService.getById(id);
       const lot = lotResponse.data || lotResponse;
-      
+
       if (!lot || !lot.id) { setError('Invalid lot data received'); return; }
-      
+
       setSelectedLot(lot);
-      
+
       let godown = null;
-      
+
       try {
         if (lot.inwardId) {
           const inwardResponse = await inwardEntryService.getById(lot.inwardId);
@@ -777,10 +777,10 @@ const InwardLotPage = () => {
         console.error('Error fetching inward entry:', inwardErr);
         setSelectedInward(null);
       }
-      
+
       try {
         const godownResponse = await godownService.getAll();
-        const godownsData    = Array.isArray(godownResponse) ? godownResponse : [];
+        const godownsData = Array.isArray(godownResponse) ? godownResponse : [];
         godown = godownsData.find(g => g.id === lot.godownId);
         setSelectedGodown(godown);
         setGodownSearch(godown?.godownName || '');
@@ -788,94 +788,94 @@ const InwardLotPage = () => {
         console.error('Error fetching godowns:', godownErr);
         setSelectedGodown(null);
       }
-      
+
       setFormData({
-        inwardId:       lot.inwardId   || '',
-        inwardNo:       lot.inwardNo   || '',
-        lotNo:          lot.lotNo      || '',
-        lotDate:        lot.lotDate ? lot.lotDate.split('T')[0] : new Date().toISOString().split('T')[0],
-        supplier:       lot.supplier       || '',
-        broker:         lot.broker         || '',
-        variety:        lot.variety        || '',
-        mixingGroup:    lot.mixingGroup    || '',
-        station:        lot.station        || '',
-        companyBroker:  lot.companyBroker  || '',
-        rateType:       lot.rateType       || '',
-        billNo:         lot.billNo         || '',
-        billDate:       lot.billDate       || '',
-        lotNoParty:     lot.inwardLotNo    || '',
-        lorryNo:        lot.lorryNo        || '',
-        date:           lot.inwardDate     || '',
-        candyRate:      lot.inwardCandyRate || '',
-        pMark:          lot.pMark          || '',
+        inwardId: lot.inwardId || '',
+        inwardNo: lot.inwardNo || '',
+        lotNo: lot.lotNo || '',
+        lotDate: lot.lotDate ? lot.lotDate.split('T')[0] : new Date().toISOString().split('T')[0],
+        supplier: lot.supplier || '',
+        broker: lot.broker || '',
+        variety: lot.variety || '',
+        mixingGroup: lot.mixingGroup || '',
+        station: lot.station || '',
+        companyBroker: lot.companyBroker || '',
+        rateType: lot.rateType || '',
+        billNo: lot.billNo || '',
+        billDate: lot.billDate || '',
+        lotNoParty: lot.inwardLotNo || '',
+        lorryNo: lot.lorryNo || '',
+        date: lot.inwardDate || '',
+        candyRate: lot.inwardCandyRate || '',
+        pMark: lot.pMark || '',
         pressRunningNo: lot.pressRunningNo || '',
-        commisType:     lot.commisType     || '',
-        commisValue:    lot.commisValue    || '',
-        permitNo:       lot.permitNo       || '',
-        comm:           lot.comm           || '',
-        cooly:          lot.cooly          || '',
-        bale:           lot.bale           || '',
-        gst:            lot.gst            || '',
-        sgst:           lot.sgst           || '',
-        cgst:           lot.cgst           || '',
-        igst:           lot.igst           || '',
-        sgstAmount:     lot.sgstAmount     || '',
-        cgstAmount:     lot.cgstAmount     || '',
-        igstAmount:     lot.igstAmount     || '',
-        Tax:            lot.Tax            || '',
-        TaxRs:          lot.TaxRs          || '',
-        grossPerQty:    lot.grossWeight && lot.qty ? (parseFloat(lot.grossWeight) / lot.qty).toFixed(3) : '',
-        tarePerQty:     lot.tareWeight  && lot.qty ? (parseFloat(lot.tareWeight)  / lot.qty).toFixed(3) : '',
-        freightPerQty:  lot.freight     && lot.qty ? (parseFloat(lot.freight)     / lot.qty).toFixed(2) : '',
-        godownId:       lot.godownId   || '',
-        godownName:     godown?.godownName || '',
-        qty:            lot.qty        || '',
-        paymentDays:    lot.paymentDays || '',
-        lcNo:           lot.lcNo       || '',
-        setNo:          lot.setNo      || '',
-        cess:           lot.cess       || '0',
-        type:           lot.type       || '',
-        grossWeight:    lot.grossWeight || '',
-        tareWeight:     lot.tareWeight  || '',
-        nettWeight:     lot.nettWeight  || '',
-        freight:        lot.freight     || '0',
+        commisType: lot.commisType || '',
+        commisValue: lot.commisValue || '',
+        permitNo: lot.permitNo || '',
+        comm: lot.comm || '',
+        cooly: lot.cooly || '',
+        bale: lot.bale || '',
+        gst: lot.gst || '',
+        sgst: lot.sgst || '',
+        cgst: lot.cgst || '',
+        igst: lot.igst || '',
+        sgstAmount: lot.sgstAmount || '',
+        cgstAmount: lot.cgstAmount || '',
+        igstAmount: lot.igstAmount || '',
+        Tax: lot.Tax || '',
+        TaxRs: lot.TaxRs || '',
+        grossPerQty: lot.grossWeight && lot.qty ? (parseFloat(lot.grossWeight) / lot.qty).toFixed(3) : '',
+        tarePerQty: lot.tareWeight && lot.qty ? (parseFloat(lot.tareWeight) / lot.qty).toFixed(3) : '',
+        freightPerQty: lot.freight && lot.qty ? (parseFloat(lot.freight) / lot.qty).toFixed(2) : '',
+        godownId: lot.godownId || '',
+        godownName: godown?.godownName || '',
+        qty: lot.qty || '',
+        paymentDays: lot.paymentDays || '',
+        lcNo: lot.lcNo || '',
+        setNo: lot.setNo || '',
+        cess: lot.cess || '0',
+        type: lot.type || '',
+        grossWeight: lot.grossWeight || '',
+        tareWeight: lot.tareWeight || '',
+        nettWeight: lot.nettWeight || '',
+        freight: lot.freight || '0',
         candyRateWithTax: lot.candyRate || '',
-        ratePerKg:      lot.ratePerKg  || '',
-        quintalRate:    lot.quintalRate || '',
-        assessValue:    lot.assessValue || '',
-        isLastLot:      false,
+        ratePerKg: lot.ratePerKg || '',
+        quintalRate: lot.quintalRate || '',
+        assessValue: lot.assessValue || '',
+        isLastLot: false,
       });
-      
+
       if (lot.weightments && lot.weightments.length > 0) {
         const formattedWeightments = lot.weightments.map((w, index) => ({
-          id:          w.id || index + 1,
-          slNo:        index + 1,
-          baleNo:      w.baleNo,
+          id: w.id || index + 1,
+          slNo: index + 1,
+          baleNo: w.baleNo,
           grossWeight: w.grossWeight,
-          tareWeight:  w.tareWeight,
-          baleWeight:  w.baleWeight,
-          baleValue:   w.baleValue,
-          isEdited:    false,
+          tareWeight: w.tareWeight,
+          baleWeight: w.baleWeight,
+          baleValue: w.baleValue,
+          isEdited: false,
         }));
-        
+
         setWeightments(formattedWeightments);
-        
+
         const totals = formattedWeightments.reduce(
           (acc, w) => {
             acc.grossWeight += parseFloat(w.grossWeight) || 0;
-            acc.tareWeight  += parseFloat(w.tareWeight)  || 0;
-            acc.baleWeight  += parseFloat(w.baleWeight)  || 0;
-            acc.baleValue   += parseFloat(w.baleValue)   || 0;
+            acc.tareWeight += parseFloat(w.tareWeight) || 0;
+            acc.baleWeight += parseFloat(w.baleWeight) || 0;
+            acc.baleValue += parseFloat(w.baleValue) || 0;
             return acc;
           },
           { grossWeight: 0, tareWeight: 0, baleWeight: 0, baleValue: 0 }
         );
-        
+
         setWeightmentTotals(totals);
       }
-      
+
       setShowEditModal(true);
-      
+
     } catch (error) {
       console.error('Error loading lot for edit:', error);
       setError('Failed to load lot details for editing');
@@ -886,54 +886,54 @@ const InwardLotPage = () => {
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
-    if (!selectedLot)    { setError('No lot selected for update'); return; }
+
+    if (!selectedLot) { setError('No lot selected for update'); return; }
     if (!selectedLot.id) { setError('Invalid lot data: missing ID'); return; }
     if (weightments.length === 0) { setError('Please add weightments first'); return; }
     if (!validateWeightments()) return;
-    
+
     setSubmitting(true);
     try {
       const lotHeader = {
-        inwardId:    selectedInward?.id || selectedLot.inwardId,
-        lotNo:       formData.lotNo,
-        lotDate:     formData.lotDate,
-        qty:         parseInt(formData.qty)              || 0,
-        freight:     parseFloat(formData.freight)        || 0,
-        grossWeight: parseFloat(formData.grossWeight)    || 0,
-        tareWeight:  parseFloat(formData.tareWeight)     || 0,
-        nettWeight:  parseFloat(formData.nettWeight)     || 0,
-        candyRate:   parseFloat(formData.candyRateWithTax) || 0,
-        quintalRate: parseFloat(formData.quintalRate)    || 0,
-        ratePerKg:   parseFloat(formData.ratePerKg)     || 0,
-        assessValue: parseFloat(formData.assessValue)   || 0,
-        godownId:    parseInt(formData.godownId),
-        lcNo:        formData.lcNo        || null,
+        inwardId: selectedInward?.id || selectedLot.inwardId,
+        lotNo: formData.lotNo,
+        lotDate: formData.lotDate,
+        qty: parseInt(formData.qty) || 0,
+        freight: parseFloat(formData.freight) || 0,
+        grossWeight: parseFloat(formData.grossWeight) || 0,
+        tareWeight: parseFloat(formData.tareWeight) || 0,
+        nettWeight: parseFloat(formData.nettWeight) || 0,
+        candyRate: parseFloat(formData.candyRateWithTax) || 0,
+        quintalRate: parseFloat(formData.quintalRate) || 0,
+        ratePerKg: parseFloat(formData.ratePerKg) || 0,
+        assessValue: parseFloat(formData.assessValue) || 0,
+        godownId: parseInt(formData.godownId),
+        lcNo: formData.lcNo || null,
         paymentDays: formData.paymentDays ? parseInt(formData.paymentDays) : null,
         paymentDate: formData.paymentDate || null,
-        setNo:       formData.setNo       || null,
-        cess:        parseFloat(formData.cess) || 0,
-        type:        formData.type        || null,
+        setNo: formData.setNo || null,
+        cess: parseFloat(formData.cess) || 0,
+        type: formData.type || null,
       };
 
       const weightmentsData = weightments.map(w => ({
-        id:          w.id,
-        baleNo:      w.baleNo,
+        id: w.id,
+        baleNo: w.baleNo,
         grossWeight: parseFloat(w.grossWeight) || 0,
-        tareWeight:  parseFloat(w.tareWeight)  || 0,
-        baleWeight:  parseFloat(w.baleWeight)  || 0,
-        baleValue:   parseFloat(w.baleValue)   || 0,
+        tareWeight: parseFloat(w.tareWeight) || 0,
+        baleWeight: parseFloat(w.baleWeight) || 0,
+        baleValue: parseFloat(w.baleValue) || 0,
       }));
-      
+
       await inwardLotService.update(selectedLot.id, lotHeader, weightmentsData);
-      
+
       setSuccess('Lot updated successfully!');
       setTimeout(() => {
         setShowEditModal(false);
         fetchLots();
         resetForm();
       }, 2000);
-      
+
     } catch (err) {
       console.error('Error updating lot:', err);
       setError(err.response?.data?.message || 'Failed to update lot');
@@ -964,24 +964,24 @@ const InwardLotPage = () => {
         'Nett Weight', 'Candy Rate', 'Quintal Rate', 'Rate/Kg', 'Assess Value',
         'Freight', 'Created Date',
       ];
-      
+
       const csvContent = 'data:text/csv;charset=utf-8,' +
         headers.join(',') + '\n' +
         filteredLots.map(lot => [
           `"${lot.lotNo || ''}"`,
           `"${lot.lotDate || ''}"`,
-          lot.qty        || 0,
+          lot.qty || 0,
           lot.grossWeight || 0,
-          lot.tareWeight  || 0,
-          lot.nettWeight  || 0,
-          lot.candyRate   || 0,
+          lot.tareWeight || 0,
+          lot.nettWeight || 0,
+          lot.candyRate || 0,
           lot.quintalRate || 0,
-          lot.ratePerKg   || 0,
+          lot.ratePerKg || 0,
           lot.assessValue || 0,
-          lot.freight     || 0,
+          lot.freight || 0,
           `"${lot.createdAt ? new Date(lot.createdAt).toLocaleDateString('en-IN') : ''}"`,
         ].join(',')).join('\n');
-      
+
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement('a');
       link.setAttribute('href', encodedUri);
@@ -989,7 +989,7 @@ const InwardLotPage = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       setSuccess('Lots exported successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -1138,13 +1138,13 @@ const InwardLotPage = () => {
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Purchase details</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            ['Supplier',       formData.supplier],
-            ['Broker',         formData.broker],
-            ['Variety',        formData.variety],
-            ['Mixing',         formData.mixingGroup],
-            ['Station',        formData.station],
+            ['Supplier', formData.supplier],
+            ['Broker', formData.broker],
+            ['Variety', formData.variety],
+            ['Mixing', formData.mixingGroup],
+            ['Station', formData.station],
             ['Company Broker', formData.companyBroker || 'NONE'],
-            ['Rate Type',      formData.rateType],
+            ['Rate Type', formData.rateType],
           ].map(([label, val]) => (
             <div key={label}>
               <label className="block text-xs text-gray-500">{label}</label>
@@ -1159,20 +1159,20 @@ const InwardLotPage = () => {
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Party details</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            ['Bill No.',        formData.billNo],
-            ['Bill Date',       formatDate(formData.billDate)],
-            ['Lot No.',         formData.lotNoParty],
-            ['Lorry No.',       formData.lorryNo],
-            ['Date',            formatDate(formData.date)],
-            ['Candy Rate',      `₹${formData.candyRate || 'N/A'}`],
-            ['P. Mark',         formData.pMark || '-'],
+            ['Bill No.', formData.billNo],
+            ['Bill Date', formatDate(formData.billDate)],
+            ['Lot No.', formData.lotNoParty],
+            ['Lorry No.', formData.lorryNo],
+            ['Date', formatDate(formData.date)],
+            ['Candy Rate', `₹${formData.candyRate || 'N/A'}`],
+            ['P. Mark', formData.pMark || '-'],
             ['Press Running No.', formData.pressRunningNo || '-'],
-            ['Commis. Type',    formData.commisType || '-'],
-            ['Commis. Value',   `₹${formData.commisValue || '0'}`],
-            ['Permit No.',      formData.permitNo || '-'],
-            ['Commission',      `₹${formData.comm || '0'}`],
-            ['Cooly',           `₹${formData.cooly || '0'}`],
-            ['Bale',            `₹${formData.bale || '0'}`],
+            ['Commis. Type', formData.commisType || '-'],
+            ['Commis. Value', `₹${formData.commisValue || '0'}`],
+            ['Permit No.', formData.permitNo || '-'],
+            ['Commission', `₹${formData.comm || '0'}`],
+            ['Cooly', `₹${formData.cooly || '0'}`],
+            ['Bale', `₹${formData.bale || '0'}`],
           ].map(([label, val]) => (
             <div key={label}>
               <label className="block text-xs text-gray-500">{label}</label>
@@ -1187,13 +1187,13 @@ const InwardLotPage = () => {
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Tax Details</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            ['GST %',     `${formData.gst || '0'}%`],
-            ['SGST %',    `${formData.sgst || '0'}%`],
-            ['CGST %',    `${formData.cgst || '0'}%`],
-            ['IGST %',    `${formData.igst || '0'}%`],
-            ['SGST Amt',  `₹${formData.sgstAmount || '0'}`],
-            ['CGST Amt',  `₹${formData.cgstAmount || '0'}`],
-            ['IGST Amt',  `₹${formData.igstAmount || '0'}`],
+            ['GST %', `${formData.gst || '0'}%`],
+            ['SGST %', `${formData.sgst || '0'}%`],
+            ['CGST %', `${formData.cgst || '0'}%`],
+            ['IGST %', `${formData.igst || '0'}%`],
+            ['SGST Amt', `₹${formData.sgstAmount || '0'}`],
+            ['CGST Amt', `₹${formData.cgstAmount || '0'}`],
+            ['IGST Amt', `₹${formData.igstAmount || '0'}`],
             ['Total Tax', `₹${formData.TaxRs || '0'}`],
           ].map(([label, val]) => (
             <div key={label}>
@@ -1258,8 +1258,7 @@ const InwardLotPage = () => {
             ) : (
               filteredGodowns.slice(0, 10).map((godown) => (
                 <div key={godown.id} onClick={() => handleGodownSelect(godown)}
-                  className={`p-3 cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-b-0 ${
-                    selectedGodown?.id === godown.id ? 'bg-blue-100' : ''}`}>
+                  className={`p-3 cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-b-0 ${selectedGodown?.id === godown.id ? 'bg-blue-100' : ''}`}>
                   <div className="font-medium text-gray-900">{godown.godownName}</div>
                   <div className="text-xs text-gray-600 mt-1">
                     {godown.locationName || 'N/A'} | Code: #{godown.code || 'N/A'}
@@ -1357,14 +1356,14 @@ const InwardLotPage = () => {
       </h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          ['Gross Weight',          `${formData.grossWeight || '0'} kg`,  'text-blue-600'],
-          ['Tare Weight',           `${formData.tareWeight  || '0'} kg`,  'text-blue-600'],
-          ['Nett Weight',           `${formData.nettWeight  || '0'} kg`,  'text-blue-600'],
-          ['Freight',               `₹${formData.freight   || '0'}`,      'text-blue-600'],
+          ['Gross Weight', `${formData.grossWeight || '0'} kg`, 'text-blue-600'],
+          ['Tare Weight', `${formData.tareWeight || '0'} kg`, 'text-blue-600'],
+          ['Nett Weight', `${formData.nettWeight || '0'} kg`, 'text-blue-600'],
+          ['Freight', `₹${formData.freight || '0'}`, 'text-blue-600'],
           ['Candy Rate (with tax)', `₹${formData.candyRateWithTax || '0'}`, 'text-green-600'],
-          ['Rate/Kg',               `₹${formData.ratePerKg  || '0'}`,    'text-green-600'],
-          ['Quintal Rate',          `₹${formData.quintalRate || '0'}`,    'text-green-600'],
-          ['Assess Value',          `₹${formData.assessValue || '0'}`,    'text-green-600'],
+          ['Rate/Kg', `₹${formData.ratePerKg || '0'}`, 'text-green-600'],
+          ['Quintal Rate', `₹${formData.quintalRate || '0'}`, 'text-green-600'],
+          ['Assess Value', `₹${formData.assessValue || '0'}`, 'text-green-600'],
         ].map(([label, val, color]) => (
           <div key={label}>
             <label className="block text-xs text-gray-500">{label}</label>
@@ -1556,8 +1555,7 @@ const InwardLotPage = () => {
                           ) : (
                             filteredInwardEntries.slice(0, 10).map((entry) => (
                               <div key={entry.id} onClick={() => handleInwardSelect(entry.id)}
-                                className={`p-3 cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-b-0 ${
-                                  selectedInward?.id === entry.id ? 'bg-blue-100' : ''}`}>
+                                className={`p-3 cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-b-0 ${selectedInward?.id === entry.id ? 'bg-blue-100' : ''}`}>
                                 <div className="font-medium text-gray-900">{entry.inwardNo}</div>
                                 <div className="text-xs text-gray-600 mt-1">
                                   Date: {formatDate(entry.inwardDate)} | Qty: {entry.noOfBales || 0} bales
@@ -1689,8 +1687,7 @@ const InwardLotPage = () => {
                             onChange={(e) => handleWeightmentChange(index, 'grossWeight', e.target.value)}
                             onKeyDown={(e) => handleKeyDown(e, index, 'grossWeight')}
                             onWheel={(e) => e.target.blur()} step="0.001"
-                            className={`w-32 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                              weightment.isEdited ? 'border-yellow-500' : 'border-gray-300'}`} />
+                            className={`w-32 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${weightment.isEdited ? 'border-yellow-500' : 'border-gray-300'}`} />
                         </td>
                         <td className="px-4 py-2">
                           <input
@@ -1699,8 +1696,7 @@ const InwardLotPage = () => {
                             onChange={(e) => handleWeightmentChange(index, 'tareWeight', e.target.value)}
                             onKeyDown={(e) => handleKeyDown(e, index, 'tareWeight')}
                             onWheel={(e) => e.target.blur()} step="0.001"
-                            className={`w-32 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                              weightment.isEdited ? 'border-yellow-500' : 'border-gray-300'}`} />
+                            className={`w-32 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${weightment.isEdited ? 'border-yellow-500' : 'border-gray-300'}`} />
                         </td>
                         <td className="px-4 py-2 text-sm font-medium">
                           {parseFloat(weightment.baleWeight || 0).toFixed(3)}
@@ -1765,12 +1761,12 @@ const InwardLotPage = () => {
                       <h5 className="font-semibold mb-3 text-blue-800">Purchase Details</h5>
                       <div className="grid grid-cols-2 gap-3">
                         {[
-                          ['Supplier',      selectedLot.supplier],
-                          ['Broker',        selectedLot.broker],
-                          ['Variety',       selectedLot.variety],
-                          ['Mixing Group',  selectedLot.mixingGroup],
-                          ['Station',       selectedLot.station],
-                          ['Company Broker',selectedLot.companyBroker],
+                          ['Supplier', selectedLot.supplier],
+                          ['Broker', selectedLot.broker],
+                          ['Variety', selectedLot.variety],
+                          ['Mixing Group', selectedLot.mixingGroup],
+                          ['Station', selectedLot.station],
+                          ['Company Broker', selectedLot.companyBroker],
                         ].map(([label, val]) => (
                           <div key={label}>
                             <p className="text-xs text-gray-500">{label}</p>
@@ -1784,11 +1780,11 @@ const InwardLotPage = () => {
                       <h5 className="font-semibold mb-3 text-blue-800">Party Details</h5>
                       <div className="grid grid-cols-2 gap-3">
                         {[
-                          ['Bill No.',        selectedLot.billNo],
-                          ['Bill Date',       formatDate(selectedLot.billDate)],
-                          ['Inward Lot No.',  selectedLot.inwardLotNo],
-                          ['P. Mark',         selectedLot.pMark || '-'],
-                          ['Press Running No.',selectedLot.pressRunningNo || '-'],
+                          ['Bill No.', selectedLot.billNo],
+                          ['Bill Date', formatDate(selectedLot.billDate)],
+                          ['Inward Lot No.', selectedLot.inwardLotNo],
+                          ['P. Mark', selectedLot.pMark || '-'],
+                          ['Press Running No.', selectedLot.pressRunningNo || '-'],
                         ].map(([label, val]) => (
                           <div key={label}>
                             <p className="text-xs text-gray-500">{label}</p>
@@ -1810,7 +1806,7 @@ const InwardLotPage = () => {
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h5 className="font-semibold mb-3 text-blue-800">Godown</h5>
-                      <p className="font-medium">{selectedLot.name || 'N/A'}</p>
+                      <p className="font-medium">{selectedLot.godown_id || 'N/A'}</p>
                     </div>
                   </div>
 
@@ -1881,7 +1877,7 @@ const InwardLotPage = () => {
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
-                            {['S.No','Bale No','Gross (kg)','Tare (kg)','Bale Wt (kg)','Bale Value (₹)','Issued'].map(h => (
+                            {['S.No', 'Bale No', 'Gross (kg)', 'Tare (kg)', 'Bale Wt (kg)', 'Bale Value (₹)', 'Issued'].map(h => (
                               <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
                             ))}
                           </tr>
@@ -1904,10 +1900,10 @@ const InwardLotPage = () => {
                           ))}
                           <tr className="bg-gray-100 font-semibold">
                             <td className="px-4 py-2 text-sm" colSpan="2">Totals</td>
-                            <td className="px-4 py-2 text-sm">{formatNumber(selectedLot.weightments.reduce((s,w) => s + parseFloat(w.grossWeight||0), 0))}</td>
-                            <td className="px-4 py-2 text-sm">{formatNumber(selectedLot.weightments.reduce((s,w) => s + parseFloat(w.tareWeight||0), 0))}</td>
-                            <td className="px-4 py-2 text-sm">{formatNumber(selectedLot.weightments.reduce((s,w) => s + parseFloat(w.baleWeight||0), 0))}</td>
-                            <td className="px-4 py-2 text-sm">₹{formatNumber(selectedLot.weightments.reduce((s,w) => s + parseFloat(w.baleValue||0), 0), 2)}</td>
+                            <td className="px-4 py-2 text-sm">{formatNumber(selectedLot.weightments.reduce((s, w) => s + parseFloat(w.grossWeight || 0), 0))}</td>
+                            <td className="px-4 py-2 text-sm">{formatNumber(selectedLot.weightments.reduce((s, w) => s + parseFloat(w.tareWeight || 0), 0))}</td>
+                            <td className="px-4 py-2 text-sm">{formatNumber(selectedLot.weightments.reduce((s, w) => s + parseFloat(w.baleWeight || 0), 0))}</td>
+                            <td className="px-4 py-2 text-sm">₹{formatNumber(selectedLot.weightments.reduce((s, w) => s + parseFloat(w.baleValue || 0), 0), 2)}</td>
                             <td className="px-4 py-2 text-sm"></td>
                           </tr>
                         </tbody>
@@ -1978,13 +1974,13 @@ const InwardLotPage = () => {
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Purchase Details</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      ['Supplier',       formData.supplier],
-                      ['Broker',         formData.broker],
-                      ['Variety',        formData.variety],
-                      ['Mixing',         formData.mixingGroup],
-                      ['Station',        formData.station],
+                      ['Supplier', formData.supplier],
+                      ['Broker', formData.broker],
+                      ['Variety', formData.variety],
+                      ['Mixing', formData.mixingGroup],
+                      ['Station', formData.station],
                       ['Company Broker', formData.companyBroker || 'NONE'],
-                      ['Rate Type',      formData.rateType],
+                      ['Rate Type', formData.rateType],
                     ].map(([label, val]) => (
                       <div key={label}>
                         <label className="block text-xs text-gray-500">{label}</label>
@@ -1998,13 +1994,13 @@ const InwardLotPage = () => {
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Party Details</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      ['Bill No.',       formData.billNo],
-                      ['Bill Date',      formatDate(formData.billDate)],
-                      ['Lot No.',        formData.lotNoParty],
-                      ['Lorry No.',      formData.lorryNo],
-                      ['Date',           formatDate(formData.date)],
-                      ['Candy Rate',     `₹${formData.candyRate || 'N/A'}`],
-                      ['P. Mark',        formData.pMark || '-'],
+                      ['Bill No.', formData.billNo],
+                      ['Bill Date', formatDate(formData.billDate)],
+                      ['Lot No.', formData.lotNoParty],
+                      ['Lorry No.', formData.lorryNo],
+                      ['Date', formatDate(formData.date)],
+                      ['Candy Rate', `₹${formData.candyRate || 'N/A'}`],
+                      ['P. Mark', formData.pMark || '-'],
                       ['Press Running No.', formData.pressRunningNo || '-'],
                     ].map(([label, val]) => (
                       <div key={label}>
@@ -2019,13 +2015,13 @@ const InwardLotPage = () => {
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Tax Details</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      ['GST %',     `${formData.gst || '0'}%`],
-                      ['SGST %',    `${formData.sgst || '0'}%`],
-                      ['CGST %',    `${formData.cgst || '0'}%`],
-                      ['IGST %',    `${formData.igst || '0'}%`],
-                      ['SGST Amt',  `₹${formData.sgstAmount || '0'}`],
-                      ['CGST Amt',  `₹${formData.cgstAmount || '0'}`],
-                      ['IGST Amt',  `₹${formData.igstAmount || '0'}`],
+                      ['GST %', `${formData.gst || '0'}%`],
+                      ['SGST %', `${formData.sgst || '0'}%`],
+                      ['CGST %', `${formData.cgst || '0'}%`],
+                      ['IGST %', `${formData.igst || '0'}%`],
+                      ['SGST Amt', `₹${formData.sgstAmount || '0'}`],
+                      ['CGST Amt', `₹${formData.cgstAmount || '0'}`],
+                      ['IGST Amt', `₹${formData.igstAmount || '0'}`],
                       ['Total Tax', `₹${formData.TaxRs || '0'}`],
                     ].map(([label, val]) => (
                       <div key={label}>
