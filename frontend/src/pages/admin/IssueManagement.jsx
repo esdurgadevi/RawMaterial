@@ -130,8 +130,8 @@ const IssueEntryManagement = () => {
           issuedBales: (issue.IssueItems || []).map(item => ({
             id: item.weightmentId,
             baleNo: item.InwardLotWeightment?.baleNo || `B${item.weightmentId}`,
-            baleWeight: Number(item.issueWeight || item.InwardLotWeightment?.netWeight || 0),
-            baleValue: Number(item.InwardLotWeightment?.value || 0),
+            baleWeight: Number(item.issueWeight || item.InwardLotWeightment?.baleWeight || 0),
+            baleValue: Number(item.InwardLotWeightment?.baleValue || 0),
             lotNo: item.InwardLotWeightment?.lotNo || ''
           })),
           createdAt: issue.createdAt,
@@ -190,9 +190,9 @@ const IssueEntryManagement = () => {
       setAvailableBales(available.map(w => ({
         id: w.id,
         baleNo: w.baleNo || `B${w.id}`,
-        baleWeight: Number(w.netWeight || w.grossWeight || 0),
+        baleWeight: Number(w.baleWeight || w.grossWeight || 0),
         grossWeight: Number(w.grossWeight || 0),
-        baleValue: Number(w.value || 0),
+        baleValue: Number(w.baleValue || 0),
         lotNo: lot.lotNo
       })));
     } catch {

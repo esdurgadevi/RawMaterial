@@ -1806,7 +1806,7 @@ const InwardLotPage = () => {
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h5 className="font-semibold mb-3 text-blue-800">Godown</h5>
-                      <p className="font-medium">{selectedLot.godown_id || 'N/A'}</p>
+                      <p className="font-medium">{selectedLot.godownName || 'N/A'}</p>
                     </div>
                   </div>
 
