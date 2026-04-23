@@ -105,6 +105,7 @@ export const getAllInwardLots = async () => {
       "freight",
       "nettWeight",
       "candyRate",
+      "godownId",
     ],
     include: [
       {
@@ -154,6 +155,11 @@ export const getInwardLotById = async (id) => {
         model: InwardLotWeightment,
         as: "weightments",
       },
+      {
+        model: db.Godown,
+        as: "godown",
+        attributes: ["godownName"],
+      },
     ],
   });
 
@@ -183,6 +189,9 @@ export const getInwardLotById = async (id) => {
     quintalRate: data.quintalRate,
     ratePerKg: data.ratePerKg,
     assessValue: data.assessValue,
+    godownId: data.godownId,
+    godownName: data.godown?.godownName || null,
+    inwardNo: data.InwardEntry?.inwardNo || null,
 
     // From InwardEntry
     billNo: data.InwardEntry?.billNo || null,

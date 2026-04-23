@@ -2,7 +2,7 @@ import db from "../../../models/index.js";
 
 
 const {
-  sequelize,  
+  sequelize,
   Issue,
   IssueItem,
   MixingGroup,

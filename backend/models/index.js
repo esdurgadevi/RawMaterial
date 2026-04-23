@@ -310,6 +310,11 @@ db.InwardLot.belongsTo(db.InwardEntry, {
   foreignKey: "inwardId",
 });
 
+db.InwardLot.belongsTo(db.Godown, {
+  foreignKey: "godownId",
+  as: "godown",
+});
+
 db.InwardLot.hasMany(db.InwardLotWeightment, {
   foreignKey: "lotNo",     
   sourceKey: "lotNo",     
