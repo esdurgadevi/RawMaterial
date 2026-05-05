@@ -962,7 +962,7 @@ const InwardLotPage = () => {
       const headers = [
         'Lot No', 'Lot Date', 'Quantity', 'Gross Weight', 'Tare Weight',
         'Nett Weight', 'Candy Rate', 'Quintal Rate', 'Rate/Kg', 'Assess Value',
-        'Freight', 'Created Date',
+        'Freight', 'Supplier', 'Station', 'Created Date',
       ];
 
       const csvContent = 'data:text/csv;charset=utf-8,' +
@@ -979,6 +979,8 @@ const InwardLotPage = () => {
           lot.ratePerKg || 0,
           lot.assessValue || 0,
           lot.freight || 0,
+          `"${lot.supplier || ''}"`,
+          `"${lot.station || ''}"`,
           `"${lot.createdAt ? new Date(lot.createdAt).toLocaleDateString('en-IN') : ''}"`,
         ].join(',')).join('\n');
 
@@ -1044,7 +1046,12 @@ const InwardLotPage = () => {
   const filteredLots = lots.filter(lot => {
     if (!searchTerm.trim()) return true;
     const searchLower = searchTerm.toLowerCase();
-    return lot.lotNo && lot.lotNo.toLowerCase().includes(searchLower);
+    return (
+      (lot.lotNo && lot.lotNo.toLowerCase().includes(searchLower)) ||
+      (lot.supplier && lot.supplier.toLowerCase().includes(searchLower)) ||
+      (lot.station && lot.station.toLowerCase().includes(searchLower)) ||
+      (lot.inwardNo && lot.inwardNo.toLowerCase().includes(searchLower))
+    );
   });
 
   // Filter inward entries
@@ -1414,7 +1421,7 @@ const InwardLotPage = () => {
           <div className="flex-1">
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
-              <input type="text" placeholder="Search lots by lot number..."
+              <input type="text" placeholder="Search lots by lot number, supplier, station, or inward number..."
                 value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
               {searchTerm && (
@@ -1468,6 +1475,8 @@ const InwardLotPage = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">LOT NO (QTY, FREIGHT)</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PURCHASE ORDER NO (CANDY RATE)</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">INWARD NO</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SUPPLIER</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATION</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
                 </tr>
               </thead>
@@ -1482,11 +1491,19 @@ const InwardLotPage = () => {
                       <div className="text-sm text-gray-500">Qty: {lot.qty || 0} bales | Freight: ₹{lot.freight || '0'}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{lot.InwardEntry?.purchaseOrder?.orderNo || 'N/A'}</div>
+                      <div className="text-sm font-medium text-gray-900">{lot.purchaseOrderNo || 'N/A'}</div>
                       <div className="text-sm text-gray-500">Candy Rate: ₹{lot.candyRate || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{lot.InwardEntry?.inwardNo || 'N/A'}</div>
+                      <div className="text-sm font-medium text-gray-900">{lot.inwardNo || 'N/A'}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 max-w-xs truncate" title={lot.supplier || 'N/A'}>
+                        {lot.supplier || 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">{lot.station || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">

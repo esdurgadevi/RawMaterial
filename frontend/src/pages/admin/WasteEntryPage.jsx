@@ -22,16 +22,18 @@ const WasteEntryPage = () => {
   const [godowns, setGodowns] = useState([]);
   const [packingTypes, setPackingTypes] = useState([]);
   
-  // Predefined departments list
-  const departments = [
-    'Carding',
-    'Comber',
-    'Speed Frame',
-    'Spinning',
-    'Auto Coner',
-    'Blow Room',
-    'Ring Frame'
-  ];
+  // Dynamic departments list derived from waste masters
+  const departments = React.useMemo(() => {
+    if (!Array.isArray(wasteMasters)) return [];
+    return Array.from(
+      new Set(
+        wasteMasters
+          .map(w => w.department)
+          .filter(dept => dept && typeof dept === 'string' && dept.trim() !== '')
+          .map(dept => dept.trim())
+      )
+    ).sort();
+  }, [wasteMasters]);
 
   // UI States
   const [showWasteDropdown, setShowWasteDropdown] = useState({});
