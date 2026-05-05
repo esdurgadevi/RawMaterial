@@ -92,9 +92,6 @@ export const createInwardLot = async (data) => {
   }
 };
 
-/* =========================
-   GET ALL (LIST PAGE)
-========================= */
 export const getAllInwardLots = async () => {
   const lots = await InwardLot.findAll({
     attributes: [
@@ -111,12 +108,24 @@ export const getAllInwardLots = async () => {
       {
         model: InwardEntry,
         as: "InwardEntry",
-        attributes: ["inwardNo"],   // get inward number
+        attributes: ["inwardNo"],
         include: [
           {
             model: PurchaseOrder,
             as: "purchaseOrder",
-            attributes: ["orderNo"],  // get purchase order number
+            attributes: ["orderNo"],
+            include: [
+              {
+                model: Supplier,
+                as: "supplier",
+                attributes: ["accountName"],
+              },
+              {
+                model: Station,
+                as: "station",
+                attributes: ["station"],
+              },
+            ],
           },
         ],
       },
@@ -124,8 +133,65 @@ export const getAllInwardLots = async () => {
     order: [["lotDate", "DESC"]],
   });
 
-  return lots;
+  return lots.map((lot) => {
+    const data = lot.toJSON();
+
+    return {
+      id: data.id,
+      lotNo: data.lotNo,
+      lotDate: data.lotDate,
+      qty: data.qty,
+      freight: data.freight,
+      nettWeight: data.nettWeight,
+      candyRate: data.candyRate,
+      godownId: data.godownId,
+
+      inwardNo: data.InwardEntry?.inwardNo || null,
+
+      purchaseOrderNo:
+        data.InwardEntry?.purchaseOrder?.orderNo || null,
+
+      supplier:
+        data.InwardEntry?.purchaseOrder?.supplier?.accountName || null,
+
+      station:
+        data.InwardEntry?.purchaseOrder?.station?.station || null,
+    };
+  });
 };
+/* =========================
+   GET ALL (LIST PAGE)
+========================= */
+// export const getAllInwardLots = async () => {
+//   const lots = await InwardLot.findAll({
+//     attributes: [
+//       "id",
+//       "lotNo",
+//       "lotDate",
+//       "qty",
+//       "freight",
+//       "nettWeight",
+//       "candyRate",
+//       "godownId",
+//     ],
+//     include: [
+//       {
+//         model: InwardEntry,
+//         as: "InwardEntry",
+//         attributes: ["inwardNo"],   // get inward number
+//         include: [
+//           {
+//             model: PurchaseOrder,
+//             as: "purchaseOrder",
+//             attributes: ["orderNo"],  // get purchase order number
+//           },
+//         ],
+//       },
+//     ],
+//     order: [["lotDate", "DESC"]],
+//   });
+//   return lots;
+// };
 
 /* =========================
    GET BY ID (FULL DETAILS)
@@ -168,7 +234,7 @@ export const getInwardLotById = async (id) => {
   }
 
   const data = lot.toJSON();
-  
+
   return {
     // Lot fields
     id: data.id,
@@ -293,9 +359,9 @@ export const updateInwardLot = async (id, data) => {
 
     // 3️⃣ Re-insert new weightments
     const weightmentRows = weightments.map(({ id, ...item }) => ({
-  ...item,
-  lotNo: lot.lotNo,
-}));
+      ...item,
+      lotNo: lot.lotNo,
+    }));
 
     await InwardLotWeightment.bulkCreate(weightmentRows, {
       transaction,
