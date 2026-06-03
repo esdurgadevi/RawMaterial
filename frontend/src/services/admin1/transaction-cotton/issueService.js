@@ -62,6 +62,14 @@ const issueService = {
     const response = await api.put(`/${id}`, data);
     return response.data.issue;
   },
+
+  // 📄 Get Daily Issue Report
+  getDailyIssueReport: async (startDate, endDate) => {
+    const response = await api.get(`/report/daily`, {
+      params: { startDate, endDate }
+    });
+    return response.data.issues;
+  },
 };
 
 export default issueService;
