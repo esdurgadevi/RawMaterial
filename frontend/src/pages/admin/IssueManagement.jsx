@@ -1,10 +1,12 @@
 // frontend/src/pages/admin/transaction-cotton/IssueEntryManagement.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import issueService from '../../services/admin1/transaction-cotton/issueService';
 import mixingGroupService from '../../services/admin1/master/mixingGroupService';
 import inwardLotService from '../../services/admin1/transaction-cotton/inwardLotService';
 
 const IssueEntryManagement = () => {
+  const navigate = useNavigate();
   // ────────────────────────────────────────────────
   //                  STATES
   // ────────────────────────────────────────────────
@@ -19,6 +21,7 @@ const IssueEntryManagement = () => {
   const [balesLoading, setBalesLoading] = useState(false);
   const [issueNoLoading, setIssueNoLoading] = useState(false);
   const [lotsLoading, setLotsLoading] = useState(false);
+  const [reportGenerating, setReportGenerating] = useState(false);
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -27,15 +30,20 @@ const IssueEntryManagement = () => {
   // Modal control
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportDates, setReportDates] = useState({
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
   const [editingIssue, setEditingIssue] = useState(null);
   const [viewingIssue, setViewingIssue] = useState(null);
 
-  // Form data ─ aligned with backend model
+  // Form data
   const [formData, setFormData] = useState({
     issueNumber: '',
     issueDate: new Date().toISOString().split('T')[0],
     mixingNo: '',
-    mixingGroupId: '',           // ← from group (was fromMixingGroupId)
+    mixingGroupId: '',           
     mixingGroupName: '',
     toMixingGroupId: '',
     toMixingGroupName: '',
@@ -48,7 +56,7 @@ const IssueEntryManagement = () => {
     totalValue: 0
   });
 
-  // Dropdown search & visibility
+  // Dropdown states
   const [showFromMixingGroupDropdown, setShowFromMixingGroupDropdown] = useState(false);
   const [showToMixingGroupDropdown, setShowToMixingGroupDropdown] = useState(false);
   const [showLotDropdown, setShowLotDropdown] = useState(false);
@@ -56,10 +64,8 @@ const IssueEntryManagement = () => {
   const [toMixingGroupSearch, setToMixingGroupSearch] = useState('');
   const [lotSearch, setLotSearch] = useState('');
 
-  // Cache mixing group names
   const [mixingGroupNames, setMixingGroupNames] = useState({});
 
-  // Refs for outside-click detection
   const fromMixingGroupRef = useRef(null);
   const toMixingGroupRef = useRef(null);
   const lotRef = useRef(null);
@@ -73,7 +79,6 @@ const IssueEntryManagement = () => {
     fetchAvailableLots();
   }, []);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (fromMixingGroupRef.current && !fromMixingGroupRef.current.contains(event.target)) {
@@ -109,7 +114,7 @@ const IssueEntryManagement = () => {
     setLoading(true);
     try {
       const response = await issueService.getAll();
-      const issuesData = Array.isArray(response) ? response : [];
+      const issuesData = Array.isArray(response) ? response : (response.issues || []);
 
       const processed = await Promise.all(issuesData.map(async (issue) => {
         const [fromName, toName] = await Promise.all([
@@ -127,6 +132,7 @@ const IssueEntryManagement = () => {
           toMixingGroupId: issue.toMixingGroupId,
           toMixingGroupName: toName,
           issueQty: issue.issueQty,
+          lotNo: issue.IssueItems?.[0]?.InwardLotWeightment?.lotNo || '',
           issuedBales: (issue.IssueItems || []).map(item => ({
             id: item.weightmentId,
             baleNo: item.InwardLotWeightment?.baleNo || `B${item.weightmentId}`,
@@ -217,6 +223,392 @@ const IssueEntryManagement = () => {
     } finally {
       setIssueNoLoading(false);
     }
+  };
+
+  // ────────────────────────────────────────────────
+  //        REPORT GENERATION (FIXED - CHANGES ONLY HERE)
+  // ────────────────────────────────────────────────
+  const handleGenerateReport = async () => {
+    if (!reportDates.startDate || !reportDates.endDate) {
+      setError("Please select both start and end dates");
+      return;
+    }
+    
+    setReportGenerating(true);
+    setShowReportModal(false);
+    
+    try {
+      // Fetch report data
+      const data = await issueService.getDailyIssueReport(reportDates.startDate, reportDates.endDate);
+      
+      if (!data || data.length === 0) {
+        throw new Error('No data found for the selected date range');
+      }
+      
+      // Process data — FIXED: use accountName for supplier, separate godown properly
+      const groupedByVariety = {};
+      data.forEach(issue => {
+        (issue.IssueItems || []).forEach(item => {
+          const weightment = item.InwardLotWeightment;
+          const inwardLot = weightment?.inwardLot;
+          const inwardEntry = inwardLot?.InwardEntry || inwardLot?.inwardEntry;
+          const po = inwardEntry?.purchaseOrder;
+          
+          const varietyName = po?.variety?.variety || po?.variety?.varietyName || 'OTHER';
+          const lotNo = inwardLot?.lotNo || 'UNKNOWN';
+
+          // FIXED: API uses accountName, not supplierName
+          const partyName = po?.supplier?.accountName || po?.supplier?.supplierName || '';
+          const godownName = inwardLot?.godown?.godownName || '';
+
+          if (!groupedByVariety[varietyName]) groupedByVariety[varietyName] = {};
+          if (!groupedByVariety[varietyName][lotNo]) {
+            groupedByVariety[varietyName][lotNo] = {
+              lotNo, partyName, qty: 0, issueWt: 0, issueValue: 0, godown: godownName, mixingNo: issue.mixingNo
+            };
+          }
+
+          const lotGroup = groupedByVariety[varietyName][lotNo];
+          lotGroup.qty += 1;
+          lotGroup.issueWt += Number(item.issueWeight || 0);
+          lotGroup.issueValue += Number(weightment?.baleValue || 0);
+        });
+      });
+
+      const finalData = {};
+      Object.keys(groupedByVariety).forEach(v => {
+        finalData[v] = Object.values(groupedByVariety[v]);
+      });
+
+      if (Object.keys(finalData).length === 0) {
+        throw new Error('No valid data to generate report');
+      }
+
+      openPrintWindow(finalData, reportDates.startDate, reportDates.endDate);
+      
+    } catch (err) {
+      console.error('Report generation error:', err);
+      setError(err.message || "Failed to generate report");
+      setShowReportModal(true);
+    } finally {
+      setReportGenerating(false);
+    }
+  };
+
+  const openPrintWindow = (reportData, startDate, endDate) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      setError('Please allow pop-ups to generate report');
+      return;
+    }
+
+    const htmlContent = generateReportHTML(reportData, startDate, endDate);
+    
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  };
+
+  // ── ONLY THIS FUNCTION IS CHANGED FROM ORIGINAL ──
+  const generateReportHTML = (reportData, startDate, endDate) => {
+    const allLots = Object.values(reportData).flat();
+    const totalQty = allLots.reduce((sum, item) => sum + item.qty, 0);
+    const totalWt = allLots.reduce((sum, item) => sum + item.issueWt, 0);
+    const totalValue = allLots.reduce((sum, item) => sum + item.issueValue, 0);
+
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+
+    const formatValue = (value) => {
+      return value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    const currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    return `<!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Daily Issue Report</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        
+        body {
+          font-family: Arial, Helvetica, sans-serif;
+          /* CHANGED: font-size bumped from 10px → 12px */
+          font-size: 12px;
+          padding: 15mm;
+          width: 210mm;
+          background: white;
+          margin: 0 auto;
+        }
+        
+        .report-header {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        
+        .company-name {
+          /* CHANGED: from 18px → 20px */
+          font-size: 20px;
+          font-weight: bold;
+          text-transform: uppercase;
+          margin: 0;
+        }
+        
+        .report-title {
+          /* CHANGED: from 11px → 13px */
+          font-size: 13px;
+          font-weight: bold;
+          border-bottom: 1px solid #9ca3af;
+          display: inline-block;
+          padding: 0 30px;
+          margin: 5px 0 0 0;
+        }
+        
+        .info-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-bottom: 10px;
+          /* CHANGED: from 11px → 13px */
+          font-size: 13px;
+          font-weight: bold;
+        }
+        
+        .date-info {
+          color: #1e3a8a;
+        }
+        
+        .mixing-no {
+          border-bottom: 1px solid black;
+          padding: 0 15px;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          /* CHANGED: from 10px → 12px */
+          font-size: 12px;
+          /* CHANGED: added table-layout fixed for proper column control */
+          table-layout: fixed;
+        }
+
+        /* CHANGED: explicit column widths so godown never bleeds into issue value */
+        col.col-slno    { width: 44px; }
+        col.col-lotno   { width: 110px; }
+        col.col-party   { width: auto; }
+        col.col-qty     { width: 52px; }
+        col.col-issuewt { width: 82px; }
+        col.col-value   { width: 100px; }
+        col.col-godown  { width: 70px; }
+        
+        th {
+          padding: 5px 4px;
+          text-align: left;
+        }
+        
+        .table-header {
+          border-top: 2px solid #b91c1c;
+          border-bottom: 2px solid #b91c1c;
+          color: #1e3a8a;
+        }
+        
+        /* CHANGED: all td/th alignment via classes with explicit padding */
+        .col-slno   { text-align: left; }
+        .col-lotno  { text-align: left; }
+        .col-party  { text-align: left; padding-left: 8px; }
+        .col-qty    { text-align: right; padding-right: 6px; }
+        .col-issuewt{ text-align: right; padding-right: 6px; }
+        .col-value  { text-align: right; padding-right: 6px; }
+        /* CHANGED: added padding-left to godown so it never touches Issue Value cell */
+        .col-godown { text-align: left; padding-left: 12px; }
+        
+        .variety-row td {
+          padding: 7px 4px;
+          font-weight: bold;
+          color: #1e3a8a;
+          border-bottom: 1px solid #e5e7eb;
+          text-transform: uppercase;
+        }
+        
+        .data-row {
+          border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .data-row td {
+          padding: 5px 4px;
+        }
+        
+        .total-row {
+          border-top: 1px dotted black;
+        }
+        
+        .total-row td {
+          padding: 5px 4px;
+          font-weight: bold;
+        }
+        
+        .total-values {
+          border-bottom: 2px double black;
+        }
+        
+        .signatures {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 50px;
+          margin-bottom: 60px;
+          padding: 0 15px;
+        }
+        
+        .signature-item {
+          text-align: center;
+        }
+        
+        .signature-label {
+          font-weight: bold;
+          margin-bottom: 40px;
+          /* CHANGED: from 11px → 13px */
+          font-size: 13px;
+        }
+        
+        .signature-line {
+          border-top: 1px solid black;
+          width: 130px;
+        }
+        
+        .footer {
+          margin-top: 30px;
+          padding-top: 16px;
+          border-top: 1px solid #b91c1c;
+          /* CHANGED: from 9px → 11px */
+          font-size: 11px;
+          display: flex;
+          justify-content: space-between;
+          text-transform: uppercase;
+        }
+        
+        @media print {
+          body {
+            padding: 0;
+            margin: 0;
+          }
+          .no-print {
+            display: none;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="report-header">
+        <h1 class="company-name">Kayaar Exports Private Limited.,</h1>
+        <p class="report-title">Daily Issue LotNo Wise As on ${formatDate(endDate)}</p>
+      </div>
+
+      <div class="info-bar">
+        <div>Date : <span class="date-info">${formatDate(endDate)}</span> &nbsp; &amp; Time : <span class="date-info">${currentTime}</span></div>
+        <div>Mixing No: &nbsp; <span class="mixing-no">${allLots[0]?.mixingNo || ''}</span></div>
+      </div>
+
+      <table>
+        <!-- CHANGED: explicit colgroup for reliable column widths -->
+        <colgroup>
+          <col class="col-slno" />
+          <col class="col-lotno" />
+          <col class="col-party" />
+          <col class="col-qty" />
+          <col class="col-issuewt" />
+          <col class="col-value" />
+          <col class="col-godown" />
+        </colgroup>
+        <thead>
+          <tr class="table-header">
+            <th class="col-slno">Sl.No</th>
+            <th class="col-lotno">Lot No</th>
+            <th class="col-party">Party Name</th>
+            <th class="col-qty">Qty</th>
+            <th class="col-issuewt">Issue Wt</th>
+            <th class="col-value">Issue Value</th>
+            <th class="col-godown">Godown</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Object.keys(reportData).map((variety) => `
+            <tr class="variety-row">
+              <td colspan="7">${variety}</td>
+            </tr>
+            ${reportData[variety].map((item, idx) => `
+              <tr class="data-row">
+                <td class="col-slno">${idx + 1}</td>
+                <td class="col-lotno">${item.lotNo}</td>
+                <!-- CHANGED: partyName now correctly populated from accountName -->
+                <td class="col-party" style="text-transform: uppercase;">${item.partyName}</td>
+                <td class="col-qty">${item.qty}</td>
+                <td class="col-issuewt">${item.issueWt.toFixed(2)}</td>
+                <td class="col-value">${formatValue(item.issueValue)}</td>
+                <!-- CHANGED: godown is its own cell with left padding, never bleeds -->
+                <td class="col-godown" style="text-transform: uppercase;">${item.godown}</td>
+              </tr>
+            `).join('')}
+          `).join('')}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="3" style="text-align: right;">&nbsp;</td>
+            <td class="col-qty total-values">${totalQty}</td>
+            <td class="col-issuewt total-values">${totalWt.toFixed(2)}</td>
+            <td class="col-value total-values">${formatValue(totalValue)}</td>
+            <td class="col-godown">&nbsp;</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="signatures">
+        <div class="signature-item">
+          <p class="signature-label">Prepared by</p>
+          <div class="signature-line"></div>
+        </div>
+        <div class="signature-item">
+          <p class="signature-label">Verified by</p>
+          <div class="signature-line"></div>
+        </div>
+        <div class="signature-item">
+          <p class="signature-label">Approved by</p>
+          <div class="signature-line"></div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div>Start Date : ${formatDate(startDate)} &nbsp;&nbsp;&nbsp; End Date : ${formatDate(endDate)}</div>
+        <div style="font-weight: bold;">&lt;&lt;&lt; End of Statement &gt;&gt;&gt;</div>
+        <div>Page 1 of 1</div>
+      </div>
+      
+      <script>
+        window.onload = function() {
+          setTimeout(function() {
+            window.print();
+          }, 500);
+        };
+      </script>
+    </body>
+    </html>`;
+  };
+
+  const formatDateForFilename = (dateStr) => {
+    if (!dateStr) return 'report';
+    const date = new Date(dateStr);
+    return date.toISOString().split('T')[0];
   };
 
   // ────────────────────────────────────────────────
@@ -481,6 +873,11 @@ const IssueEntryManagement = () => {
           <button className="ml-auto" onClick={() => setSuccess('')}>×</button>
         </div>
       )}
+      {reportGenerating && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg flex items-center">
+          <span className="mr-3">⏳</span> Generating report, please wait...
+        </div>
+      )}
 
       {/* Search & Actions */}
       <div className="bg-white rounded-lg shadow p-5 mb-6">
@@ -502,7 +899,12 @@ const IssueEntryManagement = () => {
             )}
           </div>
           <div className="flex gap-3">
-            <button className="px-4 py-2 border rounded-lg hover:bg-gray-50">Export</button>
+            <button 
+              onClick={() => setShowReportModal(true)}
+              className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            >
+              <span>📊</span> Report
+            </button>
             <button
               onClick={() => {
                 fetchIssues();
@@ -530,6 +932,7 @@ const IssueEntryManagement = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issue No / Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mixing Groups</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lot No</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bales</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
@@ -544,6 +947,9 @@ const IssueEntryManagement = () => {
                     <td className="px-6 py-4">
                       <div>From: {issue.mixingGroupName}</div>
                       <div>To: {issue.toMixingGroupName}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {issue.lotNo}
                     </td>
                     <td className="px-6 py-4">
                       {issue.issueQty} bales
@@ -727,7 +1133,7 @@ const IssueEntryManagement = () => {
                                     <td className="p-2 text-center">{selected ? '✔' : ''}</td>
                                     <td className="p-2">{bale.baleNo}</td>
                                     <td className="p-2">{formatNumber(bale.baleWeight)}</td>
-                                  </tr>
+                                   </tr>
                                 );
                               })}
                             </tbody>
@@ -805,7 +1211,7 @@ const IssueEntryManagement = () => {
         </div>
       )}
 
-      {/* View Modal - simplified */}
+      {/* View Modal */}
       {showViewModal && viewingIssue && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
@@ -816,13 +1222,86 @@ const IssueEntryManagement = () => {
             <div className="space-y-4">
               <p><strong>Issue No:</strong> {viewingIssue.issueNumber}</p>
               <p><strong>Date:</strong> {formatDate(viewingIssue.issueDate)}</p>
+              <p><strong>Lot No:</strong> {viewingIssue.lotNo}</p>
               <p><strong>From:</strong> {viewingIssue.mixingGroupName}</p>
               <p><strong>To:</strong> {viewingIssue.toMixingGroupName}</p>
-              <p><strong>Bales:</strong> {viewingIssue.issueQty}</p>
-              {/* Add more fields as needed */}
+              <p><strong>Total Bales:</strong> {viewingIssue.issueQty}</p>
+              
+              {viewingIssue.issuedBales && viewingIssue.issuedBales.length > 0 && (
+                <div>
+                  <h3 className="font-bold mb-2 mt-4 text-gray-800 border-b pb-2">Selected Bales</h3>
+                  <div className="max-h-60 overflow-auto border rounded">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="p-2 text-left border-b">Bale No</th>
+                          <th className="p-2 text-left border-b">Weight (kg)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {viewingIssue.issuedBales.map(bale => (
+                          <tr key={bale.id} className="hover:bg-gray-50 border-b last:border-0">
+                            <td className="p-2">{bale.baleNo}</td>
+                            <td className="p-2">{formatNumber(bale.baleWeight)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="mt-8 flex justify-end">
               <button onClick={() => setShowViewModal(false)} className="px-5 py-2 border rounded">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-800">Generate Daily Issue Report</h2>
+              <button onClick={() => setShowReportModal(false)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={reportDates.startDate}
+                  onChange={e => setReportDates(prev => ({ ...prev, startDate: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={reportDates.endDate}
+                  onChange={e => setReportDates(prev => ({ ...prev, endDate: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="mt-8 flex gap-3">
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerateReport}
+                disabled={reportGenerating}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold disabled:opacity-50"
+              >
+                {reportGenerating ? 'Generating...' : 'Generate'}
+              </button>
             </div>
           </div>
         </div>
