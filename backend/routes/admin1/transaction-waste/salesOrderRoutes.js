@@ -1,4 +1,3 @@
-// routes/salesOrderRoutes.js
 import express from "express";
 import {
   createSalesOrder,
@@ -6,7 +5,8 @@ import {
   getSalesOrderById,
   updateSalesOrder,
   deleteSalesOrder,
-  getNextSalesOrderNoController
+  getNextSalesOrderNoController,
+  getAvailableBales
 } from "../../../controllers/admin1/transaction-waste/salesOrderController.js";
 import { protect } from "../../../middlewares/authMiddleware.js";
 
@@ -14,6 +14,7 @@ const router = express.Router();
 
 router.use(protect);
 router.get("/next-order-no", getNextSalesOrderNoController);
+router.get("/:id/available-bales", getAvailableBales);
 router.post("/", createSalesOrder);
 router.get("/", getAllSalesOrders);
 router.get("/:id", getSalesOrderById);

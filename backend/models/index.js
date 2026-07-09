@@ -522,6 +522,22 @@ db.SalesOrderDetail.belongsTo(db.SalesOrder, {
   foreignKey: "salesOrderId",
   as: "order",
 });
+db.SalesOrderDetail.belongsTo(db.WastePacking, {
+  foreignKey: "packingId",
+  as: "packing",
+  onDelete: "RESTRICT",
+  onUpdate: "CASCADE",
+});
+db.WastePacking.hasMany(db.SalesOrderDetail, {
+  foreignKey: "packingId",
+  as: "salesOrderDetails",
+});
+
+console.log("SalesOrderDetail associations:");
+console.log(Object.keys(db.SalesOrderDetail.associations));
+
+console.log("WastePacking associations:");
+console.log(Object.keys(db.WastePacking.associations));
 // Supplier → SalesOrder
 db.Supplier.hasMany(db.SalesOrder, {
   foreignKey: "supplierId",

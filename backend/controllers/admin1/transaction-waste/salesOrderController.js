@@ -74,3 +74,17 @@ export const deleteSalesOrder = async (req, res) => {
     res.status(404).json({ message: error.message });
   }
 };
+
+export const getAvailableBales = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { excludeInvoiceId } = req.query;
+    const bales = await salesOrderService.getAvailableBales(id, excludeInvoiceId);
+    res.status(200).json({
+      message: "Available bales retrieved successfully",
+      bales,
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};

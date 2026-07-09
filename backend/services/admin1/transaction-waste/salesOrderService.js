@@ -2,7 +2,7 @@
 import db from "../../../models/index.js";
 import { Op } from "sequelize";
 
-const { SalesOrder, SalesOrderDetail, Supplier } = db;
+const { SalesOrder, SalesOrderDetail, Supplier, WastePackingDetail, WastePacking, InvoiceDetail } = db;
 
 export const create = async (data) => {
   const transaction = await db.sequelize.transaction();
@@ -33,7 +33,7 @@ export const create = async (data) => {
     data.details.forEach((detail) => {
       if (
         !detail.product ||
-        !detail.packingType ||
+        !detail.packingId ||
         !detail.qty ||
         !detail.totalWt ||
         !detail.rate ||
@@ -65,7 +65,7 @@ export const create = async (data) => {
       data.details.map((d) => ({
         salesOrderId: order.id,
         product: d.product,
-        packingType: d.packingType,
+        packingId: d.packingId,
         qty: d.qty,
         totalWt: d.totalWt,
         rate: d.rate,
@@ -92,7 +92,11 @@ export const create = async (data) => {
 export const getAll = async () => {
   return await SalesOrder.findAll({
     include: [
-      { model: SalesOrderDetail, as: "details" },
+      {
+        model: SalesOrderDetail,
+        as: "details",
+        include: [{ model: WastePacking, as: "packing" }],
+      },
       { model: Supplier, as: "supplier" },
     ],
     order: [["date", "DESC"], ["id", "DESC"]],
@@ -102,7 +106,11 @@ export const getAll = async () => {
 export const getById = async (id) => {
   const order = await SalesOrder.findByPk(id, {
     include: [
-      { model: SalesOrderDetail, as: "details" },
+      {
+        model: SalesOrderDetail,
+        as: "details",
+        include: [{ model: WastePacking, as: "packing" }],
+      },
       { model: Supplier, as: "supplier" },
     ],
   });
@@ -158,7 +166,7 @@ export const update = async (id, data) => {
       data.details.forEach((detail) => {
         if (
           !detail.product ||
-          !detail.packingType ||
+          !detail.packingId ||
           !detail.qty ||
           !detail.totalWt ||
           !detail.rate ||
@@ -179,7 +187,7 @@ export const update = async (id, data) => {
         data.details.map((d) => ({
           salesOrderId: id,
           product: d.product,
-          packingType: d.packingType,
+          packingId: d.packingId,
           qty: d.qty,
           totalWt: d.totalWt,
           rate: d.rate,
@@ -213,4 +221,54 @@ export const remove = async (id) => {
   }
 
   await order.destroy();
+};
+
+export const getAvailableBales = async (salesOrderId, excludeInvoiceId) => {
+  const order = await SalesOrder.findByPk(salesOrderId, {
+    include: [{ model: SalesOrderDetail, as: "details" }],
+  });
+
+  if (!order) {
+    throw new Error("Sales order not found");
+  }
+
+  const packingIds = order.details.map((d) => d.packingId).filter(Boolean);
+
+  if (packingIds.length === 0) {
+    return [];
+  }
+
+  const allBales = await WastePackingDetail.findAll({
+    where: { wastePackingId: packingIds },
+    include: [
+      {
+        model: WastePacking,
+        as: "packing",
+      },
+    ],
+  });
+
+  const invoiceWhereClause = {};
+  if (excludeInvoiceId) {
+    invoiceWhereClause.invoiceId = { [Op.ne]: excludeInvoiceId };
+  }
+  const invoicedDetails = await InvoiceDetail.findAll({
+    where: invoiceWhereClause,
+    attributes: ["baleNo"],
+  });
+
+  const invoicedBaleNos = new Set(invoicedDetails.map((id) => id.baleNo));
+
+  const availableBales = allBales.filter((bale) => !invoicedBaleNos.has(bale.baleNo));
+
+  return availableBales.map((bale) => ({
+    id: bale.id,
+    baleNo: bale.baleNo,
+    wasteName: bale.packing?.wasteType || "COMBER NOILS",
+    lotNo: bale.packing?.lotNo || "",
+    grossWt: parseFloat(bale.grossWeight),
+    tareWt: parseFloat(bale.tareWeight) || 0,
+    netWt: parseFloat(bale.netWeight),
+    packingId: bale.wastePackingId,
+  }));
 };

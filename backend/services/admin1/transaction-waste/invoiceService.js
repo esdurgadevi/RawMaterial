@@ -47,6 +47,17 @@ export const create = async (data) => {
       }
     }
 
+    // Check if any of the bales are already invoiced in another invoice
+    const baleNos = data.details.map((d) => d.baleNo);
+    const alreadyInvoiced = await InvoiceDetail.findOne({
+      where: {
+        baleNo: baleNos,
+      },
+    });
+    if (alreadyInvoiced) {
+      throw new Error(`Bale ${alreadyInvoiced.baleNo} has already been invoiced in another invoice`);
+    }
+
     // Prepare details
     const detailsToCreate = data.details.map((detail) => ({
       wasteName: detail.wasteName,
@@ -186,6 +197,19 @@ export const update = async (id, data) => {
       const order = await SalesOrder.findByPk(data.salesOrderId);
       if (!order) {
         throw new Error("Invalid salesOrderId");
+      }
+    }
+
+    if (data.details && Array.isArray(data.details)) {
+      const baleNos = data.details.map((d) => d.baleNo);
+      const alreadyInvoiced = await InvoiceDetail.findOne({
+        where: {
+          baleNo: baleNos,
+          invoiceId: { [Op.ne]: id }, // exclude current invoice
+        },
+      });
+      if (alreadyInvoiced) {
+        throw new Error(`Bale ${alreadyInvoiced.baleNo} has already been invoiced in another invoice`);
       }
     }
 

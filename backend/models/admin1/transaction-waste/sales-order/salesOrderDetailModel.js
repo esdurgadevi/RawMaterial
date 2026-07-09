@@ -24,9 +24,15 @@ const SalesOrderDetailModel = (sequelize) => {
         type: DataTypes.STRING(100),
         allowNull: false,
       },
-      packingType: {
-        type: DataTypes.STRING(50),
+      packingId: {
+        type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+          model: "waste_packings",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "RESTRICT",
       },
       qty: {
         type: DataTypes.INTEGER,
