@@ -898,45 +898,21 @@ const WasteCottonInvoicePage = () => {
 
       setFormData((prev) => ({ ...prev, salesOrderId: orderId }));
 
-      if (order.details?.length > 0) {
-        const generatedBales = [];
-        for (const detail of order.details) {
-          const totalBales = detail.qty || 0;
-          const totalWeight = detail.totalWt || 0;
-          const avgWeight = totalBales > 0 ? totalWeight / totalBales : 0;
-          const wasteName = detail.product || "COMBER NOILS";
-
-          let lotNo = "4";
-          try {
-            const lots = await wasteLotService.getByWasteName(wasteName);
-            if (lots?.length > 0) {
-              const active = lots.find((l) => l.active === true) || lots[0];
-              lotNo = active.lotNo;
-            }
-          } catch {
-            /* keep default */
-          }
-
-          for (let i = 1; i <= totalBales; i++) {
-            generatedBales.push({
-              wasteName,
-              lotNo,
-              baleNo: `WC-3090-${lotNo}-${i.toString().padStart(3, "0")}`,
-              grossWt: parseFloat(avgWeight.toFixed(3)),
-              tareWt: 0,
-              netWt: parseFloat(avgWeight.toFixed(3)),
-              id: `${orderId}-${detail.id || i}-${i}`,
-            });
-          }
-        }
-        setAvailableBales(generatedBales);
-
-        if (order.details[0]?.rate) {
-          setRatePerKg(parseFloat(order.details[0].rate));
-        }
-
-        setCheckedBales(new Set());
+      // ── Fetch REAL bales from waste packing details via packingId ──────────
+      try {
+        const realBales = await salesOrderService.getAvailableBales(orderId);
+        setAvailableBales(Array.isArray(realBales) ? realBales : []);
+      } catch (baleErr) {
+        console.error("Failed to load real bales:", baleErr);
+        setAvailableBales([]);
+        toast.error("Could not load available bales for this order");
       }
+
+      if (order.details?.[0]?.rate) {
+        setRatePerKg(parseFloat(order.details[0].rate));
+      }
+
+      setCheckedBales(new Set());
     } catch {
       toast.error("Failed to load order details");
     }

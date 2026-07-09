@@ -63,7 +63,7 @@ const salesOrderService = {
 
       details: (data.details || []).map((item) => ({
         product: item.product?.trim(),
-        packingType: item.packingType?.trim(),
+        packingId: Number(item.packingId),
         qty: Number(item.qty),
         totalWt: Number(item.totalWt),
         rate: Number(item.rate),
@@ -120,7 +120,7 @@ const salesOrderService = {
         data.details !== undefined
           ? (data.details || []).map((item) => ({
               product: item.product?.trim(),
-              packingType: item.packingType?.trim(),
+              packingId: Number(item.packingId),
               qty: Number(item.qty),
               totalWt: Number(item.totalWt),
               rate: Number(item.rate),
@@ -138,6 +138,13 @@ const salesOrderService = {
   delete: async (id) => {
     const response = await api.delete(`/${id}`);
     return response.data;
+  },
+
+  // 🔹 Get available bales for sales order
+  getAvailableBales: async (orderId, excludeInvoiceId) => {
+    const params = excludeInvoiceId ? { excludeInvoiceId } : {};
+    const response = await api.get(`/${orderId}/available-bales`, { params });
+    return response.data.bales;
   },
 };
 

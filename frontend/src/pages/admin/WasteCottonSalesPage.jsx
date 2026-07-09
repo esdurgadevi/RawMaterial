@@ -6,6 +6,7 @@ import salesOrderService from "../../services/admin1/transaction-waste/salesOrde
 import packingTypeService from "../../services/admin1/master/packingTypeService";
 import wasteMasterService from "../../services/admin1/master/wasteMasterService";
 import supplierService from "../../services/admin1/master/supplierService";
+import wastePackingService from "../../services/admin1/transaction-waste/wastePackingService";
 
 // Helper function to format numbers
 const formatNumber = (value, decimals = 2) => {
@@ -37,6 +38,7 @@ const WasteCottonSalesPage = () => {
   const [packingTypes, setPackingTypes] = useState([]);
   const [wasteProducts, setWasteProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [wastePackings, setWastePackings] = useState([]);
   const [loadingMasters, setLoadingMasters] = useState(false);
 
   // Form state for create/edit
@@ -53,7 +55,7 @@ const WasteCottonSalesPage = () => {
     despatchTo: "",
     details: [{
       product: "",
-      packingType: "",
+      packingId: "",
       qty: 0,
       totalWt: 0,
       rate: 0,
@@ -103,6 +105,11 @@ const WasteCottonSalesPage = () => {
       const suppliersData = await supplierService.getAll();
       console.log("Suppliers:", suppliersData);
       setSuppliers(Array.isArray(suppliersData) ? suppliersData : []);
+      
+      // Fetch waste packings
+      const packingsData = await wastePackingService.getAll();
+      console.log("Waste Packings:", packingsData);
+      setWastePackings(Array.isArray(packingsData) ? packingsData : []);
       
     } catch (error) {
       console.error("Error fetching master data:", error);
@@ -187,7 +194,7 @@ const WasteCottonSalesPage = () => {
         ...prev.details,
         {
           product: "",
-          packingType: "",
+          packingId: "",
           qty: 0,
           totalWt: 0,
           rate: 0,
@@ -195,6 +202,40 @@ const WasteCottonSalesPage = () => {
           value: 0
         }
       ]
+    }));
+  };
+
+  const handleDetailPackingChange = (index, packingId) => {
+    const updatedDetails = [...formData.details];
+    if (!packingId) {
+      updatedDetails[index] = {
+        ...updatedDetails[index],
+        packingId: "",
+        product: "",
+        qty: 0,
+        totalWt: 0,
+        value: 0
+      };
+    } else {
+      const selectedPacking = wastePackings.find(wp => String(wp.id) === String(packingId) || String(wp._id) === String(packingId));
+      if (selectedPacking) {
+        updatedDetails[index] = {
+          ...updatedDetails[index],
+          packingId: selectedPacking.id || selectedPacking._id,
+          product: selectedPacking.wasteType,
+          qty: selectedPacking.totalBales || selectedPacking.noOfBales || 0,
+          totalWt: parseFloat(selectedPacking.totalWeight) || 0,
+        };
+        // Auto-calculate value
+        const totalWt = parseFloat(selectedPacking.totalWeight) || 0;
+        const rate = parseFloat(updatedDetails[index].rate) || 0;
+        const ratePer = parseFloat(updatedDetails[index].ratePer) || 1;
+        updatedDetails[index].value = (totalWt * rate) / ratePer;
+      }
+    }
+    setFormData(prev => ({
+      ...prev,
+      details: updatedDetails
     }));
   };
 
@@ -240,8 +281,8 @@ const WasteCottonSalesPage = () => {
         toast.error(`Product is required for row ${i + 1}`);
         return false;
       }
-      if (!detail.packingType) {
-        toast.error(`Packing type is required for row ${i + 1}`);
+      if (!detail.packingId) {
+        toast.error(`Packing Lot is required for row ${i + 1}`);
         return false;
       }
     }
@@ -266,7 +307,7 @@ const WasteCottonSalesPage = () => {
       despatchTo: formData.despatchTo,
       details: formData.details.map(detail => ({
         product: detail.product,
-        packingType: detail.packingType,
+        packingId: detail.packingId,
         qty: parseInt(detail.qty) || 0,
         totalWt: parseFloat(detail.totalWt) || 0,
         rate: parseFloat(detail.rate) || 0,
@@ -308,7 +349,7 @@ const WasteCottonSalesPage = () => {
       despatchTo: formData.despatchTo,
       details: formData.details.map(detail => ({
         product: detail.product,
-        packingType: detail.packingType,
+        packingId: detail.packingId,
         qty: parseInt(detail.qty) || 0,
         totalWt: parseFloat(detail.totalWt) || 0,
         rate: parseFloat(detail.rate) || 0,
@@ -360,7 +401,7 @@ const WasteCottonSalesPage = () => {
       despatchTo: "",
       details: [{
         product: "",
-        packingType: "",
+        packingId: "",
         qty: 0,
         totalWt: 0,
         rate: 0,
@@ -392,7 +433,7 @@ const WasteCottonSalesPage = () => {
       despatchTo: order.despatchTo || "",
       details: order.details && order.details.length > 0 ? order.details.map(d => ({
         product: d.product || "",
-        packingType: d.packingType || "",
+        packingId: d.packingId || "",
         qty: d.qty || 0,
         totalWt: d.totalWt || 0,
         rate: d.rate || 0,
@@ -400,7 +441,7 @@ const WasteCottonSalesPage = () => {
         value: d.value || 0
       })) : [{
         product: "",
-        packingType: "",
+        packingId: "",
         qty: 0,
         totalWt: 0,
         rate: 0,
@@ -806,8 +847,8 @@ const WasteCottonSalesPage = () => {
                   <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product *</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Packing Type *</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Packing Lot *</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Wt.</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
@@ -821,53 +862,45 @@ const WasteCottonSalesPage = () => {
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="px-3 py-2">
                             <select
-                              value={detail.product}
-                              onChange={(e) => handleDetailChange(index, "product", e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              value={detail.packingId || ""}
+                              onChange={(e) => handleDetailPackingChange(index, e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm animate-none"
                               required
                             >
-                              <option value="">Select Product</option>
-                              {wasteProducts.map((product) => (
-                                <option key={product._id} value={product._id}>
-                                  {product.waste}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-3 py-2">
-                            <select
-                              value={detail.packingType}
-                              onChange={(e) => handleDetailChange(index, "packingType", e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              required
-                            >
-                              <option value="">Select Packing Type</option>
-                              {packingTypes.map((type) => (
-                                <option key={type._id} value={type._id}>
-                                  {type.name}
+                              <option value="">Select Packing Lot</option>
+                              {wastePackings.map((packing) => (
+                                <option key={packing.id || packing._id} value={packing.id || packing._id}>
+                                  Lot: {packing.lotNo} ({packing.wasteType})
                                 </option>
                               ))}
                             </select>
                           </td>
                           <td className="px-3 py-2">
                             <input
-                              type="number"
-                              value={detail.qty}
-                              onChange={(e) => handleDetailChange(index, "qty", e.target.value)}
-                              onWheel={(e) => e.target.blur()}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              min="0"
+                              type="text"
+                              value={detail.product || ""}
+                              readOnly
+                              disabled
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100 cursor-not-allowed"
+                              placeholder="Auto-populated"
                             />
                           </td>
                           <td className="px-3 py-2">
                             <input
                               type="number"
-                              value={detail.totalWt}
-                              onChange={(e) => handleDetailChange(index, "totalWt", e.target.value)}
-                              onWheel={(e) => e.target.blur()}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              step="0.001"
-                              min="0"
+                              value={detail.qty || 0}
+                              readOnly
+                              disabled
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100 cursor-not-allowed"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              value={detail.totalWt || 0}
+                              readOnly
+                              disabled
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100 cursor-not-allowed animate-none"
                             />
                           </td>
                           <td className="px-3 py-2">
@@ -879,6 +912,7 @@ const WasteCottonSalesPage = () => {
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                               step="0.01"
                               min="0"
+                              required
                             />
                           </td>
                           <td className="px-3 py-2">
@@ -1016,7 +1050,7 @@ const WasteCottonSalesPage = () => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Packing Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Packing / Lot</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Wt.</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
@@ -1028,10 +1062,10 @@ const WasteCottonSalesPage = () => {
                     {(selectedOrder.details || []).map((detail, index) => (
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="px-6 py-3 text-sm text-gray-900">
-                          {getProductName(detail.product)}
+                          {detail.product}
                         </td>
                         <td className="px-6 py-3 text-sm text-gray-500">
-                          {getPackingTypeName(detail.packingType)}
+                          {detail.packing?.packingType || detail.packingType || "N/A"} {detail.packing?.lotNo ? `(Lot: ${detail.packing.lotNo})` : ""}
                         </td>
                         <td className="px-6 py-3 text-sm text-gray-500">{detail.qty}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">{formatNumber(detail.totalWt, 3)}</td>
@@ -1245,8 +1279,8 @@ const WasteCottonSalesPage = () => {
                   <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product *</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Packing Type *</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Packing Lot *</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Wt.</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
@@ -1260,53 +1294,45 @@ const WasteCottonSalesPage = () => {
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="px-3 py-2">
                             <select
-                              value={detail.product}
-                              onChange={(e) => handleDetailChange(index, "product", e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              value={detail.packingId || ""}
+                              onChange={(e) => handleDetailPackingChange(index, e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm animate-none"
                               required
                             >
-                              <option value="">Select Product</option>
-                              {wasteProducts.map((product) => (
-                                <option key={product._id} value={product._id}>
-                                  {product.waste}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-3 py-2">
-                            <select
-                              value={detail.packingType}
-                              onChange={(e) => handleDetailChange(index, "packingType", e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              required
-                            >
-                              <option value="">Select Packing Type</option>
-                              {packingTypes.map((type) => (
-                                <option key={type._id} value={type._id}>
-                                  {type.name}
+                              <option value="">Select Packing Lot</option>
+                              {wastePackings.map((packing) => (
+                                <option key={packing.id || packing._id} value={packing.id || packing._id}>
+                                  Lot: {packing.lotNo} ({packing.wasteType})
                                 </option>
                               ))}
                             </select>
                           </td>
                           <td className="px-3 py-2">
                             <input
-                              type="number"
-                              value={detail.qty}
-                              onChange={(e) => handleDetailChange(index, "qty", e.target.value)}
-                              onWheel={(e) => e.target.blur()}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              min="0"
+                              type="text"
+                              value={detail.product || ""}
+                              readOnly
+                              disabled
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100 cursor-not-allowed"
+                              placeholder="Auto-populated"
                             />
                           </td>
                           <td className="px-3 py-2">
                             <input
                               type="number"
-                              value={detail.totalWt}
-                              onChange={(e) => handleDetailChange(index, "totalWt", e.target.value)}
-                              onWheel={(e) => e.target.blur()}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              step="0.001"
-                              min="0"
+                              value={detail.qty || 0}
+                              readOnly
+                              disabled
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100 cursor-not-allowed"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              value={detail.totalWt || 0}
+                              readOnly
+                              disabled
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100 cursor-not-allowed animate-none"
                             />
                           </td>
                           <td className="px-3 py-2">
@@ -1318,6 +1344,7 @@ const WasteCottonSalesPage = () => {
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                               step="0.01"
                               min="0"
+                              required
                             />
                           </td>
                           <td className="px-3 py-2">
