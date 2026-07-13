@@ -253,7 +253,7 @@ const InwardLotPage = () => {
       const allLots = Array.isArray(response) ? response : [];
 
       const filteredLots = allLots.filter(lot =>
-        lot.InwardEntry?.inwardNo === inwardNo
+        (lot.inwardNo || lot.InwardEntry?.inwardNo) === inwardNo
       );
 
       setExistingLots(filteredLots);
@@ -548,20 +548,48 @@ const InwardLotPage = () => {
     }
 
     const qty = parseInt(formData.qty);
-    const grossPerBale = parseFloat(formData.grossWeight) / qty;
-    const tarePerBale = parseFloat(formData.tareWeight) / qty;
+    const headerGross = parseFloat(formData.grossWeight) || 0;
+    const headerTare = parseFloat(formData.tareWeight) || 0;
+    const headerNet = parseFloat(formData.nettWeight) || 0;
+    const grossPerBale = headerGross / qty;
+    const tarePerBale = headerTare / qty;
     const ratePerKg = parseFloat(formData.ratePerKg) || 0;
 
-    const newWeightments = Array.from({ length: qty }, (_, index) => ({
-      id: index + 1,
-      slNo: index + 1,
-      baleNo: generateBaleNumber(index + 1),
-      grossWeight: grossPerBale.toFixed(3),
-      tareWeight: tarePerBale.toFixed(3),
-      baleWeight: (grossPerBale - tarePerBale).toFixed(3),
-      baleValue: ((grossPerBale - tarePerBale) * ratePerKg).toFixed(2),
-      isEdited: false,
-    }));
+    const newWeightments = Array.from({ length: qty }, (_, index) => {
+      const isLastBale = index === qty - 1;
+      const previousTotals = isLastBale
+        ? Array.from({ length: index }).reduce(
+            (acc) => {
+              acc.grossWeight += parseFloat((grossPerBale).toFixed(3)) || 0;
+              acc.tareWeight += parseFloat((tarePerBale).toFixed(3)) || 0;
+              acc.baleWeight += parseFloat((grossPerBale - tarePerBale).toFixed(3)) || 0;
+              return acc;
+            },
+            { grossWeight: 0, tareWeight: 0, baleWeight: 0 }
+          )
+        : null;
+
+      const grossWeight = isLastBale
+        ? headerGross - previousTotals.grossWeight
+        : grossPerBale;
+      const tareWeight = isLastBale
+        ? headerTare - previousTotals.tareWeight
+        : tarePerBale;
+      const baleWeight = isLastBale
+        ? headerNet - previousTotals.baleWeight
+        : grossPerBale - tarePerBale;
+
+      return {
+        id: index + 1,
+        slNo: index + 1,
+        baleNo: generateBaleNumber(index + 1),
+        grossWeight: grossWeight.toFixed(3),
+        tareWeight: tareWeight.toFixed(3),
+        baleWeight: baleWeight.toFixed(3),
+        baleValue: (baleWeight * ratePerKg).toFixed(2),
+        isEdited: false,
+      };
+    });
 
     setWeightments(newWeightments);
 
