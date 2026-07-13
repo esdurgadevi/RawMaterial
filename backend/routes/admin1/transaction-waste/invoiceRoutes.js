@@ -1,6 +1,7 @@
 // routes/invoiceRoutes.js
 import express from "express";
 import {
+  getNextInvoiceNoController,
   createInvoice,
   getAllInvoices,
   getInvoiceById,
@@ -13,6 +14,7 @@ const router = express.Router();
 
 router.use(protect);
 
+router.get("/next-invoice-no", getNextInvoiceNoController);
 router.post("/", createInvoice);
 router.get("/", getAllInvoices);
 router.get("/:id", getInvoiceById);

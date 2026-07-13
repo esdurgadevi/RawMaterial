@@ -256,6 +256,35 @@ export const getNextSalesOrderNo = async () => {
   }
 };
 
+const { Invoice } = db;
+
+export const getNextInvoiceNo = async () => {
+  try {
+    const result = await Invoice.findOne({
+      attributes: [
+        [
+          Invoice.sequelize.fn(
+            "MAX",
+            Invoice.sequelize.cast(
+              Invoice.sequelize.col("invoiceNo"),
+              "INTEGER"
+            )
+          ),
+          "maxInvoiceNo",
+        ],
+      ],
+      raw: true,
+    });
+
+    const maxInvoiceNo = result?.maxInvoiceNo || 0;
+
+    return (parseInt(maxInvoiceNo, 10) + 1).toString();
+  } catch (error) {
+    console.error("Error generating invoice number:", error);
+    throw error;
+  }
+};
+
 
 //masters Auto Code generation function
 

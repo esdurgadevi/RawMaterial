@@ -1,5 +1,21 @@
 // controllers/invoiceController.js
 import * as invoiceService from "../../../services/admin1/transaction-waste/invoiceService.js";
+import { getNextInvoiceNo } from "../../../utils/helpers.js";
+
+export const getNextInvoiceNoController = async (req, res) => {
+  try {
+    const nextInvoiceNo = await getNextInvoiceNo();
+    res.status(200).json({
+      message: "Next invoice number generated",
+      nextInvoiceNo,
+    });
+  } catch (error) {
+    console.error("Error generating invoice no:", error);
+    res.status(500).json({
+      message: "Failed to generate next invoice number",
+    });
+  }
+};
 
 export const createInvoice = async (req, res) => {
   try {

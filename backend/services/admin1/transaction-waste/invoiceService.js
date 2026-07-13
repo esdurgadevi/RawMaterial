@@ -1,6 +1,7 @@
 // services/invoiceService.js
 import db from "../../../models/index.js";
 import { Op } from "sequelize";
+import { getNextInvoiceNo } from "../../../utils/helpers.js";
 
 const { Invoice, InvoiceDetail, SalesOrder, Supplier } = db;
 
@@ -8,9 +9,12 @@ export const create = async (data) => {
   const transaction = await db.sequelize.transaction();
 
   try {
+    if (!data.invoiceNo) {
+      data.invoiceNo = await getNextInvoiceNo();
+    }
+
     // Validation
     if (
-      !data.invoiceNo ||
       !data.date ||
       !data.invoiceType ||
       !data.supplierId ||
