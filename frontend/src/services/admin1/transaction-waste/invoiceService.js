@@ -35,6 +35,12 @@ const cleanPayload = (obj) => {
 };
 
 const invoiceService = {
+  getNextInvoiceNo: async () => {
+    const response = await api.get("/next-invoice-no");
+    console.log(response.data.nextInvoiceNo);
+    return response.data.nextInvoiceNo;
+  },
+
   // 🔹 Get all invoices
   getAll: async () => {
     const response = await api.get("/");

@@ -206,6 +206,7 @@ const InvoiceForm = React.memo(({
   setShowEditModal,
   resetForm,
   setSelectedInvoice,
+  setFormData,
 }) => {
   return (
     <form onSubmit={onSubmit}>
@@ -217,9 +218,8 @@ const InvoiceForm = React.memo(({
             type="text"
             name="invoiceNo"
             value={formData.invoiceNo}
-            onChange={handleFormChange}
-            required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+            disabled
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm bg-gray-100 cursor-not-allowed"
           />
         </div>
         <div>
@@ -1117,6 +1117,23 @@ const WasteCottonInvoicePage = () => {
     setShowDeleteModal(true);
   };
 
+  const loadNextInvoiceNo = useCallback(async () => {
+    try {
+      const nextNo = await invoiceService.getNextInvoiceNo();
+      setFormData((prev) => {
+        // only set the auto-generated number when the field is currently empty
+        if (prev.invoiceNo && String(prev.invoiceNo).trim() !== "") return prev;
+        return { ...prev, invoiceNo: String(nextNo) };
+      });
+    } catch (err) {
+      // fallback to 1 if API fails
+      setFormData((prev) => {
+        if (prev.invoiceNo && String(prev.invoiceNo).trim() !== "") return prev;
+        return { ...prev, invoiceNo: "1" };
+      });
+    }
+  }, []);
+
   const resetForm = useCallback(() => {
     setFormData(emptyForm());
     setSelectedOrder(null);
@@ -1125,7 +1142,16 @@ const WasteCottonInvoicePage = () => {
     setRatePerKg(null);
     const def = invoiceTypes.find((t) => t.name === "GST WASTE SALE INVOICE");
     setSelectedInvoiceType(def || null);
-  }, [invoiceTypes]);
+    // fetch next invoice no into the cleared form
+    loadNextInvoiceNo();
+  }, [invoiceTypes, loadNextInvoiceNo]);
+
+  const handleOpenCreate = useCallback(async () => {
+    // clear existing form values first
+    setFormData(emptyForm());
+    await loadNextInvoiceNo();
+    setShowCreateModal(true);
+  }, [loadNextInvoiceNo]);
 
   // ── JSON preview / download ───────────────────────────────────────────────────
   const handleShowJson = (invoice) => {
@@ -1170,6 +1196,7 @@ const WasteCottonInvoicePage = () => {
     setShowEditModal,
     resetForm,
     setSelectedInvoice,
+    setFormData,
   };
 
   if (loading) {
@@ -1192,7 +1219,7 @@ const WasteCottonInvoicePage = () => {
           <p className="text-gray-500 text-sm">Add, modify or export cotton invoice details.</p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={handleOpenCreate}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
         >
           + Create New Invoice
