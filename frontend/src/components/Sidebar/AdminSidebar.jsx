@@ -37,7 +37,7 @@ const AdminSidebar = () => {
 
   const cottonTransactionItems = [
   { to: "/admin/purchase-order", icon: "🛒", label: "Purchase Order" },
-  { to: "/admin/inward-entries", icon: "📥", label: "Inward Entries" },
+  { to: "/admin/inward-entries", icon: "📥", label: "Gate Inward" },
   { to: "/admin/inward-lot", icon: "🧾", label: "Inward Lot" },
   { to: "/admin/issue", icon: "📤", label: "Issue" },
   { to: "/admin/final-invoice", icon: "🧾", label: "Final Invoice" },
