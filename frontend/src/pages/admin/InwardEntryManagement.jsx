@@ -998,6 +998,9 @@ const InwardEntryManagement = () => {
                     INWARD DETAILS
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    SUPPLIER
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     QUANTITY & WEIGHT
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1024,6 +1027,11 @@ const InwardEntryManagement = () => {
                             PO: {entry.purchaseOrderNo || 'N/A'}
                           </div>
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {entry.supplier || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4">
