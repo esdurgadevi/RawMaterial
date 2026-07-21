@@ -47,6 +47,9 @@ export const getAllInwardEntries = async () => {
         model: PurchaseOrder,
         as: "purchaseOrder",
         attributes: ["candyRate", "orderNo"],
+        include: [
+          { model: Supplier, as: "supplier", attributes: ["accountName"] },
+        ],
       },
     ],
     order: [["inwardNo", "DESC"]],
@@ -59,6 +62,7 @@ export const getAllInwardEntries = async () => {
     nettWeight: entry.nettWeight,
     candyRate: entry.purchaseOrder?.candyRate || null,
     purchaseOrderNo: entry.purchaseOrder?.orderNo || null,
+    supplier: entry.purchaseOrder?.supplier?.accountName || null,
     
     // Added timestamps
     inwardDate:entry.inwardDate
